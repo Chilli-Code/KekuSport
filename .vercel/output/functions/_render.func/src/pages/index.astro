@@ -1,0 +1,22 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Sponsors from "../components/Sponsors.astro";
+import Hero from "../components/Hero.astro";
+import StandingsTable from "../components/StandingsTable.astro";
+import TournamentBracket from "../components/TournamentBracket.astro";
+import Video from "../components/Videos.astro";
+---
+
+<Layout>
+  <Hero />
+  <StandingsTable title="TORNEO PES - TEMPORADA 1" />
+    <section class="py-12 px-4">
+    <TournamentBracket 
+      title="PLAYOFF"
+      finalDate="30 DE MAYO"
+      finalLocation="BUDAPEST"
+    />
+  </section>
+  <!-- <Sponsors /> -->
+  <Video />
+</Layout>

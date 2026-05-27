@@ -1,0 +1,737 @@
+---
+export interface Tournament {
+  id: string
+  name: string
+  year: string
+  location?: string
+  participants?: number
+  position: number
+  prize?: string
+  record?: string
+  logo?: string
+  stats?: {
+    goals?: number
+    assists?: number
+    matches?: number
+    wins?: number
+    losses?: number
+    draws?: number
+    yellowCards?: number
+    redCards?: number
+    minutesPlayed?: number
+    rating?: number
+    pace?: number
+    shooting?: number
+    passing?: number
+    dribbling?: number
+    defending?: number
+    physical?: number
+  }
+}
+
+export interface Props {
+  tournaments: Tournament[]
+  fighterId: string
+}
+
+const ITEMS_PER_PAGE = 6
+const { tournaments = [], fighterId } = Astro.props
+
+const fixed = [
+  [8,4,10,7,1,2,870,2,0,8.2, 78,74,68,80,45,70],
+  [5,3,8,5,1,2,720,1,0,7.6, 65,60,72,68,52,65],
+  [3,1,6,3,2,1,540,0,1,7.1, 82,55,64,76,40,68],
+  [12,7,14,10,3,1,1200,3,0,8.8,71,82,75,85,48,73],
+  [6,2,9,5,3,1,810,1,0,7.4, 88,65,70,79,55,67],
+  [9,5,11,8,2,1,990,2,1,8.0, 74,78,66,81,42,72],
+  [4,1,5,3,1,1,450,0,0,7.3, 69,58,62,72,38,60],
+  [7,3,8,5,2,1,720,1,0,7.8, 80,70,71,77,50,66],
+  [11,6,13,9,3,1,1170,2,0,8.5,76,79,73,83,46,74],
+]
+
+const enriched = tournaments.map((t, i) => {
+  const d = fixed[i % 9]
+  return {
+    ...t,
+    stats: t.stats ?? {
+      goals: d[0], assists: d[1], matches: d[2], wins: d[3],
+      draws: d[4], losses: d[5], minutesPlayed: d[6],
+      yellowCards: d[7], redCards: d[8], rating: d[9],
+      pace: d[10], shooting: d[11], passing: d[12],
+      dribbling: d[13], defending: d[14], physical: d[15],
+    }
+  }
+})
+
+const totalPages = Math.ceil(enriched.length / ITEMS_PER_PAGE)
+
+const getBadge = (pos: number) => {
+  if (pos === 1) return { emoji: '🏆', label: 'Campeón',    cls: 'badge--gold'   }
+  if (pos === 2) return { emoji: '🥈', label: 'Subcampeón', cls: 'badge--silver' }
+  if (pos === 3) return { emoji: '🥉', label: '3er Puesto', cls: 'badge--bronze' }
+  return           { emoji: '🏅', label: `${pos}º Puesto`, cls: 'badge--default' }
+}
+
+const getStatColor = (v: number) =>
+  v >= 80 ? '#00ff88' : v >= 65 ? '#fbbf24' : '#ef4444'
+
+const defaultId = enriched[0]?.id ?? ''
+---
+
+<section class="px-4 pb-12 pt-6">
+
+  <!-- Título -->
+  <div class="flex items-center gap-3 mb-6">
+    <span class="tc-diamond"></span>
+    <h2 class="tc-section-title">TORNEOS DISPUTADOS</h2>
+    <span class="tc-line"></span>
+    {totalPages > 1 && (
+      <span class="font-mono text-[0.7rem] font-bold text-[color-mix(in_srgb,var(--color-theme-gold)_60%,transparent)] whitespace-nowrap shrink-0" id={`tc-pi-${fighterId}`}>
+        1 / {totalPages}
+      </span>
+    )}
+  </div>
+
+  <!-- GRID DE CARDS -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-6" id={`tc-grid-${fighterId}`}>
+    {enriched.map((t, i) => {
+      const badge = getBadge(t.position)
+      const uid   = `tc-${fighterId}-${t.id}`
+      const page  = Math.floor(i / ITEMS_PER_PAGE)
+      return (
+        <div
+          class="tc-card"
+          data-uid={uid}
+          data-page={page}
+          data-tid={t.id}
+          data-active={t.id === defaultId ? 'true' : 'false'}
+          style={`animation-delay:${(i % ITEMS_PER_PAGE) * 0.07}s; ${page === 0 ? '' : 'display:none'}`}
+        >
+          <span class="tc-corner tc-corner--tl"></span>
+          <span class="tc-corner tc-corner--tr"></span>
+          <span class="tc-corner tc-corner--bl"></span>
+          <span class="tc-corner tc-corner--br"></span>
+          <div class="tc-glow" aria-hidden="true"></div>
+
+          <button
+            class="tc-trigger flex items-center gap-3 w-full p-4 bg-transparent border-0 cursor-pointer text-left relative z-10"
+            data-uid={uid}
+            data-tid={t.id}
+            aria-label={`Ver estadísticas de ${t.name}`}
+          >
+            <div class="tc-trophy shrink-0">
+              {t.logo
+                ? <img src={t.logo} alt={t.name} class="w-full h-full object-contain" />
+                : <span class="text-2xl leading-none">{badge.emoji}</span>
+              }
+            </div>
+
+            <div class="flex-1 min-w-0">
+              <span class="tc-name block">{t.name}</span>
+              <div class="flex items-center gap-1.5 mt-1 flex-wrap">
+                <span class={`tc-badge ${badge.cls}`}>{badge.label}</span>
+                <span class="tc-year">{t.year}</span>
+              </div>
+              {t.location && (
+                <span class="block mt-0.5 text-[0.52rem] tracking-wide truncate" style="color:color-mix(in srgb,var(--color-theme-cream) 40%,transparent)">
+                  📍 {t.location}
+                </span>
+              )}
+            </div>
+
+            <div class="tc-active-dot shrink-0"></div>
+          </button>
+        </div>
+      )
+    })}
+  </div>
+
+  <!-- Paginación -->
+  {totalPages > 1 && (
+    <div class="flex items-center justify-center gap-4 mb-8">
+      <button class="tc-nav-btn" id={`tc-prev-${fighterId}`} aria-label="Anterior">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M10 13L5 8l5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <div class="flex items-center gap-1.5" id={`tc-dots-${fighterId}`}>
+        {Array.from({ length: totalPages }, (_, p) => (
+          <span class={`tc-dot ${p === 0 ? 'tc-dot--active' : ''}`} data-dot={p}></span>
+        ))}
+      </div>
+      <button class="tc-nav-btn" id={`tc-next-${fighterId}`} aria-label="Siguiente">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </div>
+  )}
+
+  <!-- PANEL PRINCIPAL -->
+  <div class="flex" id="tc-panel-wrap">
+    {enriched.map((t) => {
+      const badge = getBadge(t.position)
+      const s = t.stats!
+      const rPct = Math.round(((s.rating ?? 7) / 10) * 100)
+
+      return (
+        <div
+          class="tc-outer"
+          data-slide={t.id}
+          style={t.id === defaultId ? 'display:flex' : 'display:none'}
+        >
+
+    
+
+
+          <!-- PANEL DE STATS -->
+          <div class="tc-panel">
+            <div class="tc-scanlines" aria-hidden="true"></div>
+
+            <div class="tc-panel-inner">
+
+              <!-- Rating -->
+              <div class="tc-rating-block">
+                <div class="flex items-baseline gap-2 mb-1.5">
+                  <span class="tc-rating-num" style={`color:${getStatColor(rPct)}`}>
+                    {s.rating?.toFixed(1)}
+                  </span>
+                  <span class="tc-gen-label">VALORACIÓN</span>
+                </div>
+                <div class="tc-rating-bar-wrap">
+                  <div class="tc-rating-bar" style={`width:${rPct}%;background:${getStatColor(rPct)}`}></div>
+                </div>
+              </div>
+
+              <div class="tc-panel-sep"></div>
+
+              <!-- Resumen jugador -->
+              <p class="tc-right-title">RESUMEN DEL JUGADOR</p>
+              <div class="space-y-2">
+                {[
+                  { label: 'Goles',       val: s.goals    ?? 0, max: 20, color: '#00ff88' },
+                  { label: 'Asistencias', val: s.assists  ?? 0, max: 15, color: '#a78bfa' },
+                  { label: 'Partidos',    val: s.matches  ?? 0, max: 20, color: '#fbbf24' },
+                  { label: 'Victorias',   val: s.wins     ?? 0, max: 15, color: '#22c55e' },
+                  { label: 'Empates',     val: s.draws    ?? 0, max: 10, color: '#eab308' },
+                  { label: 'Derrotas',    val: s.losses   ?? 0, max: 10, color: '#ef4444' },
+                ].map(stat => (
+                  <div class="flex items-center gap-2">
+                    <span class="tc-attr-label">{stat.label}</span>
+                    <div class="flex-1 h-1.5 rounded-full overflow-hidden" style="background:color-mix(in srgb,var(--color-theme-midnight) 80%,transparent);border:1px solid color-mix(in srgb,var(--color-theme-gold) 10%,transparent)">
+                      <div
+                        class="h-full rounded-full transition-all duration-500"
+                        style={`width:${Math.min((stat.val/stat.max)*100,100)}%;background:${stat.color}`}
+                      ></div>
+                    </div>
+                    <span class="tc-attr-val w-5 text-right" style={`color:${stat.color}`}>{stat.val}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div class="tc-panel-sep tc-panel-sep--dim"></div>
+
+              <!-- Atributos FIFA-style -->
+              <p class="tc-right-title">ATRIBUTOS</p>
+              <div class="space-y-2 mb-4">
+                {[
+                  { label: 'Ritmo',   val: s.pace      ?? 0 },
+                  { label: 'Disparo', val: s.shooting  ?? 0 },
+                  { label: 'Pase',    val: s.passing   ?? 0 },
+                  { label: 'Regate',  val: s.dribbling ?? 0 },
+                  { label: 'Defensa', val: s.defending ?? 0 },
+                  { label: 'Físico',  val: s.physical  ?? 0 },
+                ].map(a => (
+                  <div class="flex items-center gap-2">
+                    <span class="tc-attr-label">{a.label}</span>
+                    <div class="flex-1 h-1.5 rounded-full overflow-hidden" style="background:color-mix(in srgb,var(--color-theme-midnight) 80%,transparent);border:1px solid color-mix(in srgb,var(--color-theme-gold) 10%,transparent)">
+                      <div
+                        class="h-full rounded-full transition-all duration-500"
+                        style={`width:${a.val}%;background:${getStatColor(a.val)}`}
+                      ></div>
+                    </div>
+                    <span class="tc-attr-val w-5 text-right" style={`color:${getStatColor(a.val)}`}>{a.val}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div class="tc-panel-sep tc-panel-sep--dim"></div>
+
+              <!-- Mini stats -->
+              <div class="grid grid-cols-3 gap-2 mb-4">
+                {[
+                  { emoji: '🟨', val: s.yellowCards ?? 0,              label: 'Amarillas' },
+                  { emoji: '🟥', val: s.redCards    ?? 0,              label: 'Rojas'     },
+                  { emoji: '⏱',  val: `${s.minutesPlayed ?? 0}'`,      label: 'Minutos'   },
+                ].map(m => (
+                  <div class="flex flex-col items-center py-2 px-1 rounded-lg text-center" style="background:color-mix(in srgb,var(--color-theme-midnight) 70%,transparent);border:1px solid color-mix(in srgb,var(--color-theme-gold) 12%,transparent)">
+                    <span class="text-[0.8rem] mb-0.5">{m.emoji}</span>
+                    <span class="font-bold text-[0.75rem]" style="color:var(--color-theme-cream)">{m.val}</span>
+                    <span class="text-[0.42rem] uppercase tracking-widest" style="color:color-mix(in srgb,var(--color-theme-cream) 40%,transparent)">{m.label}</span>
+                  </div>
+                ))}
+              </div>
+
+              <!-- CTA -->
+              <a href={`/torneos/${t.id}`} class="tc-cta">
+                Ver Torneo Completo
+                <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                  <path d="M2.5 6.5h8M6.5 2.5l4 4-4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </a>
+
+            </div>
+          </div>
+
+                    <div class="tc-float">
+            <div class="tc-float-bg" aria-hidden="true"></div>
+
+            <div class="tc-logo-wrap">
+              {t.logo
+                ? <img src={t.logo} alt={t.name} class="w-full h-full object-contain rounded-[20px]" />
+                : <span class="tc-logo-emoji">{badge.emoji}</span>
+              }
+              <div class="tc-logo-pulse"></div>
+            </div>
+
+            <span class="tc-float-name">{t.name}</span>
+            <span class="tc-float-year">{t.year}</span>
+            <span class={`tc-badge tc-float-badge ${badge.cls}`}>{badge.emoji} {badge.label}</span>
+
+            {(t.location || t.participants || t.record || t.prize) && (
+              <div class="tc-float-meta">
+                {t.location && (
+                  <div class="tc-meta-row">
+                    <span class="tc-gen-label">SEDE</span>
+                    <span class="tc-gen-val">{t.location}</span>
+                  </div>
+                )}
+                {t.participants && (
+                  <div class="tc-meta-row">
+                    <span class="tc-gen-label">EQUIPOS</span>
+                    <span class="tc-gen-val">{t.participants}</span>
+                  </div>
+                )}
+                {t.record && (
+                  <div class="tc-meta-row">
+                    <span class="tc-gen-label">RÉCORD</span>
+                    <span class="tc-gen-val font-mono">{t.record}</span>
+                  </div>
+                )}
+                {t.prize && (
+                  <div class="tc-meta-row">
+                    <span class="tc-gen-label">PREMIO</span>
+                    <span class="tc-gen-val tc-gen-val--gold">{t.prize}</span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )
+    })}
+  </div>
+
+</section>
+
+<script>
+  const allCards  = document.querySelectorAll<HTMLElement>('.tc-card')
+  const allSlides = document.querySelectorAll<HTMLElement>('.tc-outer[data-slide]')
+
+  function selectTournament(tid: string) {
+    allCards.forEach(c  => { c.dataset.active = c.dataset.tid === tid ? 'true' : 'false' })
+    allSlides.forEach(s => { s.style.display  = s.dataset.slide === tid ? 'flex' : 'none' })
+  }
+
+  document.querySelectorAll<HTMLButtonElement>('.tc-trigger').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tid = btn.dataset.tid
+      if (!tid) return
+      selectTournament(tid)
+      const wrap = document.getElementById('tc-panel-wrap')
+      if (wrap) setTimeout(() => wrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50)
+    })
+  })
+
+  // Paginación
+  const fid = document.querySelector('[id^="tc-grid-"]')?.id.replace('tc-grid-', '')
+  if (fid) {
+    const cards  = document.querySelectorAll<HTMLElement>(`#tc-grid-${fid} .tc-card`)
+    const prevBtn = document.querySelector<HTMLButtonElement>(`#tc-prev-${fid}`)
+    const nextBtn = document.querySelector<HTMLButtonElement>(`#tc-next-${fid}`)
+    const dots    = document.querySelectorAll<HTMLElement>(`#tc-dots-${fid} .tc-dot`)
+    const pi      = document.getElementById(`tc-pi-${fid}`)
+    const total   = dots.length
+    let cur = 0
+
+    function showPage(p: number) {
+      cards.forEach(c => { c.style.display = parseInt(c.dataset.page ?? '0') === p ? '' : 'none' })
+      dots.forEach((d, i) => d.classList.toggle('tc-dot--active', i === p))
+      if (pi) pi.textContent = `${p + 1} / ${total}`
+      cur = p
+    }
+
+    prevBtn?.addEventListener('click', () => { if (cur > 0) showPage(cur - 1) })
+    nextBtn?.addEventListener('click', () => { if (cur < total - 1) showPage(cur + 1) })
+  }
+</script>
+
+<style>
+  /* ── Header ornaments ── */
+  .tc-diamond {
+    display: inline-block;
+    width: 6px; height: 6px;
+    background: var(--color-theme-gold);
+    transform: rotate(45deg);
+    flex-shrink: 0;
+    box-shadow: 0 0 8px var(--color-theme-gold);
+  }
+  .tc-line {
+    flex: 1; height: 1px;
+    background: linear-gradient(to right, color-mix(in srgb, var(--color-theme-gold) 45%, transparent), transparent);
+  }
+  .tc-section-title {
+    font-family: var(--font-cinzel), serif;
+    font-size: clamp(1rem, 3vw, 1.4rem);
+    font-weight: 900;
+    letter-spacing: 0.2em;
+    color: color-mix(in srgb, var(--color-theme-gold) 90%, transparent);
+    white-space: nowrap;
+  }
+
+  /* ══ CARD ══ */
+  .tc-card {
+    position: relative;
+    border-radius: 14px;
+    border: 1px solid color-mix(in srgb, var(--color-theme-gold) 22%, transparent);
+    background: linear-gradient(160deg,
+      color-mix(in srgb, var(--color-theme-midnight) 90%, #00ff88) 0%,
+      var(--color-theme-midnight) 100%
+    );
+    backdrop-filter: blur(10px);
+    overflow: hidden;
+    opacity: 0;
+    animation: tcCardIn 0.5s ease-out forwards;
+    transition: border-color 0.3s, box-shadow 0.3s, transform 0.2s;
+  }
+  .tc-card:hover { transform: translateY(-2px); }
+  .tc-card[data-active="true"] {
+    border-color: #00ff88 !important;
+    box-shadow: 0 0 0 1px #00ff88, 0 0 20px rgba(0,255,136,0.2);
+    transform: translateY(-2px);
+  }
+  @keyframes tcCardIn {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .tc-glow {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 50% 0%, rgba(0,255,136,0.10) 0%, transparent 60%);
+    opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 0;
+  }
+  .tc-card:hover .tc-glow,
+  .tc-card[data-active="true"] .tc-glow { opacity: 1; }
+
+  .tc-corner {
+    position: absolute; width: 10px; height: 10px;
+    border-color: color-mix(in srgb, var(--color-theme-gold) 40%, transparent);
+    border-style: solid;
+    transition: border-color 0.3s, width 0.3s, height 0.3s;
+    z-index: 2; pointer-events: none;
+  }
+  .tc-corner--tl { top: 6px; left: 6px;   border-width: 1.5px 0 0 1.5px; }
+  .tc-corner--tr { top: 6px; right: 6px;  border-width: 1.5px 1.5px 0 0; }
+  .tc-corner--bl { bottom: 6px; left: 6px;  border-width: 0 0 1.5px 1.5px; }
+  .tc-corner--br { bottom: 6px; right: 6px; border-width: 0 1.5px 1.5px 0; }
+  .tc-card[data-active="true"] .tc-corner { width: 14px; height: 14px; border-color: #00ff88; }
+
+  .tc-trophy {
+    display: flex; align-items: center; justify-content: center;
+    width: 44px; height: 44px; border-radius: 10px;
+    background: color-mix(in srgb, var(--color-theme-gold) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-theme-gold) 22%, transparent);
+    overflow: hidden; flex-shrink: 0;
+    transition: background 0.3s, border-color 0.3s;
+  }
+  .tc-card[data-active="true"] .tc-trophy {
+    background: rgba(0,255,136,0.12); border-color: rgba(0,255,136,0.35);
+  }
+
+  .tc-name {
+    font-family: var(--font-cinzel), serif;
+    font-size: 0.78rem; font-weight: 700;
+    letter-spacing: 0.05em; text-transform: uppercase;
+    color: var(--color-theme-cream);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    transition: color 0.2s;
+  }
+  .tc-card[data-active="true"] .tc-name { color: #fff; }
+
+  .tc-badge {
+    display: inline-block;
+    font-family: var(--font-cinzel), serif;
+    font-size: 0.48rem; font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 2px 7px; border-radius: 99px;
+  }
+  .badge--gold    { background: rgba(251,191,36,0.15);  color:#fbbf24; border:1px solid rgba(251,191,36,0.35); }
+  .badge--silver  { background: rgba(148,163,184,0.15); color:#cbd5e1; border:1px solid rgba(148,163,184,0.35); }
+  .badge--bronze  { background: rgba(205,127,50,0.15);  color:#e09050; border:1px solid rgba(205,127,50,0.35); }
+  .badge--default { background: color-mix(in srgb,var(--color-theme-gold) 10%,transparent); color:color-mix(in srgb,var(--color-theme-gold) 70%,transparent); border:1px solid color-mix(in srgb,var(--color-theme-gold) 20%,transparent); }
+
+  .tc-year {
+    font-family: monospace; font-size: 0.62rem; font-weight: 700;
+    background: linear-gradient(to right, #a78bfa, #34d399);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+
+  .tc-active-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: color-mix(in srgb, var(--color-theme-gold) 30%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-theme-gold) 20%, transparent);
+    transition: background 0.25s, box-shadow 0.25s;
+  }
+  .tc-card[data-active="true"] .tc-active-dot {
+    background: #00ff88; box-shadow: 0 0 8px rgba(0,255,136,0.6);
+  }
+
+  /* Paginación */
+  .tc-nav-btn {
+    display: flex; align-items: center; justify-content: center;
+    width: 34px; height: 34px; border-radius: 50%;
+    border: 1px solid color-mix(in srgb, var(--color-theme-gold) 30%, transparent);
+    background: color-mix(in srgb, var(--color-theme-midnight) 70%, transparent);
+    color: color-mix(in srgb, var(--color-theme-gold) 70%, transparent);
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s, background 0.2s, transform 0.15s;
+  }
+  .tc-nav-btn:hover {
+    border-color: #00ff88; color: #00ff88;
+    background: rgba(0,255,136,0.08); transform: scale(1.1);
+  }
+  .tc-dot {
+    display: block; width: 7px; height: 7px; border-radius: 50%;
+    background: color-mix(in srgb, var(--color-theme-gold) 25%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-theme-gold) 15%, transparent);
+    transition: background 0.25s, transform 0.25s;
+  }
+  .tc-dot--active {
+    background: #00ff88; border-color: #00ff88;
+    box-shadow: 0 0 6px rgba(0,255,136,0.5); transform: scale(1.3);
+  }
+
+  /* ══ WRAPPER EXTERNO ══ */
+.tc-outer {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  width: 100%;
+  gap: 2rem;
+}
+
+  /* ══ LOGO FLOTANTE (fuera del panel) ══ */
+.tc-float {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.75rem 2rem;
+  z-index: 2;
+  gap: 0.5rem;
+}
+/* 
+  .tc-float-bg {
+    position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(ellipse at 60% 50%, rgba(0,255,136,0.10) 0%, rgba(124,58,237,0.06) 50%, transparent 75%);
+    z-index: 0;
+  } */
+
+  /* Logo grande con animación */
+  .tc-logo-wrap {
+    position: relative; z-index: 1;
+    width: 148px; height: 148px;
+    border-radius: 22px;
+    border: 1.5px solid color-mix(in srgb, var(--color-theme-gold) 35%, transparent);
+    background: color-mix(in srgb, var(--color-theme-gold) 8%, transparent);
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+    animation: logoSlideIn 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+    margin-bottom: 0.25rem;
+  }
+
+  @keyframes logoSlideIn {
+    from { opacity: 0; transform: translateX(-55px) scale(0.65) rotate(-10deg); }
+    to   { opacity: 1; transform: translateX(0) scale(1) rotate(0deg); }
+  }
+
+  .tc-logo-emoji { font-size: 5rem; line-height: 1; }
+
+  .tc-logo-pulse {
+    position: absolute; inset: -4px; border-radius: 26px;
+    border: 1.5px solid rgba(0,255,136,0.45);
+    animation: pulseBorder 2.6s ease-in-out infinite;
+    pointer-events: none;
+  }
+  @keyframes pulseBorder {
+    0%, 100% { opacity: 0.25; transform: scale(1); }
+    50%       { opacity: 1;   transform: scale(1.05); }
+  }
+
+  .tc-float-name {
+    font-family: var(--font-cinzel), serif;
+    font-size: 0.82rem; font-weight: 900;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--color-theme-cream); text-align: center; line-height: 1.3;
+    animation: fadeUpFloat 0.5s 0.35s both;
+    position: relative; z-index: 1;
+  }
+  .tc-float-year {
+    font-family: monospace; font-size: 0.68rem; font-weight: 700;
+    background: linear-gradient(to right, #a78bfa, #34d399);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text; text-align: center;
+    animation: fadeUpFloat 0.5s 0.45s both;
+    position: relative; z-index: 1;
+  }
+  .tc-float-badge {
+    font-size: 0.52rem !important;
+    padding: 3px 10px !important;
+    animation: fadeUpFloat 0.5s 0.55s both;
+    position: relative; z-index: 1;
+  }
+
+  @keyframes fadeUpFloat {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Meta info debajo del badge */
+  .tc-float-meta {
+    width: auto; align-self: center; display: flex; flex-direction: column; gap: 4px;
+    border-top: 1px solid color-mix(in srgb, var(--color-theme-gold) 15%, transparent);
+    padding-top: 0.6rem; margin-top: 0.25rem;
+    animation: fadeUpFloat 0.5s 0.65s both;
+    position: relative; z-index: 1;
+  }
+  .tc-meta-row {
+    display: flex; gap: 0.5rem; justify-content: space-between; align-items: center;
+  }
+  .tc-gen-label {
+    font-family: var(--font-cinzel), serif;
+    font-size: 0.5rem; letter-spacing: 0.12em;
+    color: color-mix(in srgb, var(--color-theme-cream) 45%, transparent);
+  }
+  .tc-gen-val {
+    font-family: var(--font-cinzel), serif;
+    font-size: 0.6rem; font-weight: 700;
+    color: var(--color-theme-cream); text-align: right;
+  }
+  .tc-gen-val--gold {
+    background: linear-gradient(to right, #fbbf24, #f59e0b);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+
+  /* ══ PANEL DE STATS ══ */
+.tc-panel {
+  position: relative;
+  flex: 1;
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--color-theme-gold) 25%, transparent);
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--color-theme-midnight) 85%, #00ff88) 0%,
+    var(--color-theme-midnight) 60%,
+    color-mix(in srgb, var(--color-theme-midnight) 90%, #7c3aed) 100%
+  );
+  overflow: hidden;
+  min-height: 420px;
+}
+  .tc-scanlines {
+    position: absolute; inset: 0; pointer-events: none; z-index: 0;
+    background: repeating-linear-gradient(
+      0deg, transparent, transparent 3px,
+      rgba(0,255,136,0.012) 3px, rgba(0,255,136,0.012) 4px
+    );
+  }
+
+  .tc-panel-inner {
+    position: relative; z-index: 1;
+    padding: 1.5rem 1.5rem 1.25rem;
+    display: flex; flex-direction: column; gap: 0.75rem;
+  }
+
+  /* Rating */
+  .tc-rating-num {
+    font-family: var(--font-cinzel), serif;
+    font-size: 2rem; font-weight: 900; line-height: 1;
+  }
+  .tc-rating-bar-wrap {
+    width: 100%; height: 5px; border-radius: 99px; overflow: hidden;
+    background: color-mix(in srgb, var(--color-theme-midnight) 80%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-theme-gold) 10%, transparent);
+  }
+  .tc-rating-bar { height: 100%; border-radius: 99px; transition: width 0.6s ease; }
+
+  .tc-panel-sep {
+    width: 100%; height: 1px;
+    background: linear-gradient(to right, transparent, rgba(0,255,136,0.3), transparent);
+  }
+  .tc-panel-sep--dim {
+    background: linear-gradient(to right, rgba(0,255,136,0.15), transparent);
+  }
+
+  .tc-right-title {
+    font-family: var(--font-cinzel), serif;
+    font-size: 0.52rem; font-weight: 700;
+    letter-spacing: 0.2em; color: rgba(0,255,136,0.7);
+    margin-bottom: 0.4rem;
+  }
+
+  .tc-attr-label {
+    font-family: var(--font-cinzel), serif;
+    font-size: 0.58rem;
+    color: color-mix(in srgb, var(--color-theme-cream) 65%, transparent);
+    width: 70px; flex-shrink: 0;
+  }
+  .tc-attr-val {
+    font-family: var(--font-cinzel), serif;
+    font-size: 0.68rem; font-weight: 900;
+    flex-shrink: 0;
+  }
+
+  /* CTA */
+  .tc-cta {
+    display: flex; align-items: center; justify-content: center; gap: 0.4rem;
+    padding: 0.5rem 1rem; border-radius: 99px; margin-top: auto;
+    border: 1px solid rgba(0,255,136,0.35);
+    color: rgba(0,255,136,0.85);
+    font-family: var(--font-cinzel), serif;
+    font-size: 0.52rem; font-weight: 700;
+    letter-spacing: 0.18em; text-transform: uppercase; text-decoration: none;
+    background: rgba(0,255,136,0.05);
+    transition: background 0.2s, border-color 0.2s, color 0.2s, transform 0.15s;
+    width: fit-content; align-self: flex-end;
+  }
+  .tc-cta:hover {
+    background: rgba(0,255,136,0.12); border-color: rgba(0,255,136,0.6);
+    color: #00ff88; transform: translateY(-1px);
+  }
+
+  /* Responsive: en mobile el float va arriba */
+  @media (max-width: 540px) {
+    .tc-outer { flex-direction: column-reverse; align-items: center; }
+    .tc-float {
+      width: 100%; flex-direction: column; flex-wrap: wrap;
+      justify-content: center; align-items: center;
+      padding: 1rem 1rem 0.5rem; gap: 0.75rem;
+    }
+    .tc-float-bg { display: none; }
+    .tc-logo-wrap { width: 90px; height: 90px; margin-bottom: 0; }
+    .tc-logo-emoji { font-size: 3rem; }
+    .tc-float-name { font-size: 0.75rem; }
+    .tc-float-meta { display: flex; }
+    .tc-panel { border-radius: 16px; min-height: max-content; height: 100%; width: 100%; }
+  }
+</style>

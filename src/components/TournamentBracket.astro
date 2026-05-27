@@ -1,0 +1,584 @@
+---
+// TournamentBracket.astro
+// Estructura horizontal: Grupos → Cuartos → Semis → Final ← Semis ← Cuartos ← Grupos
+
+export interface Team {
+  id: string
+  name: string
+  logo?: string
+  points: number
+}
+
+export interface Match {
+  id: string
+  team1: Team
+  team2: Team
+  score1: number
+  score2: number
+  winner: 'team1' | 'team2'
+}
+
+export interface Props {
+  title?: string
+  subtitle?: string
+  finalDate?: string
+  finalLocation?: string
+  groupA?: Team[]
+  groupB?: Team[]
+  groupC?: Team[]
+  groupD?: Team[]
+  leftQuarterFinals?: Match[]
+  rightQuarterFinals?: Match[]
+  leftSemiFinal?: Match
+  rightSemiFinal?: Match
+  finalMatch?: Match
+}
+
+const {
+  title = "PLAYOFF",
+  subtitle = "COPA CHONTADURO",
+  finalDate = "30 DE MAYO",
+  finalLocation = "BUDAPEST",
+
+  groupA = [
+    { id: 'peereira',  name: 'Peereira',    logo: '/images/fighters/cards/peereira.webp',  points: 9 },
+    { id: 'djmariio',  name: 'DjMaRIIO',    logo: '/images/fighters/cards/djmariio.webp',  points: 6 },
+    { id: 'xocas',     name: 'Xocas',       logo: '/images/fighters/cards/xocas.webp',     points: 3 },
+    { id: 'elxokas',   name: 'ElXokas',     logo: '/images/fighters/cards/elxokas.webp',   points: 0 },
+  ],
+  groupB = [
+    { id: 'ibai',      name: 'Ibai Llanos', logo: '/images/fighters/cards/ibai.webp',      points: 9 },
+    { id: 'spursito',  name: 'Spursito',    logo: '/images/fighters/cards/spursito.webp',  points: 6 },
+    { id: 'carreraa',  name: 'Carreraa',    logo: '/images/fighters/cards/carreraa.webp',  points: 3 },
+    { id: 'rivaldios', name: 'Rivaldios',   logo: '/images/fighters/cards/rivaldios.webp', points: 0 },
+  ],
+  groupC = [
+    { id: 'grefg',     name: 'ElGrefg',    logo: '/images/fighters/cards/grefg.webp',     points: 9 },
+    { id: 'vegetta',   name: 'Vegetta777', logo: '/images/fighters/cards/vegetta.webp',   points: 6 },
+    { id: 'illojuan',  name: 'IlloJuan',   logo: '/images/fighters/cards/illojuan.webp',  points: 3 },
+    { id: 'agustin51', name: 'Agustin51',  logo: '/images/fighters/cards/agustin51.webp', points: 0 },
+  ],
+  groupD = [
+    { id: 'auronplay', name: 'AuronPlay',  logo: '/images/fighters/cards/auronplay.webp', points: 9 },
+    { id: 'rubius',    name: 'Rubius',     logo: '/images/fighters/cards/rubius.webp',    points: 6 },
+    { id: 'messi',     name: 'Messi',      logo: '/images/fighters/cards/messi.webp',     points: 3 },
+    { id: 'cristiano', name: 'Cristiano',  logo: '/images/fighters/cards/cristiano.webp', points: 0 },
+  ],
+
+  leftQuarterFinals = [
+    { id: 'lqf1', team1: { id: 'peereira', name: 'Peereira',    points: 9 }, team2: { id: 'spursito', name: 'Spursito',  points: 6 }, score1: 3, score2: 1, winner: 'team1' },
+    { id: 'lqf2', team1: { id: 'ibai',     name: 'Ibai Llanos', points: 9 }, team2: { id: 'djmariio', name: 'DjMaRIIO', points: 6 }, score1: 3, score2: 1, winner: 'team1' },
+  ],
+  rightQuarterFinals = [
+    { id: 'rqf1', team1: { id: 'grefg',     name: 'ElGrefg',   points: 9 }, team2: { id: 'rubius',  name: 'Rubius',     points: 6 }, score1: 2, score2: 0, winner: 'team1' },
+    { id: 'rqf2', team1: { id: 'auronplay', name: 'AuronPlay', points: 9 }, team2: { id: 'vegetta', name: 'Vegetta777', points: 6 }, score1: 2, score2: 0, winner: 'team1' },
+  ],
+  leftSemiFinal = {
+    id: 'lsf',
+    team1: { id: 'peereira', name: 'Peereira',    points: 9 },
+    team2: { id: 'ibai',     name: 'Ibai Llanos', points: 9 },
+    score1: 2, score2: 1, winner: 'team1',
+  },
+  rightSemiFinal = {
+    id: 'rsf',
+    team1: { id: 'grefg',     name: 'ElGrefg',   points: 9 },
+    team2: { id: 'auronplay', name: 'AuronPlay',  points: 9 },
+    score1: 3, score2: 2, winner: 'team1',
+  },
+  finalMatch = {
+    id: 'final',
+    team1: { id: 'peereira', name: 'Peereira', points: 9 },
+    team2: { id: 'grefg',    name: 'ElGrefg',  points: 9 },
+    score1: 4, score2: 2, winner: 'team1',
+  },
+} = Astro.props
+---
+
+<section class="w-full px-4 py-10 tb-fade-in">
+
+  <!-- ── HEADER ── -->
+  <div class="text-center mb-10">
+    <div class="flex justify-center gap-1.5 mb-2">
+      <span class="tb-diamond"></span>
+      <span class="tb-diamond"></span>
+      <span class="tb-diamond"></span>
+    </div>
+    <h2 class="tb-title">{title}</h2>
+    <p class="tb-subtitle">{subtitle}</p>
+  </div>
+
+  <!-- ── BRACKET SCROLL ── -->
+<div class="w-full overflow-x-auto 2xl:flex 2xl:justify-center pb-2 [-webkit-overflow-scrolling:touch]">
+  <div class="flex items-center w-max px-4">
+      <!-- ══════════════ GRUPOS IZQ (A + B) ══════════════ -->
+      <div class="flex flex-col gap-3 flex-shrink-0 self-center" style="width:190px">
+
+        <div class="flex flex-col gap-1.5">
+          <span class="tb-round-label">Grupo A</span>
+          <div class="tb-group-card">
+            {groupA.map((t, i) => (
+              <a href={`/luchador/${t.id}`} class="tb-group-row group">
+                <span class={`tb-pos ${i === 0 ? 'tb-pos--gold' : ''}`}>{i + 1}</span>
+                {t.logo && <div class="tb-avatar"><img src={t.logo} alt={t.name} loading="lazy" /></div>}
+                <span class="tb-team-name">{t.name}</span>
+                <span class="tb-pts">{t.points}</span>
+              </a>
+            ))}
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+          <span class="tb-round-label">Grupo B</span>
+          <div class="tb-group-card">
+            {groupB.map((t, i) => (
+              <a href={`/luchador/${t.id}`} class="tb-group-row group">
+                <span class={`tb-pos ${i === 0 ? 'tb-pos--gold' : ''}`}>{i + 1}</span>
+                {t.logo && <div class="tb-avatar"><img src={t.logo} alt={t.name} loading="lazy" /></div>}
+                <span class="tb-team-name">{t.name}</span>
+                <span class="tb-pts">{t.points}</span>
+              </a>
+            ))}
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ══ CONECTOR grupos izq → cuartos izq ══ -->
+      <div class="flex-shrink-0 self-stretch flex items-center" style="width:36px">
+        <svg class="w-full overflow-visible" style="height:260px" viewBox="0 0 36 200" preserveAspectRatio="none">
+          <line x1="0"  y1="38"  x2="18" y2="38"  />
+          <line x1="18" y1="38"  x2="18" y2="82"  />
+          <line x1="18" y1="82"  x2="36" y2="82"  />
+          <line x1="0"  y1="155" x2="18" y2="155" />
+          <line x1="18" y1="155" x2="18" y2="118" />
+          <line x1="18" y1="118" x2="36" y2="118" />
+        </svg>
+      </div>
+
+      <!-- ══════════════ CUARTOS IZQ ══════════════ -->
+      <div class="flex flex-col gap-3 flex-shrink-0 self-center" style="width:158px">
+        <span class="tb-round-label">Cuartos de Final</span>
+        {leftQuarterFinals.map((m) => (
+          <a href={`/luchador/${m.winner === 'team1' ? m.team1.id : m.team2.id}`} class="tb-match">
+            <div class={`tb-match-row ${m.winner === 'team1' ? 'tb-match-row--win' : ''}`}>
+              <span class="tb-team-name">{m.team1.name}</span>
+              <span class={`tb-score ${m.winner === 'team1' ? 'tb-score--win' : 'tb-score--loss'}`}>{m.score1}</span>
+            </div>
+            <div class={`tb-match-row ${m.winner === 'team2' ? 'tb-match-row--win' : ''}`}>
+              <span class="tb-team-name">{m.team2.name}</span>
+              <span class={`tb-score ${m.winner === 'team2' ? 'tb-score--win' : 'tb-score--loss'}`}>{m.score2}</span>
+            </div>
+          </a>
+        ))}
+      </div>
+
+      <!-- ══ CONECTOR cuartos izq → semi izq ══ -->
+      <div class="flex-shrink-0 self-stretch flex items-center" style="width:36px">
+        <svg class="w-full overflow-visible" style="height:260px" viewBox="0 0 36 200" preserveAspectRatio="none">
+          <line x1="0"  y1="74"  x2="18" y2="74"  />
+          <line x1="18" y1="74"  x2="18" y2="100" />
+          <line x1="0"  y1="126" x2="18" y2="126" />
+          <line x1="18" y1="126" x2="18" y2="100" />
+          <line x1="18" y1="100" x2="36" y2="100" />
+        </svg>
+      </div>
+
+      <!-- ══════════════ SEMI IZQ ══════════════ -->
+      <div class="flex flex-col gap-1.5 flex-shrink-0 self-center" style="width:162px">
+        <span class="tb-round-label">Semifinal</span>
+        <a href={`/luchador/${leftSemiFinal.winner === 'team1' ? leftSemiFinal.team1.id : leftSemiFinal.team2.id}`} class="tb-sf">
+          <div class={`tb-sf-row ${leftSemiFinal.winner === 'team1' ? 'tb-match-row--win' : ''}`}>
+            <span class="tb-team-name">{leftSemiFinal.team1.name}</span>
+            <span class={`tb-score ${leftSemiFinal.winner === 'team1' ? 'tb-score--win' : 'tb-score--loss'}`}>{leftSemiFinal.score1}</span>
+          </div>
+          <div class={`tb-sf-row ${leftSemiFinal.winner === 'team2' ? 'tb-match-row--win' : ''}`}>
+            <span class="tb-team-name">{leftSemiFinal.team2.name}</span>
+            <span class={`tb-score ${leftSemiFinal.winner === 'team2' ? 'tb-score--win' : 'tb-score--loss'}`}>{leftSemiFinal.score2}</span>
+          </div>
+        </a>
+      </div>
+
+      <!-- ══ CONECTOR semi izq → final ══ -->
+      <div class="flex-shrink-0 self-center" style="width:42px">
+        <svg class="w-full" height="2" viewBox="0 0 42 2">
+          <line x1="0" y1="1" x2="42" y2="1" />
+        </svg>
+      </div>
+
+      <!-- ══════════════ FINAL ══════════════ -->
+      <div class="flex flex-col gap-1.5 flex-shrink-0 self-center" style="width:182px">
+        <span class="tb-round-label tb-round-label--final">★ Final ★</span>
+        <a href={`/luchador/${finalMatch.winner === 'team1' ? finalMatch.team1.id : finalMatch.team2.id}`} class="tb-final">
+          <div class="tb-final-header">CAMPEÓN</div>
+          <div class={`tb-final-row ${finalMatch.winner === 'team1' ? 'tb-match-row--win' : ''}`}>
+            {finalMatch.team1.logo && (
+              <div class="tb-avatar tb-avatar--lg">
+                <img src={finalMatch.team1.logo} alt={finalMatch.team1.name} loading="lazy" />
+              </div>
+            )}
+            <span class="tb-team-name">{finalMatch.team1.name}</span>
+            <span class={`tb-score tb-score--xl ${finalMatch.winner === 'team1' ? 'tb-score--win' : 'tb-score--loss'}`}>{finalMatch.score1}</span>
+          </div>
+          <div class="tb-final-vs">VS</div>
+          <div class={`tb-final-row ${finalMatch.winner === 'team2' ? 'tb-match-row--win' : ''}`}>
+            {finalMatch.team2.logo && (
+              <div class="tb-avatar tb-avatar--lg">
+                <img src={finalMatch.team2.logo} alt={finalMatch.team2.name} loading="lazy" />
+              </div>
+            )}
+            <span class="tb-team-name">{finalMatch.team2.name}</span>
+            <span class={`tb-score tb-score--xl ${finalMatch.winner === 'team2' ? 'tb-score--win' : 'tb-score--loss'}`}>{finalMatch.score2}</span>
+          </div>
+        </a>
+        <p class="tb-final-info">📍 {finalLocation} · {finalDate}</p>
+      </div>
+
+      <!-- ══ CONECTOR final → semi der ══ -->
+      <div class="flex-shrink-0 self-center" style="width:42px">
+        <svg class="w-full" height="2" viewBox="0 0 42 2">
+          <line x1="0" y1="1" x2="42" y2="1" />
+        </svg>
+      </div>
+
+      <!-- ══════════════ SEMI DER ══════════════ -->
+      <div class="flex flex-col gap-1.5 flex-shrink-0 self-center" style="width:162px">
+        <span class="tb-round-label">Semifinal</span>
+        <a href={`/luchador/${rightSemiFinal.winner === 'team1' ? rightSemiFinal.team1.id : rightSemiFinal.team2.id}`} class="tb-sf">
+          <div class={`tb-sf-row ${rightSemiFinal.winner === 'team1' ? 'tb-match-row--win' : ''}`}>
+            <span class="tb-team-name">{rightSemiFinal.team1.name}</span>
+            <span class={`tb-score ${rightSemiFinal.winner === 'team1' ? 'tb-score--win' : 'tb-score--loss'}`}>{rightSemiFinal.score1}</span>
+          </div>
+          <div class={`tb-sf-row ${rightSemiFinal.winner === 'team2' ? 'tb-match-row--win' : ''}`}>
+            <span class="tb-team-name">{rightSemiFinal.team2.name}</span>
+            <span class={`tb-score ${rightSemiFinal.winner === 'team2' ? 'tb-score--win' : 'tb-score--loss'}`}>{rightSemiFinal.score2}</span>
+          </div>
+        </a>
+      </div>
+
+      <!-- ══ CONECTOR semi der ← cuartos der ══ -->
+      <div class="flex-shrink-0 self-stretch flex items-center" style="width:36px">
+        <svg class="w-full overflow-visible" style="height:260px" viewBox="0 0 36 200" preserveAspectRatio="none">
+          <line x1="36" y1="74"  x2="18" y2="74"  />
+          <line x1="18" y1="74"  x2="18" y2="100" />
+          <line x1="36" y1="126" x2="18" y2="126" />
+          <line x1="18" y1="126" x2="18" y2="100" />
+          <line x1="18" y1="100" x2="0"  y2="100" />
+        </svg>
+      </div>
+
+      <!-- ══════════════ CUARTOS DER ══════════════ -->
+      <div class="flex flex-col gap-3 flex-shrink-0 self-center" style="width:158px">
+        <span class="tb-round-label">Cuartos de Final</span>
+        {rightQuarterFinals.map((m) => (
+          <a href={`/luchador/${m.winner === 'team1' ? m.team1.id : m.team2.id}`} class="tb-match">
+            <div class={`tb-match-row ${m.winner === 'team1' ? 'tb-match-row--win' : ''}`}>
+              <span class="tb-team-name">{m.team1.name}</span>
+              <span class={`tb-score ${m.winner === 'team1' ? 'tb-score--win' : 'tb-score--loss'}`}>{m.score1}</span>
+            </div>
+            <div class={`tb-match-row ${m.winner === 'team2' ? 'tb-match-row--win' : ''}`}>
+              <span class="tb-team-name">{m.team2.name}</span>
+              <span class={`tb-score ${m.winner === 'team2' ? 'tb-score--win' : 'tb-score--loss'}`}>{m.score2}</span>
+            </div>
+          </a>
+        ))}
+      </div>
+
+      <!-- ══ CONECTOR cuartos der ← grupos der ══ -->
+      <div class="flex-shrink-0 self-stretch flex items-center" style="width:36px">
+        <svg class="w-full overflow-visible" style="height:260px" viewBox="0 0 36 200" preserveAspectRatio="none">
+          <line x1="36" y1="38"  x2="18" y2="38"  />
+          <line x1="18" y1="38"  x2="18" y2="82"  />
+          <line x1="18" y1="82"  x2="0"  y2="82"  />
+          <line x1="36" y1="155" x2="18" y2="155" />
+          <line x1="18" y1="155" x2="18" y2="118" />
+          <line x1="18" y1="118" x2="0"  y2="118" />
+        </svg>
+      </div>
+
+      <!-- ══════════════ GRUPOS DER (C + D) ══════════════ -->
+      <div class="flex flex-col gap-3 flex-shrink-0 self-center" style="width:190px">
+
+        <div class="flex flex-col gap-1.5">
+          <span class="tb-round-label">Grupo C</span>
+          <div class="tb-group-card">
+            {groupC.map((t, i) => (
+              <a href={`/luchador/${t.id}`} class="tb-group-row group">
+                <span class={`tb-pos ${i === 0 ? 'tb-pos--gold' : ''}`}>{i + 1}</span>
+                {t.logo && <div class="tb-avatar"><img src={t.logo} alt={t.name} loading="lazy" /></div>}
+                <span class="tb-team-name">{t.name}</span>
+                <span class="tb-pts">{t.points}</span>
+              </a>
+            ))}
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+          <span class="tb-round-label">Grupo D</span>
+          <div class="tb-group-card">
+            {groupD.map((t, i) => (
+              <a href={`/luchador/${t.id}`} class="tb-group-row group">
+                <span class={`tb-pos ${i === 0 ? 'tb-pos--gold' : ''}`}>{i + 1}</span>
+                {t.logo && <div class="tb-avatar"><img src={t.logo} alt={t.name} loading="lazy" /></div>}
+                <span class="tb-team-name">{t.name}</span>
+                <span class="tb-pts">{t.points}</span>
+              </a>
+            ))}
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+</section>
+
+<style>
+  /* ─────────────────────────────────────────
+     Todas las vars vienen de tu global.css:
+       --color-theme-gold     → #fbbf24
+       --color-theme-cream    → #fef3c7
+       --color-theme-midnight → #1e1b4b
+  ───────────────────────────────────────── */
+
+  /* ── Animación entrada ── */
+  .tb-fade-in { animation: tbFadeUp 0.5s ease-out both; }
+  @keyframes tbFadeUp {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── Header ── */
+  .tb-diamond {
+    display: inline-block;
+    width: 6px; height: 6px;
+    background: color-mix(in srgb, var(--color-theme-gold) 70%, transparent);
+    transform: rotate(45deg);
+  }
+  .tb-title {
+    font-family: var(--font-cinzel), serif;
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: color-mix(in srgb, var(--color-theme-gold) 90%, transparent);
+    line-height: 1;
+  }
+  .tb-subtitle {
+    margin-top: 6px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3em;
+    color: color-mix(in srgb, var(--color-theme-cream) 50%, transparent);
+  }
+
+  /* ── Labels de ronda ── */
+  .tb-round-label {
+    display: block;
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: color-mix(in srgb, var(--color-theme-gold) 60%, transparent);
+    text-align: center;
+  }
+  .tb-round-label--final {
+    color: var(--color-theme-gold);
+    font-size: 0.65rem;
+    letter-spacing: 0.25em;
+  }
+
+  /* ── Conectores SVG ── */
+  svg line {
+    stroke: color-mix(in srgb, var(--color-theme-gold) 40%, transparent);
+    stroke-width: 0.8px;
+  }
+
+  /* ── Tabla de grupo ── */
+  .tb-group-card {
+    border-radius: 8px;
+    border: 1px solid color-mix(in srgb, var(--color-theme-gold) 20%, transparent);
+    background: color-mix(in srgb, var(--color-theme-midnight) 60%, transparent);
+    backdrop-filter: blur(8px);
+    overflow: hidden;
+  }
+  .tb-group-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-theme-gold) 10%, transparent);
+    text-decoration: none;
+    transition: background 0.15s;
+  }
+  .tb-group-row:last-child { border-bottom: none; }
+  .tb-group-row:hover { background: color-mix(in srgb, var(--color-theme-gold) 5%, transparent); }
+
+  /* ── Partido (cuartos) ── */
+  .tb-match {
+    display: block;
+    border-radius: 8px;
+    border: 1px solid color-mix(in srgb, var(--color-theme-gold) 20%, transparent);
+    background: color-mix(in srgb, var(--color-theme-midnight) 60%, transparent);
+    backdrop-filter: blur(8px);
+    overflow: hidden;
+    text-decoration: none;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .tb-match:hover {
+    border-color: color-mix(in srgb, var(--color-theme-gold) 50%, transparent);
+    transform: scale(1.025);
+  }
+  .tb-match-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 8px;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-theme-gold) 10%, transparent);
+  }
+  .tb-match-row:last-child { border-bottom: none; }
+  .tb-match-row--win { background: rgba(34, 197, 94, 0.10); }
+
+  /* ── Semifinal ── */
+  .tb-sf {
+    display: block;
+    border-radius: 10px;
+    border: 2px solid color-mix(in srgb, var(--color-theme-gold) 30%, transparent);
+    background: linear-gradient(
+      to right,
+      color-mix(in srgb, var(--color-theme-gold) 10%, transparent),
+      color-mix(in srgb, var(--color-theme-midnight) 80%, transparent)
+    );
+    backdrop-filter: blur(8px);
+    overflow: hidden;
+    text-decoration: none;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .tb-sf:hover {
+    border-color: color-mix(in srgb, var(--color-theme-gold) 70%, transparent);
+    transform: scale(1.025);
+  }
+  .tb-sf-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 10px;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-theme-gold) 20%, transparent);
+  }
+  .tb-sf-row:last-child { border-bottom: none; }
+
+  /* ── Final ── */
+  .tb-final {
+    display: block;
+    border-radius: 12px;
+    border: 2px solid color-mix(in srgb, var(--color-theme-gold) 50%, transparent);
+    background: linear-gradient(
+      to bottom right,
+      color-mix(in srgb, var(--color-theme-gold) 20%, transparent),
+      color-mix(in srgb, var(--color-theme-midnight) 90%, transparent)
+    );
+    backdrop-filter: blur(8px);
+    overflow: hidden;
+    text-decoration: none;
+    transition: transform 0.25s, box-shadow 0.25s;
+  }
+  .tb-final:hover {
+    transform: scale(1.03);
+    box-shadow: 0 0 28px color-mix(in srgb, var(--color-theme-gold) 20%, transparent);
+  }
+  .tb-final-header {
+    padding: 5px 10px;
+    text-align: center;
+    font-size: 0.55rem;
+    font-weight: 700;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--color-theme-gold);
+    border-bottom: 1px solid color-mix(in srgb, var(--color-theme-gold) 20%, transparent);
+  }
+  .tb-final-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-theme-gold) 15%, transparent);
+  }
+  .tb-final-row:last-child { border-bottom: none; }
+  .tb-final-vs {
+    text-align: center;
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    color: color-mix(in srgb, var(--color-theme-cream) 40%, transparent);
+    padding: 3px 0;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-theme-gold) 15%, transparent);
+  }
+  .tb-final-info {
+    text-align: center;
+    margin-top: 6px;
+    font-size: 0.6rem;
+    letter-spacing: 0.08em;
+    color: color-mix(in srgb, var(--color-theme-cream) 50%, transparent);
+  }
+
+  /* ── Elementos comunes ── */
+  .tb-pos {
+    width: 14px;
+    font-size: 0.6rem;
+    font-weight: 700;
+    color: color-mix(in srgb, var(--color-theme-cream) 50%, transparent);
+    flex-shrink: 0;
+    text-align: center;
+  }
+  .tb-pos--gold { color: var(--color-theme-gold); }
+
+  .tb-avatar {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
+    border: 1px solid color-mix(in srgb, var(--color-theme-gold) 30%, transparent);
+    background: var(--color-theme-midnight);
+  }
+  .tb-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .tb-avatar--lg {
+    width: 32px; height: 32px;
+    border-color: color-mix(in srgb, var(--color-theme-gold) 50%, transparent);
+  }
+
+  .tb-team-name {
+    flex: 1;
+    font-family: var(--font-cinzel), serif;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-theme-cream);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .tb-score {
+    font-family: monospace;
+    font-size: 0.75rem;
+    font-weight: 700;
+    min-width: 16px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .tb-score--win  { color: #22c55e; }
+  .tb-score--loss { color: color-mix(in srgb, var(--color-theme-cream) 50%, transparent); }
+  .tb-score--xl   { font-size: 1rem; font-weight: 900; }
+
+  .tb-pts {
+    font-family: monospace;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--color-theme-gold);
+    min-width: 18px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+</style>

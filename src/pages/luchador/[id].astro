@@ -1,0 +1,242 @@
+---
+import { FIGHTERS } from '@/consts/fighters'
+import { fixedTitle } from '@/consts/pageTitles'
+
+import Layout from '@/layouts/Layout.astro'
+import BoxerProfileCard from '@/components/BoxerProfileCard.astro'
+import TournamentCards from '@/components/TournamentCards.astro'
+
+const { id } = Astro.params
+
+const fighter = FIGHTERS.find((fighter) => fighter.id === id)
+
+if (!fighter) {
+  return Astro.redirect('/404')
+}
+
+const birthDate = fighter.birthDate.toLocaleDateString('es-ES', {
+  year: 'numeric',
+  month: 'short',
+  day: 'numeric',
+})
+
+// ================= DATOS SIMULADOS DE TORNEOS =================
+const simulatedTournaments = [
+  {
+    id: 'champions-2025',
+    name: 'Champions League',
+    year: '2025',
+    location: 'Sevilla, España',
+    participants: 32,
+    position: 1,
+    prize: '1.000.000€',
+    record: '7-1-0'
+  },
+  {
+    id: 'liga-2024',
+    name: 'Liga Velada',
+    year: '2024',
+    location: 'Madrid, España',
+    participants: 16,
+    position: 2,
+    prize: '500.000€',
+    record: '6-2-1'
+  },
+  {
+    id: 'copa-2024',
+    name: 'Copa del Rey',
+    year: '2024',
+    location: 'Barcelona, España',
+    participants: 64,
+    position: 3,
+    prize: '200.000€',
+    record: '5-1-1'
+  },
+  {
+    id: 'euro-2023',
+    name: 'Eurocopa de Streamers',
+    year: '2023',
+    location: 'París, Francia',
+    participants: 24,
+    position: 4,
+    prize: '100.000€',
+    record: '4-2-2'
+  },
+  {
+    id: 'mundial-2023',
+    name: 'Mundial de Creadores',
+    year: '2023',
+    location: 'Doha, Qatar',
+    participants: 32,
+    position: 5,
+    prize: '75.000€',
+    record: '3-1-2'
+  },
+  {
+    id: 'supercopa-2025',
+    name: 'Supercopa de España',
+    year: '2025',
+    location: 'Riad, Arabia Saudí',
+    participants: 4,
+    position: 1,
+    prize: '300.000€',
+    record: '2-0-0'
+  },
+  {
+    id: 'iberoamericana-2024',
+    name: 'Copa Iberoamericana',
+    year: '2024',
+    location: 'Buenos Aires, Argentina',
+    participants: 16,
+    position: 1,
+    prize: '150.000€',
+    record: '5-1-0'
+  },
+  {
+    id: 'intercontinental-2023',
+    name: 'Intercontinental Cup',
+    year: '2023',
+    location: 'Tokio, Japón',
+    participants: 8,
+    position: 3,
+    prize: '80.000€',
+    record: '3-1-1'
+  },
+  {
+    id: 'pretemporada-2026',
+    name: 'Pretemporada Velada',
+    year: '2026',
+    location: 'Miami, EE.UU',
+    participants: 12,
+    position: 2,
+    prize: '50.000€',
+    record: '4-1-1'
+  }
+]
+
+// Usa torneos reales o simulados
+const tournaments = fighter.tournaments ?? simulatedTournaments
+---
+
+<Layout title={`${fighter.name} | ${fixedTitle}`}>
+  <section class="relative flex lg:min-h-screen w-full flex-col-reverse lg:flex-row">
+
+
+
+    <!-- Contenido -->
+    <div class="ssss">
+
+      <div
+        class="relative z-10 flex w-full flex-col items-center justify-center pl-0 pr-0 lg:pr-6 pt-24 lg:flex-row lg:items-start lg:pt-32"
+      >
+
+        <!-- Imagen -->
+        <div
+          class="relative mt-8 px-6 lg:px-2 flex h-[60vh] w-full lg:min-w-sm items-center justify-center lg:mt-0 lg:h-[80vh] lg:w-1/2"
+        >
+          <img
+            src={`/images/fighters/big/jugador_mistery.webp`}
+            alt={`Retrato de ${fighter.name}`}
+            class="animate-fade-in mask-image-fade-bottom h-full w-full object-contain transition-all duration-700 hover:scale-105"
+            transition:name={`image-${id}`}
+          />
+        </div>
+
+        <!-- Perfil -->
+        <div
+          class="w-[95%] md:w-full lg:w-1/2
+          px-1
+          sm:px-4
+          md:px-8
+          lg:px-0
+          mx-auto
+          flex flex-col items-center justify-center
+          text-white"
+        >
+          <BoxerProfileCard
+            fighter={fighter}
+            birthDate={birthDate}
+          />
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- NUEVO COMPONENTE DE TORNEOS -->
+  <TournamentCards
+    fighterId={fighter.id}
+    tournaments={tournaments}
+  />
+
+
+
+
+</Layout>
+
+<style>
+  .ssss {
+    width: 100%;
+    display: flex;
+  }
+
+  @media (max-width: 1024px) {
+    .ssss {
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+  }
+
+  .mask-image-fade-bottom {
+    mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
+  }
+
+  .boxer-detail-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 1.3rem;
+    border-radius: 9999px;
+    font-family: 'Cinzel', var(--font-fallback);
+    font-size: 0.6rem;
+    font-weight: 800;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition:
+      transform 250ms ease,
+      background-color 250ms ease,
+      color 250ms ease,
+      box-shadow 250ms ease;
+  }
+
+  @media (min-width: 640px) {
+    .boxer-detail-cta {
+      font-size: 0.5rem;
+      padding: 0.8rem 1.5rem;
+    }
+  }
+
+  .boxer-detail-cta-ghost {
+    background: transparent;
+    color: color-mix(in srgb, var(--color-theme-cream) 80%, transparent);
+
+    box-shadow:
+      inset 0 0 0 1px
+      color-mix(in srgb, var(--color-theme-gold) 35%, transparent);
+  }
+
+  .boxer-detail-cta-ghost:hover,
+  .boxer-detail-cta-ghost:focus-visible {
+    color: var(--color-theme-cream);
+
+    box-shadow:
+      inset 0 0 0 1px
+      color-mix(in srgb, var(--color-theme-gold) 70%, transparent);
+
+    transform: translateY(-1px);
+    outline: none;
+  }
+</style>

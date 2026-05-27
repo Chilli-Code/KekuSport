@@ -1,0 +1,450 @@
+---
+import { FIGHTERS } from '@/consts/fighters'
+import Layout from '@/layouts/Layout.astro'
+
+const totalBoxers = FIGHTERS.length
+
+const countryNames: Record<string, string> = {
+  es: 'España', mx: 'México', ar: 'Argentina', co: 'Colombia', pe: 'Perú', cl: 'Chile', us: 'EE.UU'
+}
+const countryFlags: Record<string, string> = {
+  es: '🇪🇸', mx: '🇲🇽', ar: '🇦🇷', co: '🇨🇴', pe: '🇵🇪', cl: '🇨🇱', us: '🇺🇸'
+}
+
+const boxerCards = FIGHTERS.map((fighter) => ({
+  id: fighter.id,
+  name: fighter.name,
+  country: fighter.country,
+  countryName: countryNames[fighter.country] || fighter.country,
+  flag: countryFlags[fighter.country] || '🏳️',
+  gender: fighter.gender === 'masculino' ? 'M' : 'F',
+}))
+---
+<Layout >
+
+  <div class="players-root">
+  
+    <!-- Fondo espacial -->
+    <div class="players-bg" aria-hidden="true">
+      <div class="players-bg-glow players-bg-glow--green"></div>
+      <div class="players-bg-glow players-bg-glow--purple"></div>
+      <div class="players-stars"></div>
+      <!-- líneas de campo -->
+      <div class="players-field-line players-field-line--left"></div>
+      <div class="players-field-line players-field-line--right"></div>
+      <div class="players-field-arc"></div>
+    </div>
+  
+    <div class="players-content">
+  
+      <!-- HEADER -->
+      <header class="players-header">
+        <div class="players-header-ornament">
+          <span class="players-orn-line"></span>
+          <span class="players-orn-diamond players-orn-diamond--gold"></span>
+          <span class="players-orn-diamond players-orn-diamond--sm players-orn-diamond--purple"></span>
+          <span class="players-orn-diamond players-orn-diamond--gold"></span>
+          <span class="players-orn-line"></span>
+        </div>
+        <h1 class="players-h1">JUGADORES</h1>
+        <p class="players-desc">LOS {totalBoxers} GUERREROS DEL TORNEO PES</p>
+      </header>
+  
+      <!-- GRID -->
+      <div class="players-grid">
+        {boxerCards.map((fighter, i) => (
+          <a
+            href={`/luchador/${fighter.id}`}
+            class="pcard"
+            style={`animation-delay:${i * 0.04}s`}
+          >
+            <span class="pcard-corner pcard-corner--tl"></span>
+            <span class="pcard-corner pcard-corner--tr"></span>
+            <span class="pcard-corner pcard-corner--bl"></span>
+            <span class="pcard-corner pcard-corner--br"></span>
+  
+
+            <div class="pcard-img-wrap">
+              <img
+                src={`/images/fighters/cards/${fighter.id}.webp`}
+                alt={fighter.name}
+                class="pcard-img"
+                loading="lazy"
+              />
+   
+              <div class="pcard-overlay"></div>
+              <!-- rayo lateral izquierdo -->
+              <div class="pcard-lightning pcard-lightning--l"></div>
+              <div class="pcard-lightning pcard-lightning--r"></div>
+            </div>
+  
+
+            <div class="pcard-glow" aria-hidden="true"></div>
+  
+
+            <div class="pcard-info">
+              <div class="pcard-divider"></div>
+              <h2 class="pcard-name">{fighter.name}</h2>
+              <div class="pcard-country">
+                <span class="pcard-flag">{fighter.flag}</span>
+                <span class="pcard-country-name">{fighter.countryName}</span>
+              </div>
+            </div>
+          </a>
+        ))}
+      </div>
+  
+    </div>
+  </div>
+</Layout>
+
+<style>
+  /* ══════════════════════════════════════════
+     RAÍZ Y FONDO
+  ══════════════════════════════════════════ */
+  .players-root {
+    position: relative;
+    min-height: 100vh;
+    background: radial-gradient(ellipse at 50% -10%, #0b2a1a 0%, #050d08 55%, #03080e 100%);
+    padding: 3rem 1.5rem 5rem;
+    overflow: hidden;
+    isolation: isolate;
+  }
+
+  /* Glows de fondo */
+  .players-bg { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
+
+  .players-bg-glow {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.35;
+  }
+  .players-bg-glow--green {
+    width: 60vw; height: 50vh;
+    top: -10%; left: 20%;
+    background: radial-gradient(circle, #00ff88 0%, transparent 70%);
+    animation: glowPulse 8s ease-in-out infinite alternate;
+  }
+  .players-bg-glow--purple {
+    width: 40vw; height: 40vh;
+    bottom: 10%; right: -5%;
+    background: radial-gradient(circle, #7c3aed 0%, transparent 70%);
+    opacity: 0.25;
+    animation: glowPulse 10s ease-in-out infinite alternate-reverse;
+  }
+  @keyframes glowPulse {
+    0%   { opacity: 0.2; transform: scale(1); }
+    100% { opacity: 0.45; transform: scale(1.1); }
+  }
+
+  /* Estrellas */
+  .players-stars {
+    position: absolute; inset: 0;
+    background-image:
+      radial-gradient(1.5px 1.5px at 10% 20%, #fff, transparent),
+      radial-gradient(1px 1px at 30% 65%, #aaffcc, transparent),
+      radial-gradient(2px 2px at 55% 15%, #a855f7, transparent),
+      radial-gradient(1px 1px at 70% 80%, #fff, transparent),
+      radial-gradient(2px 2px at 85% 40%, #00ff88, transparent),
+      radial-gradient(1px 1px at 20% 90%, #c084fc, transparent),
+      radial-gradient(1.5px 1.5px at 60% 55%, #fff, transparent),
+      radial-gradient(1px 1px at 45% 35%, #aaffcc, transparent),
+      radial-gradient(2px 2px at 92% 10%, #fff, transparent);
+    background-size: 300px 300px;
+    background-repeat: repeat;
+    opacity: 0.55;
+    animation: starsTwinkle 7s ease-in-out infinite alternate;
+  }
+  @keyframes starsTwinkle {
+    0%   { opacity: 0.3; }
+    100% { opacity: 0.7; }
+  }
+
+  /* Líneas de campo decorativas */
+  .players-field-line {
+    position: absolute;
+    bottom: 0;
+    width: 1px;
+    height: 35%;
+    background: linear-gradient(to top, rgba(0,255,136,0.18), transparent);
+  }
+  .players-field-line--left  { left: 15%; }
+  .players-field-line--right { right: 15%; }
+
+  .players-field-arc {
+    position: absolute;
+    bottom: -8vw;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 50vw;
+    height: 16vw;
+    border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+    border: 1px solid rgba(0,255,136,0.12);
+    pointer-events: none;
+  }
+
+  /* ══════════════════════════════════════════
+     CONTENIDO
+  ══════════════════════════════════════════ */
+  .players-content {
+    position: relative;
+    z-index: 10;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  /* ── HEADER ── */
+  .players-header {
+    text-align: center;
+    margin-bottom: 3.5rem;
+  }
+
+  .players-header-ornament {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    margin-bottom: 1.25rem;
+  }
+  .players-orn-line {
+    display: block;
+    width: 6rem;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--color-theme-gold), transparent);
+  }
+  .players-orn-diamond {
+    display: block;
+    transform: rotate(45deg);
+  }
+  .players-orn-diamond--gold {
+    width: 8px; height: 8px;
+    background: var(--color-theme-gold);
+    box-shadow: 0 0 10px var(--color-theme-gold);
+  }
+  .players-orn-diamond--sm { width: 5px; height: 5px; }
+  .players-orn-diamond--purple {
+    background: #a855f7;
+    box-shadow: 0 0 8px #a855f7;
+  }
+
+  .players-h1 {
+    font-family: var(--font-cinzel), serif;
+    font-size: clamp(2.5rem, 7vw, 5rem);
+    font-weight: 900;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    /* gradiente texto igual que tu web */
+    background: linear-gradient(135deg, #fef3c7 0%, var(--color-theme-gold) 40%, #a855f7 75%, #c084fc 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin-bottom: 0.6rem;
+    filter: drop-shadow(0 0 20px rgba(0,255,136,0.2));
+  }
+
+  .players-desc {
+    font-family: var(--font-cinzel), serif;
+    font-size: 0.65rem;
+    letter-spacing: 0.3em;
+    color: color-mix(in srgb, var(--color-theme-cream) 55%, transparent);
+    text-transform: uppercase;
+  }
+
+  /* ── GRID ── */
+  .players-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+  @media (min-width: 480px) {
+    .players-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+  @media (min-width: 768px) {
+    .players-grid { grid-template-columns: repeat(4, 1fr); gap: 1.25rem; }
+  }
+  @media (min-width: 1024px) {
+    .players-grid { grid-template-columns: repeat(5, 1fr); gap: 1.5rem; }
+  }
+  @media (min-width: 1280px) {
+    .players-grid { grid-template-columns: repeat(6, 1fr); }
+  }
+
+  /* ══════════════════════════════════════════
+     CARD
+  ══════════════════════════════════════════ */
+  .pcard {
+    position: relative;
+    display: block;
+    aspect-ratio: 3 / 4;
+    text-decoration: none;
+    border-radius: 12px;
+    overflow: hidden;
+    /* entrada escalonada */
+    opacity: 0;
+    animation: cardIn 0.5s ease-out forwards;
+    cursor: pointer;
+  }
+  @keyframes cardIn {
+    from { opacity: 0; transform: translateY(18px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .pcard:hover { transform: translateY(-6px) scale(1.02); }
+  .pcard { transition: transform 0.3s cubic-bezier(0.2,0.9,0.4,1.1); }
+
+  /* Borde base + hover verde eléctrico */
+  .pcard::before {
+    content: '';
+    position: absolute; inset: 0;
+    border-radius: 12px;
+    border: 1px solid color-mix(in srgb, var(--color-theme-gold) 25%, transparent);
+    transition: border-color 0.3s, box-shadow 0.3s;
+    z-index: 8;
+    pointer-events: none;
+  }
+  .pcard:hover::before {
+    border-color: #00ff88;
+    box-shadow:
+      0 0 0 1px #00ff88,
+      inset 0 0 20px rgba(0,255,136,0.08),
+      0 0 30px rgba(0,255,136,0.25);
+  }
+
+  /* ── Esquinas tipo HUD ── */
+  .pcard-corner {
+    position: absolute;
+    width: 14px; height: 14px;
+    border-color: color-mix(in srgb, var(--color-theme-gold) 50%, transparent);
+    border-style: solid;
+    transition: width 0.3s, height 0.3s, border-color 0.3s, box-shadow 0.3s;
+    z-index: 9;
+    pointer-events: none;
+  }
+  .pcard-corner--tl { top: 8px; left: 8px;  border-width: 1.5px 0 0 1.5px; }
+  .pcard-corner--tr { top: 8px; right: 8px;  border-width: 1.5px 1.5px 0 0; }
+  .pcard-corner--bl { bottom: 8px; left: 8px;  border-width: 0 0 1.5px 1.5px; }
+  .pcard-corner--br { bottom: 8px; right: 8px;  border-width: 0 1.5px 1.5px 0; }
+
+  .pcard:hover .pcard-corner {
+    width: 20px; height: 20px;
+    border-color: #00ff88;
+    box-shadow: 0 0 10px #00ff88;
+  }
+
+  /* ── Imagen ── */
+  .pcard-img-wrap {
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, #061a0e 0%, #030d07 100%);
+  }
+  .pcard-img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    object-position: top center;
+    filter: saturate(0.88) brightness(0.92);
+    transition: transform 0.45s ease, filter 0.45s ease;
+    display: block;
+  }
+  .pcard:hover .pcard-img {
+    transform: scale(1.07);
+    filter: saturate(1.05) brightness(1.0);
+  }
+
+  /* Overlay degradado inferior */
+  .pcard-overlay {
+    position: absolute; inset: 0;
+    background:
+      linear-gradient(180deg,
+        transparent 30%,
+        rgba(0,10,5,0.55) 65%,
+        rgba(0,8,4,0.97) 100%
+      );
+    pointer-events: none;
+  }
+
+  /* Rayos eléctricos laterales (sutil) */
+  .pcard-lightning {
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 3px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+    z-index: 3;
+  }
+  .pcard-lightning--l {
+    left: 0;
+    background: linear-gradient(180deg, transparent, rgba(0,255,136,0.6), transparent);
+  }
+  .pcard-lightning--r {
+    right: 0;
+    background: linear-gradient(180deg, transparent, rgba(124,58,237,0.6), transparent);
+  }
+  .pcard:hover .pcard-lightning { opacity: 1; }
+
+  /* Glow hover interior */
+  .pcard-glow {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 50% 20%, rgba(0,255,136,0.18) 0%, transparent 65%);
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    pointer-events: none;
+    z-index: 4;
+  }
+  .pcard:hover .pcard-glow { opacity: 1; }
+
+  /* ── Info ── */
+  .pcard-info {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    padding: 0.75rem 0.75rem 1rem;
+    text-align: center;
+    z-index: 10;
+  }
+
+  .pcard-divider {
+    width: 1.75rem;
+    height: 1px;
+    background: rgba(0,255,136,0.5);
+    margin: 0 auto 0.45rem;
+    box-shadow: 0 0 6px rgba(0,255,136,0.4);
+    transition: width 0.3s, background 0.3s;
+  }
+  .pcard:hover .pcard-divider {
+    width: 3rem;
+    background: #00ff88;
+    box-shadow: 0 0 10px #00ff88;
+  }
+
+  .pcard-name {
+    font-family: var(--font-cinzel), serif;
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--color-theme-cream);
+    text-transform: uppercase;
+    margin-bottom: 0.25rem;
+    text-shadow: 0 0 12px rgba(0,0,0,0.9), 0 0 8px rgba(0,255,136,0.3);
+    transition: color 0.3s;
+  }
+  .pcard:hover .pcard-name { color: #fff; }
+
+  @media (min-width: 768px) {
+    .pcard-name { font-size: 0.95rem; }
+  }
+
+  .pcard-country {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    font-family: var(--font-cinzel), serif;
+    font-size: 0.58rem;
+    letter-spacing: 0.14em;
+    color: color-mix(in srgb, var(--color-theme-cream) 60%, transparent);
+    text-transform: uppercase;
+  }
+  .pcard-flag { font-size: 0.75rem; }
+  .pcard-country-name { }
+
+</style>

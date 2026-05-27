@@ -1,0 +1,36 @@
+---
+import { SPONSORS } from "../consts/sponsors";
+
+const firstRow = SPONSORS.slice(0, 5);
+const secondRow = SPONSORS.slice(5);
+---
+
+<section id="sponsors" class="mx-auto max-w-xl py-36">
+  <h2 class="mb-4 text-2xl font-light text-center text-dark-magenta">Patrocinadores del evento</h2>
+  <div class="grid grid-cols-5 gap-4">
+    {
+      firstRow.map(({ url, image, name }) => (
+        <a
+          href={url}
+          target="_blank"
+          class="size-14 hover:scale-125 transition text-[#2a1f26] flex justify-center items-center"
+        >
+          {!image.logo ? <p>{name}</p> : <image.logo class="h-14 w-auto" />}
+        </a>
+      ))
+    }
+  </div>
+  <div class="grid grid-cols-6 gap-4">
+    {
+      secondRow.map(({ url, image, name }) => (
+        <a
+          href={url}
+          target="_blank"
+          class="size-14 hover:scale-125 transition text-[#2a1f26] flex justify-center items-center"
+        >
+          {!image.logo ? <p>{name}</p> : <image.logo class="h-14 w-auto" />}
+        </a>
+      ))
+    }
+  </div>
+</section>

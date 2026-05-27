@@ -1,0 +1,183 @@
+@import "tailwindcss";
+@plugin "@midudev/tailwind-animations";
+
+@theme {
+  --color-dark-magenta: #2a1f26;
+  --font-fallback:
+    'Adjusted Arial Fallback', system-ui, -apple-system, blinkmacsystemfont, 'Segoe UI',
+    'Noto Sans', helvetica, arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+  --font-primary: 'Anisette';
+  --font-cinzel: 'Cinzel';
+  --font-fantasy: 'Fantasy Magist';
+
+  --color-theme-french-mauve: oklch(67.65% 0.1539 329.18);
+  --color-theme-raisin-black: oklch(25.53% 0.0209 340.25);
+  --color-theme-tickle-me-pink: oklch(75.65% 0.143 355.9);
+  --color-theme-seashell: oklch(95.25% 0.0147 33.07);
+  --color-theme-turquoise: oklch(82.97% 0.148864 181.7442);
+
+  --morado-medio: #9b59b6; /* Morado intermedio */
+  --morado-claro: #bb8fce; /* Más claro */
+  --morado-azulado: #8e44ad; /* Más oscurito */
+  --color-velada-cream: #f4e4c9;
+  --color-theme-cream: var(--color-velada-cream);
+      --color-theme-gold: #fbbf24;
+    --color-theme-cream: #fef3c7;
+    --color-theme-midnight: #1e1b4b;
+}
+
+
+
+@font-face {
+  font-family: 'Adjusted Arial Fallback';
+  src: local(Arial);
+  size-adjust: 112%;
+  ascent-override: 74%;
+  descent-override: normal;
+  line-gap-override: normal;
+}
+
+@font-face {
+  font-family: 'Cinzel';
+  src: url('/fonts/cinzel-regular.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Cinzel';
+  src: url('/fonts/cinzel-medium.woff2') format('woff2');
+  font-weight: 500;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Cinzel';
+  src: url('/fonts/cinzel-semibold.woff2') format('woff2');
+  font-weight: 600;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Cinzel';
+  src: url('/fonts/cinzel-bold.woff2') format('woff2');
+  font-weight: 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Cinzel';
+  src: url('/fonts/cinzel-extrabold.woff2') format('woff2');
+  font-weight: 800;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Cinzel';
+  src: url('/fonts/cinzel-black.woff2') format('woff2');
+  font-weight: 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Fantasy Magist';
+  src: url('/fonts/fantasy-magist.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Fantasy Magist';
+  src: url('/fonts/fantasy-magist-italic.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+html {
+  font-family: 'Cinzel', var(--font-fallback);
+  text-transform: uppercase;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+@utility mask-fade-bottom{
+  mask-image: linear-gradient(to bottom, black 80%, transparent 100%);
+}
+
+
+
+/* ================= BARRAS DE SCROLL PERSONALIZADAS ================= */
+
+/* Webkit Browsers (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-theme-midnight);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    135deg,
+    var(--color-theme-gold) 0%,
+    #fef3c7 100%
+  );
+  border-radius: 10px;
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  transition: all 0.3s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(
+    135deg,
+    #fef3c7 0%,
+    var(--color-theme-gold) 100%
+  );
+  border: 1px solid var(--color-theme-gold);
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: #fef3c7;
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-theme-gold) var(--color-theme-midnight);
+}
+
+/* Scroll horizontal para tablas y brackets */
+.overflow-x-auto::-webkit-scrollbar {
+  height: 6px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-track {
+  background: var(--color-theme-midnight);
+  border-radius: 10px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    90deg,
+    var(--color-theme-gold) 0%,
+    #fef3c7 50%,
+    var(--color-theme-gold) 100%
+  );
+  border-radius: 10px;
+}
+
+/* Ocultar scroll pero mantener funcionalidad */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

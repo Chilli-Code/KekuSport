@@ -1,0 +1,252 @@
+---
+import Layout from "../../layouts/Layout.astro";
+---
+
+<Layout>
+  <section class="relative flex min-h-screen w-full items-center justify-center overflow-hidden">
+    <div class="mask-fade-bottom absolute inset-0 w-full bg-[url('/images/herp.jpeg')] bg-cover bg-center"></div>
+    <div class="relative z-10 mx-auto flex max-w-5xl flex-col items-center px-4 py-32 text-center">
+      <span class="animate-fade-in mb-4 inline-block rounded-full border border-[var(--color-theme-gold)] px-4 py-1 text-xs tracking-[0.2em] text-[var(--color-theme-gold)]">
+        PLATAFORMA DEPORTIVA
+      </span>
+      <h1 class="animate-fade-in animate-delay-200 text-4xl font-bold leading-tight text-white md:text-7xl">
+        CREA TU<br />
+        <span class="text-[var(--color-theme-gold)]">TORNEO</span>
+      </h1>
+      <p class="animate-fade-in animate-delay-400 mt-6 max-w-2xl text-sm leading-relaxed text-white/60 md:text-base">
+        Organiza torneos de fútbol <strong class="text-white">presenciales</strong> y 
+        <strong class="text-white">virtuales</strong>. Gestiona equipos, sigue estadísticas 
+        en vivo y activa apuestas entre participantes.
+      </p>
+      <div class="animate-fade-in animate-delay-600 mt-10 flex flex-wrap justify-center gap-4">
+        <a
+          href="#crear"
+          class="inline-block rounded-lg bg-[var(--color-theme-gold)] px-8 py-3 text-sm font-bold tracking-wider text-[var(--color-theme-midnight)] transition duration-300 hover:scale-105 hover:brightness-110"
+        >
+          CREAR TORNEO GRATIS
+        </a>
+        <a
+          href="#como-funciona"
+          class="inline-block rounded-lg border border-white/20 px-8 py-3 text-sm font-bold tracking-wider text-white transition duration-300 hover:border-[var(--color-theme-gold)] hover:text-[var(--color-theme-gold)]"
+        >
+          CÓMO FUNCIONA
+        </a>
+      </div>
+      <div class="animate-fade-in animate-delay-800 mt-16 grid grid-cols-2 gap-6 md:grid-cols-4">
+        <div class="text-center">
+          <p class="text-3xl font-bold text-[var(--color-theme-gold)]">10+</p>
+          <p class="mt-1 text-xs text-white/40">Modalidades</p>
+        </div>
+        <div class="text-center">
+          <p class="text-3xl font-bold text-[var(--color-theme-gold)]">500+</p>
+          <p class="mt-1 text-xs text-white/40">Torneos creados</p>
+        </div>
+        <div class="text-center">
+          <p class="text-3xl font-bold text-[var(--color-theme-gold)]">12K+</p>
+          <p class="mt-1 text-xs text-white/40">Jugadores</p>
+        </div>
+        <div class="text-center">
+          <p class="text-3xl font-bold text-[var(--color-theme-gold)]">98%</p>
+          <p class="mt-1 text-xs text-white/40">Satisfacción</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="crear" class="relative px-4 py-24">
+    <div class="mx-auto max-w-6xl">
+      <div class="mb-16 text-center">
+        <span class="mb-2 inline-block text-xs tracking-[0.2em] text-[var(--color-theme-gold)]">MODALIDADES</span>
+        <h2 class="text-3xl font-bold text-white md:text-5xl">PRESENCIAL O VIRTUAL</h2>
+        <p class="mx-auto mt-4 max-w-2xl text-sm text-white/40">
+          Elige el formato que mejor se adapte a tu liga. Ambas modalidades incluyen 
+          estadísticas, apuestas y soporte completo.
+        </p>
+      </div>
+      <div class="grid gap-8 md:grid-cols-2">
+        <div class="group rounded-2xl border border-white/10 bg-white/[0.03] p-8 transition duration-300 hover:border-[var(--color-theme-gold)]/40 hover:bg-white/[0.06]">
+          <div class="mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-[var(--color-theme-gold)]/10 text-2xl">🏟️</div>
+          <h3 class="mb-3 text-xl font-bold text-white">Torneo Presencial</h3>
+          <ul class="space-y-2 text-sm text-white/50">
+            <li class="flex items-start gap-2">
+              <span class="mt-0.5 text-[var(--color-theme-gold)]">✓</span>
+              Gestión de sedes y horarios
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="mt-0.5 text-[var(--color-theme-gold)]">✓</span>
+              Árbitros y reglamento oficial
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="mt-0.5 text-[var(--color-theme-gold)]">✓</span>
+              Estadísticas en tiempo real
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="mt-0.5 text-[var(--color-theme-gold)]">✓</span>
+              Apuestas entre equipos presentes
+            </li>
+          </ul>
+        </div>
+        <div class="group rounded-2xl border border-white/10 bg-white/[0.03] p-8 transition duration-300 hover:border-[var(--color-theme-gold)]/40 hover:bg-white/[0.06]">
+          <div class="mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-[var(--color-theme-gold)]/10 text-2xl">🖥️</div>
+          <h3 class="mb-3 text-xl font-bold text-white">Torneo Virtual</h3>
+          <ul class="space-y-2 text-sm text-white/50">
+            <li class="flex items-start gap-2">
+              <span class="mt-0.5 text-[var(--color-theme-gold)]">✓</span>
+              Partidos online multiplataforma
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="mt-0.5 text-[var(--color-theme-gold)]">✓</span>
+              Salas privadas y públicas
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="mt-0.5 text-[var(--color-theme-gold)]">✓</span>
+              Streaming y retransmisión
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="mt-0.5 text-[var(--color-theme-gold)]">✓</span>
+              Sistema de fair play
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="apuestas" class="relative px-4 py-24">
+    <div class="mx-auto max-w-6xl">
+      <div class="mb-16 text-center">
+        <span class="mb-2 inline-block text-xs tracking-[0.2em] text-[var(--color-theme-gold)]">APUESTAS</span>
+        <h2 class="text-3xl font-bold text-white md:text-5xl">APUESTA ENTRE EQUIPOS</h2>
+        <p class="mx-auto mt-4 max-w-2xl text-sm text-white/40">
+          Activa el módulo de apuestas para que los equipos compitan también fuera de la cancha.
+        </p>
+      </div>
+      <div class="grid gap-6 md:grid-cols-3">
+        <div class="rounded-xl border border-white/[0.06] bg-white/[0.02] p-6 text-center">
+          <div class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/10 text-xl">💰</div>
+          <h4 class="mb-2 font-bold text-white">Apuesta Directa</h4>
+          <p class="text-xs text-white/40">Los equipos apuestan directamente entre sí. El ganador se lleva el pozo.</p>
+        </div>
+        <div class="rounded-xl border border-white/[0.06] bg-white/[0.02] p-6 text-center">
+          <div class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/10 text-xl">📊</div>
+          <h4 class="mb-2 font-bold text-white">Cuotas en Vivo</h4>
+          <p class="text-xs text-white/40">Las cuotas se actualizan en tiempo real según el rendimiento de cada equipo.</p>
+        </div>
+        <div class="rounded-xl border border-white/[0.06] bg-white/[0.02] p-6 text-center">
+          <div class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/10 text-xl">🏆</div>
+          <h4 class="mb-2 font-bold text-white">Torneo Entero</h4>
+          <p class="text-xs text-white/40">Apuesta por el campeón del torneo desde el día uno y acumula ganancias.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="relative px-4 py-24">
+    <div class="mx-auto max-w-6xl">
+      <div class="mb-16 text-center">
+        <span class="mb-2 inline-block text-xs tracking-[0.2em] text-[var(--color-theme-gold)]">ESTADÍSTICAS</span>
+        <h2 class="text-3xl font-bold text-white md:text-5xl">DATOS EN TIEMPO REAL</h2>
+        <p class="mx-auto mt-4 max-w-2xl text-sm text-white/40">
+          Cada partido, cada jugador, cada torneo. Toda la información que necesitas en un solo lugar.
+        </p>
+      </div>
+      <div class="grid gap-8 md:grid-cols-3">
+        <div class="group rounded-2xl border border-white/10 bg-white/[0.03] p-8 transition duration-300 hover:border-[var(--color-theme-gold)]/40">
+          <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-purple-500/10 text-lg">⚽</div>
+          <h3 class="mb-4 text-lg font-bold text-white">Partidos</h3>
+          <ul class="space-y-3 text-sm text-white/50">
+            <li class="flex justify-between"><span>Posesión</span><span class="text-white">64% - 36%</span></li>
+            <li class="flex justify-between"><span>Remates</span><span class="text-white">12 - 5</span></li>
+            <li class="flex justify-between"><span>Pases completados</span><span class="text-white">342 - 198</span></li>
+            <li class="flex justify-between"><span>Faltas</span><span class="text-white">8 - 14</span></li>
+            <li class="flex justify-between"><span>Tarjetas</span><span class="text-white">1 - 3</span></li>
+          </ul>
+        </div>
+        <div class="group rounded-2xl border border-white/10 bg-white/[0.03] p-8 transition duration-300 hover:border-[var(--color-theme-gold)]/40">
+          <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-emerald-500/10 text-lg">👤</div>
+          <h3 class="mb-4 text-lg font-bold text-white">Jugadores</h3>
+          <ul class="space-y-3 text-sm text-white/50">
+            <li class="flex justify-between"><span>Goles</span><span class="text-white">7</span></li>
+            <li class="flex justify-between"><span>Asistencias</span><span class="text-white">4</span></li>
+            <li class="flex justify-between"><span>Minutos jugados</span><span class="text-white">540'</span></li>
+            <li class="flex justify-between"><span>Efectividad</span><span class="text-white">83%</span></li>
+            <li class="flex justify-between"><span>Valoración</span><span class="text-white">8.4</span></li>
+          </ul>
+        </div>
+        <div class="group rounded-2xl border border-white/10 bg-white/[0.03] p-8 transition duration-300 hover:border-[var(--color-theme-gold)]/40">
+          <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-amber-500/10 text-lg">🏆</div>
+          <h3 class="mb-4 text-lg font-bold text-white">Torneo</h3>
+          <ul class="space-y-3 text-sm text-white/50">
+            <li class="flex justify-between"><span>Equipos</span><span class="text-white">16</span></li>
+            <li class="flex justify-between"><span>Partidos jugados</span><span class="text-white">48</span></li>
+            <li class="flex justify-between"><span>Goles totales</span><span class="text-white">142</span></li>
+            <li class="flex justify-between"><span>Media goles</span><span class="text-white">2.96</span></li>
+            <li class="flex justify-between"><span>Jornada actual</span><span class="text-white">6 / 14</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="como-funciona" class="relative px-4 py-24">
+    <div class="mx-auto max-w-6xl">
+      <div class="mb-16 text-center">
+        <span class="mb-2 inline-block text-xs tracking-[0.2em] text-[var(--color-theme-gold)]">GUÍA</span>
+        <h2 class="text-3xl font-bold text-white md:text-5xl">CÓMO FUNCIONA</h2>
+      </div>
+      <div class="relative grid gap-0 md:grid-cols-4">
+        <div class="relative border-b border-white/[0.06] p-6 text-center md:border-b-0 md:border-r">
+          <div class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-theme-gold)]/10 text-lg font-bold text-[var(--color-theme-gold)]">1</div>
+          <h4 class="mb-2 font-bold text-white">Regístrate</h4>
+          <p class="text-xs text-white/40">Crea tu cuenta gratuita en menos de 2 minutos.</p>
+        </div>
+        <div class="relative border-b border-white/[0.06] p-6 text-center md:border-b-0 md:border-r">
+          <div class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-theme-gold)]/10 text-lg font-bold text-[var(--color-theme-gold)]">2</div>
+          <h4 class="mb-2 font-bold text-white">Crea Torneo</h4>
+          <p class="text-xs text-white/40">Elige modalidad, número de equipos y reglas.</p>
+        </div>
+        <div class="relative border-b border-white/[0.06] p-6 text-center md:border-b-0 md:border-r">
+          <div class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-theme-gold)]/10 text-lg font-bold text-[var(--color-theme-gold)]">3</div>
+          <h4 class="mb-2 font-bold text-white">Invita Equipos</h4>
+          <p class="text-xs text-white/40">Comparte el código y los equipos se unen solos.</p>
+        </div>
+        <div class="p-6 text-center">
+          <div class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-theme-gold)]/10 text-lg font-bold text-[var(--color-theme-gold)]">4</div>
+          <h4 class="mb-2 font-bold text-white">A Jugar</h4>
+          <p class="text-xs text-white/40">Sigue estadísticas, apuestas y resultados en vivo.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="relative px-4 py-24">
+    <div class="mx-auto max-w-6xl">
+      <div class="mb-12 text-center">
+        <h2 class="text-3xl font-bold text-white md:text-5xl">¿LISTO PARA CREAR TU TORNEO?</h2>
+        <p class="mx-auto mt-4 max-w-xl text-sm text-white/40">
+          Únete a la comunidad de organizadores y lleva tu liga al siguiente nivel.
+        </p>
+      </div>
+      <div class="flex flex-wrap justify-center gap-4">
+        <a
+          href="#"
+          class="inline-block rounded-lg bg-[var(--color-theme-gold)] px-10 py-4 text-sm font-bold tracking-wider text-[var(--color-theme-midnight)] transition duration-300 hover:scale-105 hover:brightness-110"
+        >
+          CREAR TORNEO AHORA
+        </a>
+        <a
+          href="#"
+          class="inline-block rounded-lg border border-white/20 px-10 py-4 text-sm font-bold tracking-wider text-white transition duration-300 hover:border-[var(--color-theme-gold)] hover:text-[var(--color-theme-gold)]"
+        >
+          VER DEMO
+        </a>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .mask-fade-bottom {
+    mask-image: linear-gradient(to bottom, black 50%, transparent 100%);
+  }
+</style>

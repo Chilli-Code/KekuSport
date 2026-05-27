@@ -1,0 +1,407 @@
+---
+// Tabla de posiciones para torneo de PES
+import { FIGHTERS } from '@/consts/fighters'
+
+export interface Props {
+  standings?: Array<{
+    position: number
+    team: {
+      id: string
+      name: string
+      logo?: string
+      manager?: string
+    }
+    played: number
+    wins: number
+    draws: number
+    losses: number
+    goalsFor: number
+    goalsAgainst: number
+    goalDifference: number
+    points: number
+    form?: Array<'W' | 'D' | 'L'>
+  }>
+  title?: string
+  showQualificationHighlight?: boolean
+  qualificationPositions?: number[]
+}
+
+const { 
+  title = "TABLA DE POSICIONES",
+  showQualificationHighlight = true,
+  qualificationPositions = [1, 2, 3, 4]
+} = Astro.props
+
+// Datos simulados basados en tus fighters
+const simulatedStandings = [
+  {
+    position: 1,
+    team: {
+      id: 'peereira',
+      name: 'Peereira',
+      manager: 'Pablo Ramos',
+      logo: '/images/fighters/cards/peereira.webp'
+    },
+    played: 10,
+    wins: 8,
+    draws: 1,
+    losses: 1,
+    goalsFor: 24,
+    goalsAgainst: 8,
+    goalDifference: 16,
+    points: 25,
+    form: ['W', 'W', 'W', 'D', 'W'] as const
+  },
+  {
+    position: 2,
+    team: {
+      id: 'rivaldios',
+      name: 'Rivaldios',
+      manager: 'Rivaldo',
+      logo: '/images/fighters/cards/rivaldios.webp'
+    },
+    played: 10,
+    wins: 7,
+    draws: 2,
+    losses: 1,
+    goalsFor: 19,
+    goalsAgainst: 9,
+    goalDifference: 10,
+    points: 23,
+    form: ['W', 'D', 'W', 'W', 'L'] as const
+  },
+  {
+    position: 3,
+    team: {
+      id: 'djmariio',
+      name: 'DjMaRIIO',
+      manager: 'DjMaRIIO',
+      logo: '/images/fighters/cards/djmariio.webp'
+    },
+    played: 10,
+    wins: 6,
+    draws: 1,
+    losses: 3,
+    goalsFor: 16,
+    goalsAgainst: 11,
+    goalDifference: 5,
+    points: 19,
+    form: ['L', 'W', 'W', 'D', 'W'] as const
+  },
+  {
+    position: 4,
+    team: {
+      id: 'ibai',
+      name: 'Ibai Llanos',
+      manager: 'Ibai',
+      logo: '/images/fighters/cards/ibai.webp'
+    },
+    played: 10,
+    wins: 5,
+    draws: 2,
+    losses: 3,
+    goalsFor: 14,
+    goalsAgainst: 12,
+    goalDifference: 2,
+    points: 17,
+    form: ['W', 'D', 'L', 'W', 'D'] as const
+  },
+  {
+    position: 5,
+    team: {
+      id: 'spursito',
+      name: 'Spursito',
+      manager: 'Spursito',
+      logo: '/images/fighters/cards/spursito.webp'
+    },
+    played: 10,
+    wins: 4,
+    draws: 1,
+    losses: 5,
+    goalsFor: 12,
+    goalsAgainst: 15,
+    goalDifference: -3,
+    points: 13,
+    form: ['L', 'W', 'L', 'L', 'W'] as const
+  },
+  {
+    position: 6,
+    team: {
+      id: 'xocas',
+      name: 'Xocas',
+      manager: 'Xocas',
+      logo: '/images/fighters/cards/xocas.webp'
+    },
+    played: 10,
+    wins: 3,
+    draws: 2,
+    losses: 5,
+    goalsFor: 10,
+    goalsAgainst: 14,
+    goalDifference: -4,
+    points: 11,
+    form: ['L', 'D', 'L', 'W', 'L'] as const
+  },
+  {
+    position: 7,
+    team: {
+      id: 'carreraa',
+      name: 'Carreraa',
+      manager: 'Carreraa',
+      logo: '/images/fighters/cards/carreraa.webp'
+    },
+    played: 10,
+    wins: 2,
+    draws: 2,
+    losses: 6,
+    goalsFor: 8,
+    goalsAgainst: 18,
+    goalDifference: -10,
+    points: 8,
+    form: ['L', 'L', 'D', 'L', 'W'] as const
+  },
+  {
+    position: 8,
+    team: {
+      id: 'elxokas',
+      name: 'ElXokas',
+      manager: 'Xokas',
+      logo: '/images/fighters/cards/elxokas.webp'
+    },
+    played: 10,
+    wins: 1,
+    draws: 1,
+    losses: 8,
+    goalsFor: 6,
+    goalsAgainst: 22,
+    goalDifference: -16,
+    points: 4,
+    form: ['L', 'L', 'L', 'L', 'D'] as const
+  }
+]
+
+// Usar standings de props si existen, si no usar los simulados
+const standingsData = Astro.props.standings && Astro.props.standings.length > 0 
+  ? Astro.props.standings 
+  : simulatedStandings
+
+// Ordenar por puntos y luego diferencia de goles
+const sortedStandings = [...standingsData].sort((a, b) => {
+  if (a.points !== b.points) return b.points - a.points
+  return b.goalDifference - a.goalDifference
+})
+
+// Función para obtener color de la forma
+const getFormColor = (result: 'W' | 'D' | 'L') => {
+  switch(result) {
+    case 'W': return 'bg-emerald-500/80 text-white'
+    case 'D': return 'bg-amber-500/80 text-white'
+    case 'L': return 'bg-purple-600/80 text-white'
+  }
+}
+
+// Función para obtener ícono de la forma
+const getFormIcon = (result: 'W' | 'D' | 'L') => {
+  switch(result) {
+    case 'W': return '✓'
+    case 'D': return '='
+    case 'L': return '✗'
+  }
+}
+---
+
+<div class="standings-container w-full max-w-6xl mx-auto animate-fade-in-up">
+{/* Título de la tabla */}
+<div class="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+  
+  {/* Línea decorativa y título */}
+  <div class="flex items-center gap-3 order-1 sm:order-1">
+    <span class="size-1.5 rotate-45 bg-theme-gold/70"></span>
+<h2 class="font-cinzel text-xl text-center sm:text-left font-black uppercase tracking-[0.2em] text-theme-gold/90 sm:text-2xl">
+  {title}
+</h2>
+    {/* Esta línea se oculta en móvil */}
+    <span class="hidden sm:inline-block h-px w-12 bg-linear-to-r from-theme-gold/45 to-transparent"></span>
+  </div>
+  
+  {/* Leyenda de forma */}
+  <div class="flex items-center gap-2 order-2 sm:order-2">
+    <span class="text-[0.55rem] font-bold uppercase tracking-wider text-theme-cream/50">FORMA:</span>
+    <div class="flex gap-1">
+      <span class="rounded bg-emerald-500/80 px-1.5 py-0.5 text-[10px] font-bold text-white">✓</span>
+      <span class="rounded bg-amber-500/80 px-1.5 py-0.5 text-[10px] font-bold text-white">=</span>
+      <span class="rounded bg-purple-600/80 px-1.5 py-0.5 text-[10px] font-bold text-white">✗</span>
+    </div>
+  </div>
+
+  {/* Línea decorativa completa que SOLO se muestra en móvil debajo de todo */}
+  <div class="w-full flex sm:hidden order-3">
+    <span class="h-px w-full bg-linear-to-r from-theme-gold/45 via-theme-gold/20 to-transparent"></span>
+  </div>
+</div>
+
+  {/* Tabla */}
+<div class="mx-4 lg:mx-0 overflow-x-auto rounded-xl bg-theme-midnight/60 backdrop-blur-sm border border-theme-gold/20">
+    <div class="min-w-[768px]">
+      {/* Header de la tabla */}
+      <div class="grid grid-cols-12 gap-2 border-b border-theme-gold/20 bg-theme-midnight/80 px-4 py-3 text-[0.6rem] font-bold uppercase tracking-[0.15em] text-theme-gold/70 sm:text-xs">
+        <div class="col-span-1 text-center">#</div>
+        <div class="col-span-4 sm:col-span-3">EQUIPO</div>
+        <div class="col-span-1 text-center">PJ</div>
+        <div class="col-span-1 text-center">G</div>
+        <div class="col-span-1 text-center">E</div>
+        <div class="col-span-1 text-center">P</div>
+        <div class="col-span-2 hidden text-center sm:block">GF/GC</div>
+        <div class="col-span-2 hidden text-center sm:block">DG</div>
+        <div class="col-span-2 text-center sm:col-span-1">PTS</div>
+        <div class="col-span-2 hidden text-center sm:col-span-2 sm:block">FORMA</div>
+      </div>
+
+      {/* Filas de la tabla */}
+      {sortedStandings.map((team) => {
+        const isQualified = showQualificationHighlight && qualificationPositions.includes(team.position)
+        
+        return (
+          <div 
+            class={`
+              group grid grid-cols-12 gap-2 border-b border-theme-gold/10 px-4 py-2 transition-all duration-300
+              ${isQualified ? 'bg-emerald-500/5 hover:bg-emerald-500/10' : 'hover:bg-theme-gold/5'}
+            `}
+          >
+            {/* Posición */}
+            <div class={`
+              col-span-1 flex items-center justify-center font-cinzel text-sm font-black
+              ${team.position <= 3 ? 'text-theme-gold' : 'text-theme-cream/60'}
+            `}>
+              {team.position}
+            </div>
+
+            {/* Equipo con imagen y enlace */}
+            <div class="col-span-4 sm:col-span-3 flex items-center gap-2">
+              {/* Imagen del jugador */}
+              {team.team.logo && (
+                <a 
+                  href={`/luchador/${team.team.id}`}
+                  class="flex-shrink-0 transition-transform duration-300 hover:scale-110"
+                >
+                  <img 
+                    src={team.team.logo} 
+                    alt={team.team.name}
+                    class="h-10 w-10 rounded-full object-cover border border-theme-gold/30 bg-theme-midnight/80"
+                    loading="lazy"
+                  />
+                </a>
+              )}
+              
+              {/* Nombre y manager con enlace */}
+              <div class="flex flex-col">
+                <a 
+                  href={`/luchador/${team.team.id}`}
+                  class="font-cinzel text-xs font-bold uppercase tracking-wide text-theme-cream hover:text-theme-gold transition-colors duration-300"
+                >
+                  {team.team.name}
+                </a>
+                {team.team.manager && (
+                  <span class="text-[0.5rem] uppercase tracking-wider text-theme-cream/40">
+                    {team.team.manager}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Partidos Jugados */}
+            <div class="col-span-1 flex items-center justify-center font-mono text-sm font-bold text-theme-cream/80">
+              {team.played}
+            </div>
+
+            {/* Victorias */}
+            <div class="col-span-1 flex items-center justify-center font-mono text-sm font-bold text-emerald-400">
+              {team.wins}
+            </div>
+
+            {/* Empates */}
+            <div class="col-span-1 flex items-center justify-center font-mono text-sm font-bold text-amber-400">
+              {team.draws}
+            </div>
+
+            {/* Derrotas */}
+            <div class="col-span-1 flex items-center justify-center font-mono text-sm font-bold text-purple-400">
+              {team.losses}
+            </div>
+
+            {/* Goles F/C (Desktop) */}
+            <div class="col-span-2 hidden items-center justify-center font-mono text-xs text-theme-cream/70 sm:flex">
+              {team.goalsFor} : {team.goalsAgainst}
+            </div>
+
+            {/* Diferencia de Goles (Desktop) */}
+            <div class={`
+              col-span-2 hidden items-center justify-center font-mono text-sm font-bold sm:flex
+              ${team.goalDifference > 0 ? 'text-emerald-400' : team.goalDifference < 0 ? 'text-purple-400' : 'text-theme-cream/60'}
+            `}>
+              {team.goalDifference > 0 ? `+${team.goalDifference}` : team.goalDifference}
+            </div>
+
+            {/* Puntos */}
+            <div class="col-span-2 flex items-center justify-center sm:col-span-1">
+              <span class="rounded-full bg-theme-gold/15 px-3 py-1 font-cinzel text-sm font-black text-theme-gold">
+                {team.points}
+              </span>
+            </div>
+
+            {/* Forma (Desktop) */}
+            <div class="col-span-2 hidden items-center justify-center gap-1 sm:flex">
+              {team.form?.map((result, i) => (
+                <div 
+                  key={i}
+                  class={`
+                    flex h-5 w-5 items-center justify-center rounded text-[9px] font-bold transition-all
+                    ${getFormColor(result)}
+                  `}
+                  title={result === 'W' ? 'Victoria' : result === 'D' ? 'Empate' : 'Derrota'}
+                >
+                  {getFormIcon(result)}
+                </div>
+              ))}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  </div>
+
+  {/* Footer con estadísticas */}
+<div class="mt-4 flex flex-wrap justify-between gap-2 text-[0.55rem] uppercase tracking-wider text-theme-cream/40 mx-4 lg:mx-0">
+  
+  <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
+    <span>PJ: Partidos Jugados</span>
+    <span>G: Victorias</span>
+    <span>E: Empates</span>
+    <span>P: Derrotas</span>
+  </div>
+
+  <div class="flex items-center gap-2">
+    <span class="inline-block h-2 w-2 rounded-full bg-emerald-500/80"></span>
+    <span>Clasificación</span>
+  </div>
+
+</div>
+</div>
+
+<style>
+  .animate-fade-in-up {
+    animation: fadeInUp 0.5s ease-out forwards;
+    opacity: 0;
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(15px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+</style>

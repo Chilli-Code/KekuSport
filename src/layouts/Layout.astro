@@ -1,0 +1,158 @@
+---
+import { ClientRouter } from "astro:transitions";
+import "../styles/global.css";
+
+import Header from "../components/Header.astro";
+import Footer from "../components/Footer.astro";
+
+import Analytics from "@vercel/analytics/astro";
+---
+
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>La Velada del Año 5 - Evento de Boxeo</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="description" content="Evento de Boxeo de Streamer organizado por Ibai Llanos" />
+    <meta property="og:url" content="https://www.infolavelada.com" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="La Velada del Año V" />
+    <meta property="og:description" content="Evento de Boxeo de Streamer organizado por Ibai Llanos" />
+    <meta property="og:image" content="https://www.infolavelada.com/og.jpg" />
+    <meta property="og:locale" content="es_ES" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@alecb6" />
+    <meta name="twitter:creator" content="Alejandro" />
+    <meta name="twitter:title" content="La Velada del Año V" />
+    <meta name="twitter:description" content="Evento de Boxeo de Streamer organizado por Ibai Llanos" />
+    <ClientRouter />
+  </head>
+  <body>
+
+    <!-- ═══ FONDO ESPACIAL GLOBAL (una sola vez, para toda la app) ═══ -->
+    <div class="space-bg" aria-hidden="true">
+      <div class="space-glow space-glow--green"></div>
+      <div class="space-glow space-glow--purple"></div>
+      <div class="space-stars"></div>
+      <div class="space-line space-line--left"></div>
+      <div class="space-line space-line--right"></div>
+      <div class="space-arc"></div>
+    </div>
+
+    <Header />
+
+    <main>
+      <slot />
+    </main>
+
+    <Footer />
+    <Analytics />
+
+  </body>
+</html>
+
+<style>
+  /* ── Reset y scroll único ── */
+  html {
+    height: 100%;
+    overflow-y: scroll;           /* scroll SIEMPRE en html, nunca en body */
+    scrollbar-gutter: stable;
+  }
+
+  body {
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    width: 100%;
+    position: relative;
+    overscroll-behavior: none;
+    /* Fondo base — el glow encima lo cubre */
+    background: radial-gradient(ellipse at 50% -10%, #0b2a1a 0%, #050d08 55%, #03080e 100%);
+  }
+
+  main {
+    flex: 1;           /* empuja el footer al fondo */
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ═══════════════════════════════════════
+     FONDO ESPACIAL FIJO (detrás de todo)
+  ═══════════════════════════════════════ */
+  .space-bg {
+    position: fixed;   /* fixed = no se mueve al hacer scroll */
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+
+  /* Glows */
+  .space-glow {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+  }
+  .space-glow--green {
+    width: 60vw; height: 50vh;
+    top: -10%; left: 20%;
+    background: radial-gradient(circle, #00ff88 0%, transparent 70%);
+    opacity: 0.35;
+    animation: glowPulse 8s ease-in-out infinite alternate;
+  }
+  .space-glow--purple {
+    width: 40vw; height: 40vh;
+    bottom: 10%; right: -5%;
+    background: radial-gradient(circle, #7c3aed 0%, transparent 70%);
+    opacity: 0.25;
+    animation: glowPulse 10s ease-in-out infinite alternate-reverse;
+  }
+  @keyframes glowPulse {
+    0%   { opacity: 0.2; transform: scale(1); }
+    100% { opacity: 0.45; transform: scale(1.1); }
+  }
+
+  /* Estrellas */
+  .space-stars {
+    position: absolute; inset: 0;
+    background-image:
+      radial-gradient(1.5px 1.5px at 10% 20%, #fff, transparent),
+      radial-gradient(1px 1px   at 30% 65%, #aaffcc, transparent),
+      radial-gradient(2px 2px   at 55% 15%, #a855f7, transparent),
+      radial-gradient(1px 1px   at 70% 80%, #fff, transparent),
+      radial-gradient(2px 2px   at 85% 40%, #00ff88, transparent),
+      radial-gradient(1px 1px   at 20% 90%, #c084fc, transparent),
+      radial-gradient(1.5px 1.5px at 60% 55%, #fff, transparent),
+      radial-gradient(1px 1px   at 45% 35%, #aaffcc, transparent),
+      radial-gradient(2px 2px   at 92% 10%, #fff, transparent);
+    background-size: 300px 300px;
+    opacity: 0.55;
+    animation: starsTwinkle 7s ease-in-out infinite alternate;
+  }
+  @keyframes starsTwinkle {
+    0%   { opacity: 0.3; }
+    100% { opacity: 0.7; }
+  }
+
+  /* Líneas de campo */
+  .space-line {
+    position: absolute;
+    bottom: 0; width: 1px; height: 35%;
+    background: linear-gradient(to top, rgba(0,255,136,0.18), transparent);
+  }
+  .space-line--left  { left: 15%; }
+  .space-line--right { right: 15%; }
+
+  /* Arco de campo */
+  .space-arc {
+    position: absolute;
+    bottom: -8vw; left: 50%;
+    transform: translateX(-50%);
+    width: 50vw; height: 16vw;
+    border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+    border: 1px solid rgba(0,255,136,0.12);
+  }
+</style>

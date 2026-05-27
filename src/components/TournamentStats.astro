@@ -1,0 +1,261 @@
+---
+// Componente de estadísticas detalladas del torneo
+export interface Props {
+  tournament: {
+    id: string
+    name: string
+    year: string
+    location: string
+    position: number
+    prize: string
+    record: string
+  }
+  stats?: {
+    goals: number
+    assists: number
+    yellowCards: number
+    redCards: number
+    shots: number
+    shotsOnTarget: number
+    passes: number
+    tackles: number
+    saves: number
+    motm: number // Man of the Match awards
+    minutesPlayed: number
+  }
+}
+
+const { tournament } = Astro.props
+
+// Datos simulados de estadísticas (diferentes según la posición)
+const getSimulatedStats = (position: number) => {
+  if (position === 1) {
+    return {
+      goals: 12,
+      assists: 7,
+      yellowCards: 3,
+      redCards: 0,
+      shots: 28,
+      shotsOnTarget: 18,
+      passes: 342,
+      tackles: 45,
+      saves: 0,
+      motm: 4,
+      minutesPlayed: 630
+    }
+  } else if (position === 2) {
+    return {
+      goals: 8,
+      assists: 5,
+      yellowCards: 4,
+      redCards: 1,
+      shots: 22,
+      shotsOnTarget: 14,
+      passes: 298,
+      tackles: 38,
+      saves: 0,
+      motm: 2,
+      minutesPlayed: 610
+    }
+  } else if (position === 3) {
+    return {
+      goals: 6,
+      assists: 4,
+      yellowCards: 5,
+      redCards: 0,
+      shots: 18,
+      shotsOnTarget: 11,
+      passes: 267,
+      tackles: 42,
+      saves: 0,
+      motm: 1,
+      minutesPlayed: 540
+    }
+  } else {
+    return {
+      goals: 3,
+      assists: 2,
+      yellowCards: 6,
+      redCards: 1,
+      shots: 14,
+      shotsOnTarget: 7,
+      passes: 223,
+      tackles: 35,
+      saves: 0,
+      motm: 0,
+      minutesPlayed: 480
+    }
+  }
+}
+
+const stats = Astro.props.stats || getSimulatedStats(tournament.position)
+const isChampion = tournament.position === 1
+---
+
+<div class="tournament-stats animate-fade-in-up">
+  
+  {/* Cabecera con el nombre del torneo */}
+  <div class="mb-4 flex items-center gap-3">
+    <span class="size-1.5 rotate-45 bg-theme-gold/70"></span>
+    <h3 class="font-cinzel text-lg font-black uppercase tracking-[0.15em] text-theme-gold/80">
+      ESTADÍSTICAS DE {tournament.name} {tournament.year}
+    </h3>
+    <span class="hidden sm:inline-block h-px w-12 bg-linear-to-r from-theme-gold/45 to-transparent"></span>
+  </div>
+
+  {/* Grid de estadísticas */}
+  <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+    
+    {/* Goles */}
+    <div class="group relative overflow-hidden rounded-xl bg-theme-midnight/40 backdrop-blur-sm border border-theme-gold/20 p-3 transition-all duration-300 hover:scale-105 hover:border-emerald-500/50">
+      <div class="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/5 to-transparent transition-transform duration-700 group-hover:translate-x-full"></div>
+      <div class="flex items-center gap-2">
+        <span class="text-2xl">⚽</span>
+        <div>
+          <p class="text-[0.55rem] font-bold uppercase tracking-wider text-theme-cream/40">GOLES</p>
+          <p class="font-cinzel text-2xl font-black text-emerald-400">{stats.goals}</p>
+        </div>
+      </div>
+    </div>
+
+    {/* Asistencias */}
+    <div class="group relative overflow-hidden rounded-xl bg-theme-midnight/40 backdrop-blur-sm border border-theme-gold/20 p-3 transition-all duration-300 hover:scale-105 hover:border-emerald-500/50">
+      <div class="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/5 to-transparent transition-transform duration-700 group-hover:translate-x-full"></div>
+      <div class="flex items-center gap-2">
+        <span class="text-2xl">🎯</span>
+        <div>
+          <p class="text-[0.55rem] font-bold uppercase tracking-wider text-theme-cream/40">ASISTENCIAS</p>
+          <p class="font-cinzel text-2xl font-black text-theme-gold">{stats.assists}</p>
+        </div>
+      </div>
+    </div>
+
+    {/* Tarjetas Amarillas */}
+    <div class="group relative overflow-hidden rounded-xl bg-theme-midnight/40 backdrop-blur-sm border border-theme-gold/20 p-3 transition-all duration-300 hover:scale-105 hover:border-amber-500/50">
+      <div class="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/5 to-transparent transition-transform duration-700 group-hover:translate-x-full"></div>
+      <div class="flex items-center gap-2">
+        <span class="text-2xl">🟨</span>
+        <div>
+          <p class="text-[0.55rem] font-bold uppercase tracking-wider text-theme-cream/40">TARJETAS</p>
+          <p class="font-cinzel text-2xl font-black text-amber-400">{stats.yellowCards}</p>
+        </div>
+      </div>
+    </div>
+
+    {/* Tarjetas Rojas */}
+    <div class="group relative overflow-hidden rounded-xl bg-theme-midnight/40 backdrop-blur-sm border border-theme-gold/20 p-3 transition-all duration-300 hover:scale-105 hover:border-red-500/50">
+      <div class="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/5 to-transparent transition-transform duration-700 group-hover:translate-x-full"></div>
+      <div class="flex items-center gap-2">
+        <span class="text-2xl">🟥</span>
+        <div>
+          <p class="text-[0.55rem] font-bold uppercase tracking-wider text-theme-cream/40">ROJAS</p>
+          <p class="font-cinzel text-2xl font-black text-red-400">{stats.redCards}</p>
+        </div>
+      </div>
+    </div>
+
+    {/* Remates Totales */}
+    <div class="group relative overflow-hidden rounded-xl bg-theme-midnight/40 backdrop-blur-sm border border-theme-gold/20 p-3 transition-all duration-300 hover:scale-105 hover:border-theme-gold/50">
+      <div class="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/5 to-transparent transition-transform duration-700 group-hover:translate-x-full"></div>
+      <div class="flex items-center gap-2">
+        <span class="text-2xl">💥</span>
+        <div>
+          <p class="text-[0.55rem] font-bold uppercase tracking-wider text-theme-cream/40">REMATES</p>
+          <p class="font-cinzel text-2xl font-black text-theme-cream">{stats.shots}</p>
+        </div>
+      </div>
+    </div>
+
+    {/* Remates a Puerta */}
+    <div class="group relative overflow-hidden rounded-xl bg-theme-midnight/40 backdrop-blur-sm border border-theme-gold/20 p-3 transition-all duration-300 hover:scale-105 hover:border-theme-gold/50">
+      <div class="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/5 to-transparent transition-transform duration-700 group-hover:translate-x-full"></div>
+      <div class="flex items-center gap-2">
+        <span class="text-2xl">🎯</span>
+        <div>
+          <p class="text-[0.55rem] font-bold uppercase tracking-wider text-theme-cream/40">A PUERTA</p>
+          <p class="font-cinzel text-2xl font-black text-emerald-400">{stats.shotsOnTarget}</p>
+        </div>
+      </div>
+    </div>
+
+    {/* Precisión de pases */}
+    <div class="group relative overflow-hidden rounded-xl bg-theme-midnight/40 backdrop-blur-sm border border-theme-gold/20 p-3 transition-all duration-300 hover:scale-105 hover:border-theme-gold/50">
+      <div class="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/5 to-transparent transition-transform duration-700 group-hover:translate-x-full"></div>
+      <div class="flex items-center gap-2">
+        <span class="text-2xl">📊</span>
+        <div>
+          <p class="text-[0.55rem] font-bold uppercase tracking-wider text-theme-cream/40">PRECISIÓN</p>
+          <p class="font-cinzel text-2xl font-black text-theme-gold">
+            {Math.round((stats.shotsOnTarget / stats.shots) * 100)}%
+          </p>
+        </div>
+      </div>
+    </div>
+
+    {/* Efectividad */}
+    <div class="group relative overflow-hidden rounded-xl bg-theme-midnight/40 backdrop-blur-sm border border-theme-gold/20 p-3 transition-all duration-300 hover:scale-105 hover:border-emerald-500/50">
+      <div class="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/5 to-transparent transition-transform duration-700 group-hover:translate-x-full"></div>
+      <div class="flex items-center gap-2">
+        <span class="text-2xl">⚡</span>
+        <div>
+          <p class="text-[0.55rem] font-bold uppercase tracking-wider text-theme-cream/40">EFECTIVIDAD</p>
+          <p class="font-cinzel text-2xl font-black text-emerald-400">
+            {Math.round((stats.goals / stats.shots) * 100)}%
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {/* Barra de progreso - Rendimiento general */}
+  <div class="mt-4 rounded-xl bg-theme-midnight/40 backdrop-blur-sm border border-theme-gold/20 p-3">
+    <div class="flex items-center justify-between mb-2">
+      <span class="text-[0.55rem] font-bold uppercase tracking-wider text-theme-cream/40">RENDIMIENTO GENERAL</span>
+      <span class="text-[0.55rem] font-bold text-theme-gold/80">
+        {isChampion ? '🏆 EXCELENTE' : tournament.position === 2 ? '🥈 MUY BUENO' : tournament.position === 3 ? '🥉 BUENO' : '📈 REGULAR'}
+      </span>
+    </div>
+    <div class="h-2 w-full overflow-hidden rounded-full bg-theme-midnight/80">
+      <div 
+        class="h-full rounded-full bg-gradient-to-r from-purple-500 to-emerald-500 transition-all duration-1000"
+        style={`width: ${isChampion ? 95 : tournament.position === 2 ? 85 : tournament.position === 3 ? 75 : 60}%`}
+      ></div>
+    </div>
+    <div class="mt-2 flex justify-between text-[0.45rem] uppercase tracking-wider text-theme-cream/30">
+      <span>DEFENSA</span>
+      <span>MEDIO CAMPO</span>
+      <span>ATAQUE</span>
+    </div>
+  </div>
+
+  {/* Resumen adicional */}
+  <div class="mt-4 flex flex-wrap gap-2 text-[0.55rem] text-theme-cream/40">
+    <span class="rounded-full bg-theme-midnight/60 px-2 py-1 border border-theme-gold/20">
+      ⏱️ {Math.floor(stats.minutesPlayed / 60)}h {stats.minutesPlayed % 60}min jugados
+    </span>
+    <span class="rounded-full bg-theme-midnight/60 px-2 py-1 border border-theme-gold/20">
+      🏅 {stats.motm} MVP del partido
+    </span>
+    <span class="rounded-full bg-theme-midnight/60 px-2 py-1 border border-theme-gold/20">
+      📋 {tournament.record} (G-E-P)
+    </span>
+  </div>
+</div>
+
+<style>
+  .animate-fade-in-up {
+    animation: fadeInUp 0.5s ease-out forwards;
+    opacity: 0;
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(15px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+</style>
