@@ -1,9 +1,7 @@
 ---
 const { pathname } = Astro.url
 
-// Lista de rutas donde NO debe aparecer el logo
-const hideLogoRoutes = ['/']
-const shouldShowLogo = !hideLogoRoutes.includes(pathname)
+const shouldShowLogo = pathname !== '/' && !pathname.startsWith('/jugadores')
 
 // Comprueba si la ruta actual está activa
 const isActive = (path: string) => pathname === path

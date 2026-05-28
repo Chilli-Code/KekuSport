@@ -2,6 +2,8 @@
 import { FIGHTERS } from '@/consts/fighters'
 import FighterSelector from './FighterSelector.astro'
 
+const { hideLogo } = Astro.props
+
 const firstRow = FIGHTERS.slice(0, 6)
 const leftRow = firstRow.slice(0, 3)
 const rightRow = firstRow.slice(3)
@@ -11,7 +13,7 @@ const allFighters = FIGHTERS
 
 <section class="relative flex min-h-screen w-full">
   <div
-    class="mask-fade-bottom absolute inset-0 w-full bg-[url('/images/herp.jpeg')] bg-cover bg-center"
+    class="mask-fade-bottom absolute inset-0 w-full bg-[url('/images/fondo2.png')] bg-cover bg-center"
   >
   </div>
 
@@ -28,6 +30,7 @@ const allFighters = FIGHTERS
       >
         <strong>26</strong> DE <br /><strong>JULIO</strong>
       </h3>
+      {!hideLogo && (
       <figure class="animate-fade-in relative mt-8">
         <img
           class="relative z-20 h-auto w-64"
@@ -38,6 +41,7 @@ const allFighters = FIGHTERS
         />
         <div class="absolute top-0 z-0 size-64 bg-emerald-500/80 blur-2xl"></div>
       </figure>
+      )}
 
       <div class="relative z-50">
         <h3
@@ -50,7 +54,7 @@ const allFighters = FIGHTERS
     </div>
 
     <!-- VERSIÓN DESKTOP (original) -->
-    <div class="relative hidden h-full w-full max-w-6xl flex-col items-center justify-end gap-4 p-8 md:flex">
+    <div class="relative hidden h-full w-full max-w-6xl flex-col items-center justify-end gap-4 p-8 pb-2 md:flex">
       <div class="flex w-full flex-wrap justify-between px-4">
         <div class="flex flex-wrap justify-start gap-4">
           {leftRow.map(({ id, name, versus }) => <FighterSelector id={id} name={name} versus={versus} boxerCardClass='animate-fade-in-right animate-delay-500' />)}
@@ -80,17 +84,15 @@ const allFighters = FIGHTERS
         </div>
       </div>
 
-      <!-- Indicador de scroll -->
-      <div class="mt-0.5 flex items-center justify-center gap-2">
-        <svg class="h-3 w-3 text-theme-gold/50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-        </svg>
-        <span class="text-[0.5rem] uppercase tracking-wider text-theme-gold/50">Desliza</span>
-        <svg class="h-3 w-3 text-theme-gold/50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-        </svg>
-      </div>
     </div>
+
+    <a
+      href="/jugadores"
+      class="boxer-detail-cta boxer-detail-cta-ghost relative z-10 mt-1"
+    >
+      VER TODOS LOS JUGADORES
+    </a>
+  </div>
   </div>
 </section>
 
@@ -119,5 +121,52 @@ const allFighters = FIGHTERS
       background: var(--color-theme-gold);
       border-radius: 10px;
     }
+  }
+
+    .boxer-detail-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 1.3rem;
+    border-radius: 9999px;
+    font-family: 'Cinzel', var(--font-fallback);
+    font-size: 0.6rem;
+    font-weight: 800;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition:
+      transform 250ms ease,
+      background-color 250ms ease,
+      color 250ms ease,
+      box-shadow 250ms ease;
+  }
+
+  @media (min-width: 640px) {
+    .boxer-detail-cta {
+      font-size: 0.5rem;
+      padding: 0.8rem 1.5rem;
+    }
+  }
+
+  .boxer-detail-cta-ghost {
+    background: transparent;
+    color: color-mix(in srgb, var(--color-theme-cream) 80%, transparent);
+
+    box-shadow:
+      inset 0 0 0 1px
+      color-mix(in srgb, var(--color-theme-gold) 35%, transparent);
+  }
+
+  .boxer-detail-cta-ghost:hover,
+  .boxer-detail-cta-ghost:focus-visible {
+    color: var(--color-theme-cream);
+
+    box-shadow:
+      inset 0 0 0 1px
+      color-mix(in srgb, var(--color-theme-gold) 70%, transparent);
+
+    transform: translateY(-1px);
+    outline: none;
   }
 </style>
