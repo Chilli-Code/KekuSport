@@ -1,8 +1,9 @@
-import { b as createAstro, c as createComponent, m as maybeRenderHead, d as addAttribute, r as renderComponent, a as renderTemplate, e as renderScript, f as renderTransition } from '../../chunks/astro/server_DpPHlMO2.mjs';
+import { d as createAstro, c as createComponent, m as maybeRenderHead, r as renderComponent, a as renderTemplate, b as addAttribute, e as renderScript, f as renderTransition } from '../../chunks/astro/server_CQLHzLBK.mjs';
 import 'kleur/colors';
-import { F as FIGHTERS } from '../../chunks/fighters_Cwhcckr7.mjs';
-import { $ as $$Layout } from '../../chunks/Layout_BFkBUtQq.mjs';
-import { c as createSvgComponent } from '../../chunks/instagram_DIK3IyMq.mjs';
+import { P as PLAYERS } from '../../chunks/fighters_Cyp_aquJ.mjs';
+import { $ as $$Layout } from '../../chunks/Layout_uZwaYLoU.mjs';
+import { c as createSvgComponent } from '../../chunks/instagram_Dexa1W1e.mjs';
+import { T as TEAMS } from '../../chunks/teams_C073Wyrp.mjs';
 /* empty css                                   */
 import 'clsx';
 /* empty css                                       */
@@ -16,7 +17,7 @@ const $$Astro$2 = createAstro("https://la-velada-clone.vercel.app/");
 const $$BoxerProfileCard = createComponent(($$result, $$props, $$slots) => {
   const Astro2 = $$result.createAstro($$Astro$2, $$props, $$slots);
   Astro2.self = $$BoxerProfileCard;
-  const { fighter, birthDate, battle } = Astro2.props;
+  const { player } = Astro2.props;
   const generateRandomBars = () => {
     const bars2 = [];
     for (let i = 0; i < 20; i++) {
@@ -25,7 +26,7 @@ const $$BoxerProfileCard = createComponent(($$result, $$props, $$slots) => {
     return bars2;
   };
   const bars = generateRandomBars();
-  const opponent = FIGHTERS.find((f) => f.id === fighter.versus);
+  const team = TEAMS.find((t) => t.id === player.team);
   return renderTemplate`${maybeRenderHead()}<article class="boxer-profile-card group relative
 w-[92%]
 sm:w-[88%]
@@ -33,32 +34,20 @@ md:w-full
 lg:max-w-[450px]
 overflow-hidden rounded-xl
 bg-theme-midnight/70 backdrop-blur-xs
-transition-all duration-500" data-astro-cid-pfraywpi>  <div class="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/10 to-transparent transition-transform duration-700 ease-in-out group-hover:translate-x-full" data-astro-cid-pfraywpi></div> <main class="grid gap-0" data-astro-cid-pfraywpi>  <div class="flex flex-wrap items-center gap-2 p-4 pb-0 animate-fade-in-up" data-astro-cid-pfraywpi> ${battle && renderTemplate`<span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider bg-gradient-to-r from-amber-600 to-amber-500 text-white shadow-lg" data-astro-cid-pfraywpi>
-Combate · ${String(battle.number).padStart(2, "0")} </span>`} <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-500/20 backdrop-blur-sm border border-emerald-500/30 text-emerald-300" data-astro-cid-pfraywpi> <span aria-hidden="true" data-astro-cid-pfraywpi>${fighter.flag}</span> ${fighter.countryName} </span> <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider bg-purple-500/20 backdrop-blur-sm border border-purple-500/30 text-purple-300" data-astro-cid-pfraywpi> ${fighter.genderLabel} </span> </div>  <div class="flex flex-col p-4" data-astro-cid-pfraywpi>  <div class="mb-3" data-astro-cid-pfraywpi> <div class="inline-block border-l-3 border-theme-gold pl-2" data-astro-cid-pfraywpi> <div class="h-auto w-auto" data-astro-cid-pfraywpi> <h3 class="boxer-detail-name text-5xl font-black uppercase tracking-wider relative z-10 sm:text-6xl md:text-7xl" data-astro-cid-pfraywpi> ${fighter.name} </h3> <div class="absolute inset-0 bg-theme-gold/40 blur-2xl -z-0 opacity-20 group-hover:opacity-40 transition-opacity duration-500 rounded-xl" data-astro-cid-pfraywpi></div> </div> </div> </div>  ${opponent && renderTemplate`<div class="flex w-full items-center justify-left gap-4 my-2" data-astro-cid-pfraywpi> <span class="text-theme-gold font-bold text-xl" data-astro-cid-pfraywpi>VS</span>  <a${addAttribute(`/luchador/${opponent.id}`, "href")} class="relative w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden shadow-lg transition-all duration-300 hover:scale-110 hover:shadow-purple-500/30 focus:outline-none focus:ring-2 focus:ring-purple-500" data-astro-cid-pfraywpi> <img class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"${addAttribute(`/images/fighters/cards/jugador_mistery_card.png`, "src")}${addAttribute(opponent.name, "alt")} data-astro-cid-pfraywpi>  <div class="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 transition-opacity duration-300 hover:opacity-100" data-astro-cid-pfraywpi> <span class="text-purple-400 text-xs font-bold text-center px-1" data-astro-cid-pfraywpi>${opponent.name}</span> </div>  <div class="absolute inset-0 rounded-full border-2 border-purple-500/70 opacity-0 transition-opacity duration-300 hover:opacity-100" data-astro-cid-pfraywpi></div> </a> </div>`}  <div class="flex w-full items-center gap-3 sm:gap-4 my-4" aria-hidden="true" data-astro-cid-pfraywpi> <span class="size-1 rotate-45 bg-theme-gold/70" data-astro-cid-pfraywpi></span> <span class="h-px flex-1 bg-linear-to-r from-theme-gold/45 to-transparent" data-astro-cid-pfraywpi></span> </div> <p class="boxer-detail-coming-soon-eyebrow font-cinzel text-[0.55rem] font-bold tracking-[0.45em] text-theme-gold/80 sm:text-[0.65rem]" data-astro-cid-pfraywpi>
-FICHA EN PREPARACIÓN
-</p>  <div class="grid grid-cols-2 gap-3 mt-2" data-astro-cid-pfraywpi> <div class="stat-item" data-astro-cid-pfraywpi> <span class="text-[0.5rem] font-bold tracking-[0.2em] text-theme-gold/70 uppercase" data-astro-cid-pfraywpi>
+transition-all duration-500" data-astro-cid-pfraywpi> <div class="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/10 to-transparent transition-transform duration-700 ease-in-out group-hover:translate-x-full" data-astro-cid-pfraywpi></div> <main class="grid gap-0" data-astro-cid-pfraywpi> <div class="flex flex-wrap items-center gap-2 p-4 pb-0 animate-fade-in-up" data-astro-cid-pfraywpi> <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-500/20 backdrop-blur-sm border border-emerald-500/30 text-emerald-300" data-astro-cid-pfraywpi> ${player.neighborhood} </span> <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider bg-purple-500/20 backdrop-blur-sm border border-purple-500/30 text-purple-300" data-astro-cid-pfraywpi> ${player.position} </span> </div> <div class="flex flex-col p-4" data-astro-cid-pfraywpi> <div class="mb-3" data-astro-cid-pfraywpi> <div class="inline-block border-l-3 border-theme-gold pl-2" data-astro-cid-pfraywpi> <div class="h-auto w-auto" data-astro-cid-pfraywpi> <h3 class="boxer-detail-name text-5xl font-black uppercase tracking-wider relative z-10 sm:text-6xl md:text-7xl" data-astro-cid-pfraywpi> ${player.name} </h3> <div class="absolute inset-0 bg-theme-gold/40 blur-2xl -z-0 opacity-20 group-hover:opacity-40 transition-opacity duration-500 rounded-xl" data-astro-cid-pfraywpi></div> </div> </div> </div> ${team && renderTemplate`<div class="flex items-center gap-2 mt-1 mb-2" data-astro-cid-pfraywpi> <span class="text-[0.55rem] font-bold tracking-[0.3em] text-theme-gold/70 uppercase" data-astro-cid-pfraywpi> ${team.name} </span> </div>`} <div class="flex w-full items-center gap-3 sm:gap-4 my-4" aria-hidden="true" data-astro-cid-pfraywpi> <span class="size-1 rotate-45 bg-theme-gold/70" data-astro-cid-pfraywpi></span> <span class="h-px flex-1 bg-linear-to-r from-theme-gold/45 to-transparent" data-astro-cid-pfraywpi></span> </div> <div class="grid grid-cols-3 gap-2 mt-2" data-astro-cid-pfraywpi> <div class="stat-item" data-astro-cid-pfraywpi> <span class="text-[0.5rem] font-bold tracking-[0.2em] text-theme-gold/70 uppercase" data-astro-cid-pfraywpi>
 Edad
-</span> <p class="font-cinzel text-base font-bold text-theme-cream" data-astro-cid-pfraywpi> ${fighter.age} <span class="text-xs font-normal text-theme-cream/60" data-astro-cid-pfraywpi>años</span> </p> </div> <div class="stat-item" data-astro-cid-pfraywpi> <span class="text-[0.5rem] font-bold tracking-[0.2em] text-theme-gold/70 uppercase" data-astro-cid-pfraywpi>
-Equipo Actual
+</span> <p class="font-cinzel text-base font-bold text-theme-cream" data-astro-cid-pfraywpi> ${player.age} <span class="text-xs font-normal text-theme-cream/60" data-astro-cid-pfraywpi>años</span> </p> </div> <div class="stat-item" data-astro-cid-pfraywpi> <span class="text-[0.5rem] font-bold tracking-[0.2em] text-theme-gold/70 uppercase" data-astro-cid-pfraywpi>
+Dorsal
 </span> <p class="font-cinzel text-base font-bold text-theme-cream" data-astro-cid-pfraywpi>
-BARCELONA
-</p> </div> <div class="stat-item" data-astro-cid-pfraywpi> <span class="text-[0.5rem] font-bold tracking-[0.2em] text-theme-gold/70 uppercase" data-astro-cid-pfraywpi>
-Victorias
-</span> <p class="font-cinzel text-base font-bold text-theme-cream" data-astro-cid-pfraywpi>
-20 <span class="text-xs font-normal text-theme-cream/60" data-astro-cid-pfraywpi>V</span> </p> </div> <div class="stat-item" data-astro-cid-pfraywpi> <span class="text-[0.5rem] font-bold tracking-[0.2em] text-theme-gold/70 uppercase" data-astro-cid-pfraywpi>
-Derrotas
-</span> <p class="font-cinzel text-base font-bold text-theme-cream" data-astro-cid-pfraywpi>
-10 <span class="text-xs font-normal text-theme-cream/60" data-astro-cid-pfraywpi>D</span> </p> </div> <div class="stat-item" data-astro-cid-pfraywpi> <span class="text-[0.5rem] font-bold tracking-[0.2em] text-theme-gold/70 uppercase" data-astro-cid-pfraywpi>
-Empates
-</span> <p class="font-cinzel text-base font-bold text-theme-cream" data-astro-cid-pfraywpi>
-2 <span class="text-xs font-normal text-theme-cream/60" data-astro-cid-pfraywpi>E</span> </p> </div> <div class="stat-item" data-astro-cid-pfraywpi> <span class="text-[0.5rem] font-bold tracking-[0.2em] text-theme-gold/70 uppercase" data-astro-cid-pfraywpi>
-Peso
-</span> <p class="font-cinzel text-base font-bold text-theme-cream" data-astro-cid-pfraywpi> ${fighter.weight} <span class="text-xs font-normal text-theme-cream/60" data-astro-cid-pfraywpi>kg</span> </p> </div> <div class="stat-item" data-astro-cid-pfraywpi> <span class="text-[0.5rem] font-bold tracking-[0.2em] text-theme-gold/70 uppercase" data-astro-cid-pfraywpi>
-Nacimiento
-</span> <p class="font-cinzel text-base font-bold text-theme-cream" data-astro-cid-pfraywpi> ${birthDate} </p> </div> <div class="stat-item" data-astro-cid-pfraywpi> <span class="text-[0.5rem] font-bold tracking-[0.2em] text-theme-gold/70 uppercase" data-astro-cid-pfraywpi>
-Altura
-</span> <p class="font-cinzel text-base font-bold text-theme-cream" data-astro-cid-pfraywpi> ${fighter.height} <span class="text-xs font-normal text-theme-cream/60" data-astro-cid-pfraywpi>m</span> </p> </div> </div> </div> </main>  <footer class="flex items-center flex-col justify-between border-t border-theme-gold/20 bg-theme-midnight/80 px-4 py-2" data-astro-cid-pfraywpi> <div data-astro-cid-pfraywpi> <p class="boxer-detail-coming-soon-text mt-1 max-w-xl font-cinzel text-xs font-medium leading-relaxed tracking-[0.18em] text-theme-cream/70 sm:text-sm" data-astro-cid-pfraywpi>
-Estamos puliendo la ficha completa de ${fighter.name}, entrenamientos y rivalidades. Vuelve pronto.</p> </div> <div class="w-full flex justify-between mt-2" data-astro-cid-pfraywpi> <div class="flex items-center gap-2" data-astro-cid-pfraywpi> <img class="h-5 w-auto rounded-full border border-theme-gold/30 object-cover"${addAttribute(`/images/flags/${fighter.country}.webp`, "src")}${addAttribute(`Pa\xEDs ${fighter.country}`, "alt")} decoding="async" loading="lazy" data-astro-cid-pfraywpi> <span class="font-cinzel text-xs font-bold uppercase tracking-wide text-theme-cream/80" data-astro-cid-pfraywpi> ${fighter.city} </span> </div> <div class="flex items-center gap-2" data-astro-cid-pfraywpi> ${renderComponent($$result, "Logo", Logo, { "class": "h-5 w-auto text-theme-gold", "data-astro-cid-pfraywpi": true })} <div class="flex items-end bg-theme-cream/90 pl-0.5 py-0.5 rounded-sm" data-astro-cid-pfraywpi> ${bars.map((width, index) => renderTemplate`<span${addAttribute(index, "key")} class="bg-theme-midnight h-[20px] mr-0.5 transition-all duration-300 group-hover:bg-theme-gold"${addAttribute(`width: ${width}px;`, "style")} data-astro-cid-pfraywpi></span>`)} </div> </div> </div> </footer> </article> `;
+#${player.number} </p> </div> <div class="stat-item" data-astro-cid-pfraywpi> <span class="text-[0.5rem] font-bold tracking-[0.2em] text-theme-gold/70 uppercase" data-astro-cid-pfraywpi>
+Posición
+</span> <p class="font-cinzel text-base font-bold text-theme-cream" data-astro-cid-pfraywpi> ${player.position} </p> </div> <div class="stat-item" data-astro-cid-pfraywpi> <span class="text-[0.5rem] font-bold tracking-[0.2em] text-theme-gold/70 uppercase" data-astro-cid-pfraywpi>
+Barrio
+</span> <p class="font-cinzel text-base font-bold text-theme-cream" data-astro-cid-pfraywpi> ${player.neighborhood} </p> </div> <div class="stat-item" data-astro-cid-pfraywpi> <span class="text-[0.5rem] font-bold tracking-[0.2em] text-theme-gold/70 uppercase" data-astro-cid-pfraywpi>
+Pie Hábil
+</span> <p class="font-cinzel text-base font-bold text-theme-cream" data-astro-cid-pfraywpi> ${player.preferredFoot} </p> </div> </div> <div class="mt-4 p-3 rounded-lg border border-theme-gold/15 bg-theme-midnight/50" data-astro-cid-pfraywpi> <p class="font-cinzel text-xs leading-relaxed tracking-wide text-theme-cream/80 italic" data-astro-cid-pfraywpi>
+"${player.bio}"
+</p> </div> </div> </main> <footer class="flex items-center flex-col justify-between border-t border-theme-gold/20 bg-theme-midnight/80 px-4 py-2" data-astro-cid-pfraywpi> <div class="w-full flex justify-between mt-2" data-astro-cid-pfraywpi> <div class="flex items-center gap-2" data-astro-cid-pfraywpi> <span class="font-cinzel text-xs font-bold uppercase tracking-wide text-theme-cream/80" data-astro-cid-pfraywpi> ${player.city} · ${player.neighborhood} </span> </div> <div class="flex items-center gap-2" data-astro-cid-pfraywpi> ${renderComponent($$result, "Logo", Logo, { "class": "h-5 w-auto text-theme-gold", "data-astro-cid-pfraywpi": true })} <div class="flex items-end bg-theme-cream/90 pl-0.5 py-0.5 rounded-sm" data-astro-cid-pfraywpi> ${bars.map((width, index) => renderTemplate`<span${addAttribute(index, "key")} class="bg-theme-midnight h-[20px] mr-0.5 transition-all duration-300 group-hover:bg-theme-gold"${addAttribute(`width: ${width}px;`, "style")} data-astro-cid-pfraywpi></span>`)} </div> </div> </div> </footer> </article> `;
 }, "C:/Users/jorge/OneDrive/Desktop/pruebaVelada/la-velada-clone/src/components/BoxerProfileCard.astro", void 0);
 
 const $$Astro$1 = createAstro("https://la-velada-clone.vercel.app/");
@@ -151,15 +140,10 @@ const $$id = createComponent(($$result, $$props, $$slots) => {
   const Astro2 = $$result.createAstro($$Astro, $$props, $$slots);
   Astro2.self = $$id;
   const { id } = Astro2.params;
-  const fighter = FIGHTERS.find((fighter2) => fighter2.id === id);
-  if (!fighter) {
+  const player = PLAYERS.find((p) => p.id === id);
+  if (!player) {
     return Astro2.redirect("/404");
   }
-  const birthDate = fighter.birthDate.toLocaleDateString("es-ES", {
-    year: "numeric",
-    month: "short",
-    day: "numeric"
-  });
   const simulatedTournaments = [
     {
       id: "champions-2025",
@@ -252,19 +236,19 @@ const $$id = createComponent(($$result, $$props, $$slots) => {
       record: "4-1-1"
     }
   ];
-  const tournaments = fighter.tournaments ?? simulatedTournaments;
-  return renderTemplate`${renderComponent($$result, "Layout", $$Layout, { "title": `${fighter.name} | ${fixedTitle}`, "data-astro-cid-mffttbam": true }, { "default": ($$result2) => renderTemplate` ${maybeRenderHead()}<section class="relative flex lg:min-h-screen w-full flex-col-reverse lg:flex-row" data-astro-cid-mffttbam> <!-- Contenido --> <div class="ssss" data-astro-cid-mffttbam> <div class="relative z-10 flex w-full flex-col items-center justify-center pl-0 pr-0 lg:pr-6 pt-24 lg:flex-row lg:items-start lg:pt-32" data-astro-cid-mffttbam> <!-- Imagen --> <div class="relative mt-8 px-6 lg:px-2 flex h-[60vh] w-full lg:min-w-sm items-center justify-center lg:mt-0 lg:h-[80vh] lg:w-1/2" data-astro-cid-mffttbam> <img${addAttribute(`/images/fighters/big/jugador_mistery.webp`, "src")}${addAttribute(`Retrato de ${fighter.name}`, "alt")} class="animate-fade-in mask-image-fade-bottom h-full w-full object-contain transition-all duration-700 hover:scale-105" data-astro-cid-mffttbam${addAttribute(renderTransition($$result2, "5uh2lcem", "", `image-${id}`), "data-astro-transition-scope")}> </div> <!-- Perfil --> <div class="w-[95%] md:w-full lg:w-1/2
+  const tournaments = simulatedTournaments;
+  return renderTemplate`${renderComponent($$result, "Layout", $$Layout, { "title": `${player.name} | ${fixedTitle}`, "data-astro-cid-gjv37z6d": true }, { "default": ($$result2) => renderTemplate` ${maybeRenderHead()}<section class="relative flex lg:min-h-screen w-full flex-col-reverse lg:flex-row" data-astro-cid-gjv37z6d> <!-- Contenido --> <div class="ssss" data-astro-cid-gjv37z6d> <div class="relative z-10 flex w-full flex-col items-center justify-center pl-0 pr-0 lg:pr-6 pt-24 lg:flex-row lg:items-start lg:pt-32" data-astro-cid-gjv37z6d> <!-- Imagen --> <div class="relative mt-8 px-6 lg:px-2 flex h-[60vh] w-full lg:min-w-sm items-center justify-center lg:mt-0 lg:h-[80vh] lg:w-1/2" data-astro-cid-gjv37z6d> <img${addAttribute(`/images/fighters/big/jugador_mistery.webp`, "src")}${addAttribute(`Retrato de ${player.name}`, "alt")} class="animate-fade-in mask-image-fade-bottom h-full w-full object-contain transition-all duration-700 hover:scale-105" data-astro-cid-gjv37z6d${addAttribute(renderTransition($$result2, "wg6oeinf", "", `image-${id}`), "data-astro-transition-scope")}> </div> <div class="w-[95%] md:w-full lg:w-1/2
           px-1
           sm:px-4
           md:px-8
           lg:px-0
           mx-auto
           flex flex-col items-center justify-center
-          text-white" data-astro-cid-mffttbam> ${renderComponent($$result2, "BoxerProfileCard", $$BoxerProfileCard, { "fighter": fighter, "birthDate": birthDate, "data-astro-cid-mffttbam": true })} </div> </div> </div> </section>  ${renderComponent($$result2, "TournamentCards", $$TournamentCards, { "fighterId": fighter.id, "tournaments": tournaments, "data-astro-cid-mffttbam": true })} ` })} `;
-}, "C:/Users/jorge/OneDrive/Desktop/pruebaVelada/la-velada-clone/src/pages/luchador/[id].astro", "self");
+          text-white" data-astro-cid-gjv37z6d> ${renderComponent($$result2, "BoxerProfileCard", $$BoxerProfileCard, { "player": player, "data-astro-cid-gjv37z6d": true })} </div> </div> </div> </section>  ${renderComponent($$result2, "TournamentCards", $$TournamentCards, { "fighterId": player.id, "tournaments": tournaments, "data-astro-cid-gjv37z6d": true })} ` })} `;
+}, "C:/Users/jorge/OneDrive/Desktop/pruebaVelada/la-velada-clone/src/pages/jugador/[id].astro", "self");
 
-const $$file = "C:/Users/jorge/OneDrive/Desktop/pruebaVelada/la-velada-clone/src/pages/luchador/[id].astro";
-const $$url = "/luchador/[id]";
+const $$file = "C:/Users/jorge/OneDrive/Desktop/pruebaVelada/la-velada-clone/src/pages/jugador/[id].astro";
+const $$url = "/jugador/[id]";
 
 const _page = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
   __proto__: null,

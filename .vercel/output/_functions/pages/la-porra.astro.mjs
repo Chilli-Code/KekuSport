@@ -1,7 +1,7 @@
-import { b as createAstro, c as createComponent, a as renderTemplate } from '../chunks/astro/server_DpPHlMO2.mjs';
+import { d as createAstro, c as createComponent, a as renderTemplate } from '../chunks/astro/server_CQLHzLBK.mjs';
 import 'kleur/colors';
 import 'clsx';
-import { F as FIGHTERS } from '../chunks/fighters_Cwhcckr7.mjs';
+import { P as PLAYERS } from '../chunks/fighters_Cyp_aquJ.mjs';
 export { renderers } from '../renderers.mjs';
 
 const $$Astro = createAstro("https://la-velada-clone.vercel.app/");
@@ -9,8 +9,8 @@ const $$LaPorra = createComponent(($$result, $$props, $$slots) => {
   const Astro2 = $$result.createAstro($$Astro, $$props, $$slots);
   Astro2.self = $$LaPorra;
   const { id } = Astro2.params;
-  const fighter = FIGHTERS.find((fighter2) => fighter2.id === id);
-  if (!fighter) return Astro2.redirect("/404");
+  const player = PLAYERS.find((p) => p.id === id);
+  if (!player) return Astro2.redirect("/404");
   return renderTemplate``;
 }, "C:/Users/jorge/OneDrive/Desktop/pruebaVelada/la-velada-clone/src/pages/la-porra.astro", void 0);
 

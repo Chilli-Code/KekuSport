@@ -11,8 +11,10 @@ export async function getStaticPaths() {
 
 const { equipo } = Astro.params;
 const team = TEAMS.find((t) => t.id === equipo);
+
+const teamLogo = '/images/Logo_Default.png'
 ---
 
 <Layout>
-  <Hero />
+  <Hero teamLogo={teamLogo} />
 </Layout>

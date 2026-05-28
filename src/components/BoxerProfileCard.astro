@@ -1,10 +1,8 @@
 ---
 import Logo from "@/assets/svg/logo.svg";
-import BoxerCard from '@/components/BoxerCard.astro'
-import { FIGHTERS } from '@/consts/fighters'
+import { TEAMS } from '@/consts/teams'
 
-// Definir las props correctamente
-const { fighter, birthDate, battle } = Astro.props;
+const { player } = Astro.props;
 
 const generateRandomBars = () => {
   const bars = [];
@@ -15,7 +13,9 @@ const generateRandomBars = () => {
 };
 
 const bars = generateRandomBars();
-const opponent = FIGHTERS.find((f) => f.id === fighter.versus)
+const team = TEAMS.find((t) => t.id === player.team)
+
+
 ---
 
 <article class="boxer-profile-card group relative
@@ -27,171 +27,102 @@ overflow-hidden rounded-xl
 bg-theme-midnight/70 backdrop-blur-xs
 transition-all duration-500">
   
-  {/* Efecto de brillo al hover */}
   <div class="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/10 to-transparent transition-transform duration-700 ease-in-out group-hover:translate-x-full"></div>
 
   <main class="grid gap-0">
-    {/* Tags */}
     <div class="flex flex-wrap items-center gap-2 p-4 pb-0 animate-fade-in-up">
-      {battle && (
-        <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider bg-gradient-to-r from-amber-600 to-amber-500 text-white shadow-lg">
-          Combate · {String(battle.number).padStart(2, '0')}
-        </span>
-      )}
       <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-500/20 backdrop-blur-sm border border-emerald-500/30 text-emerald-300">
-        <span aria-hidden="true">{fighter.flag}</span>
-        {fighter.countryName}
+        {player.neighborhood}
       </span>
       <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider bg-purple-500/20 backdrop-blur-sm border border-purple-500/30 text-purple-300">
-        {fighter.genderLabel}
+        {player.position}
       </span>
     </div>
 
-    {/* Información */}
     <div class="flex flex-col p-4">
-      {/* Nombre del boxeador */}
       <div class="mb-3">
         <div class="inline-block border-l-3 border-theme-gold pl-2">
           <div class="h-auto w-auto">
             <h3 class="boxer-detail-name text-5xl font-black uppercase tracking-wider relative z-10 sm:text-6xl md:text-7xl">
-              {fighter.name}
+              {player.name}
             </h3>
             <div class="absolute inset-0 bg-theme-gold/40 blur-2xl -z-0 opacity-20 group-hover:opacity-40 transition-opacity duration-500 rounded-xl"></div>
           </div>
         </div>
       </div>
 
-      {/* VS y Oponente - CON ENLACE FUNCIONAL */}
-      {opponent && (
-        <div class="flex w-full items-center justify-left gap-4 my-2">
-          <span class="text-theme-gold font-bold text-xl">VS</span>
-          
-          {/* Enlace circular al perfil del oponente */}
-          <a 
-            href={`/luchador/${opponent.id}`}
-            class="relative w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden shadow-lg transition-all duration-300 hover:scale-110 hover:shadow-purple-500/30 focus:outline-none focus:ring-2 focus:ring-purple-500"
-          >
-            <img
-              class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-              src={`/images/fighters/cards/jugador_mistery_card.png`}
-              alt={opponent.name}
-            />
-            {/* Overlay con nombre al hover */}
-            <div class="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 transition-opacity duration-300 hover:opacity-100">
-              <span class="text-purple-400 text-xs font-bold text-center px-1">{opponent.name}</span>
-            </div>
-            {/* Borde circular al hover */}
-            <div class="absolute inset-0 rounded-full border-2 border-purple-500/70 opacity-0 transition-opacity duration-300 hover:opacity-100"></div>
-          </a>
+      {team && (
+        <div class="flex items-center gap-2 mt-1 mb-2">
+          <span class="text-[0.55rem] font-bold tracking-[0.3em] text-theme-gold/70 uppercase">
+            {team.name}
+          </span>
         </div>
       )}
 
-      {/* Línea decorativa */}
       <div class="flex w-full items-center gap-3 sm:gap-4 my-4" aria-hidden="true">
         <span class="size-1 rotate-45 bg-theme-gold/70"></span>
         <span class="h-px flex-1 bg-linear-to-r from-theme-gold/45 to-transparent"></span>
       </div>
 
-      <p class="boxer-detail-coming-soon-eyebrow font-cinzel text-[0.55rem] font-bold tracking-[0.45em] text-theme-gold/80 sm:text-[0.65rem]">
-        FICHA EN PREPARACIÓN
-      </p>
-
-      {/* Estadísticas */}
-      <div class="grid grid-cols-2 gap-3 mt-2">
+      <div class="grid grid-cols-3 gap-2 mt-2">
         <div class="stat-item">
           <span class="text-[0.5rem] font-bold tracking-[0.2em] text-theme-gold/70 uppercase">
             Edad
           </span>
           <p class="font-cinzel text-base font-bold text-theme-cream">
-            {fighter.age} <span class="text-xs font-normal text-theme-cream/60">años</span>
+            {player.age} <span class="text-xs font-normal text-theme-cream/60">años</span>
           </p>
         </div>
         <div class="stat-item">
           <span class="text-[0.5rem] font-bold tracking-[0.2em] text-theme-gold/70 uppercase">
-            Equipo Actual
+            Dorsal
           </span>
           <p class="font-cinzel text-base font-bold text-theme-cream">
-            BARCELONA
+            #{player.number}
           </p>
         </div>
-          <div class="stat-item">
+        <div class="stat-item">
           <span class="text-[0.5rem] font-bold tracking-[0.2em] text-theme-gold/70 uppercase">
-            Victorias
+            Posición
           </span>
           <p class="font-cinzel text-base font-bold text-theme-cream">
-            20 <span class="text-xs font-normal text-theme-cream/60">V</span>
+            {player.position}
           </p>
         </div>
+        <div class="stat-item">
+          <span class="text-[0.5rem] font-bold tracking-[0.2em] text-theme-gold/70 uppercase">
+            Barrio
+          </span>
+          <p class="font-cinzel text-base font-bold text-theme-cream">
+            {player.neighborhood}
+          </p>
+        </div>
+        <div class="stat-item">
+          <span class="text-[0.5rem] font-bold tracking-[0.2em] text-theme-gold/70 uppercase">
+            Pie Hábil
+          </span>
+          <p class="font-cinzel text-base font-bold text-theme-cream">
+            {player.preferredFoot}
+          </p>
+        </div>
+      </div>
 
-        <div class="stat-item">
-          <span class="text-[0.5rem] font-bold tracking-[0.2em] text-theme-gold/70 uppercase">
-            Derrotas
-          </span>
-          <p class="font-cinzel text-base font-bold text-theme-cream">
-            10 <span class="text-xs font-normal text-theme-cream/60">D</span>
-          </p>
-        </div>
-          <div class="stat-item">
-          <span class="text-[0.5rem] font-bold tracking-[0.2em] text-theme-gold/70 uppercase">
-            Empates
-          </span>
-          <p class="font-cinzel text-base font-bold text-theme-cream">
-            2 <span class="text-xs font-normal text-theme-cream/60">E</span>
-          </p>
-        </div>
-        
-        <div class="stat-item">
-          <span class="text-[0.5rem] font-bold tracking-[0.2em] text-theme-gold/70 uppercase">
-            Peso
-          </span>
-          <p class="font-cinzel text-base font-bold text-theme-cream">
-            {fighter.weight} <span class="text-xs font-normal text-theme-cream/60">kg</span>
-          </p>
-        </div>
-        
-        <div class="stat-item">
-          <span class="text-[0.5rem] font-bold tracking-[0.2em] text-theme-gold/70 uppercase">
-            Nacimiento
-          </span>
-          <p class="font-cinzel text-base font-bold text-theme-cream">
-            {birthDate}
-          </p>
-        </div>
-        
-        <div class="stat-item">
-          <span class="text-[0.5rem] font-bold tracking-[0.2em] text-theme-gold/70 uppercase">
-            Altura
-          </span>
-          <p class="font-cinzel text-base font-bold text-theme-cream">
-            {fighter.height} <span class="text-xs font-normal text-theme-cream/60">m</span>
-          </p>
-        </div>
+      <div class="mt-4 p-3 rounded-lg border border-theme-gold/15 bg-theme-midnight/50">
+        <p class="font-cinzel text-xs leading-relaxed tracking-wide text-theme-cream/80 italic">
+          "{player.bio}"
+        </p>
       </div>
     </div>
   </main>
 
-  {/* Footer con ciudad y código de barras */}
   <footer class="flex items-center flex-col justify-between border-t border-theme-gold/20 bg-theme-midnight/80 px-4 py-2">
-        <div>
-      <p class="boxer-detail-coming-soon-text mt-1 max-w-xl font-cinzel text-xs font-medium leading-relaxed tracking-[0.18em] text-theme-cream/70 sm:text-sm">
-      Estamos puliendo la ficha completa de {fighter.name}, entrenamientos y rivalidades. Vuelve pronto.</p>
-
-    </div>
-    
     <div class="w-full flex justify-between mt-2">
       <div class="flex items-center gap-2">
-        <img
-          class="h-5 w-auto rounded-full border border-theme-gold/30 object-cover"
-          src={`/images/flags/${fighter.country}.webp`}
-          alt={`País ${fighter.country}`}
-          decoding="async"
-          loading="lazy"
-        />
         <span class="font-cinzel text-xs font-bold uppercase tracking-wide text-theme-cream/80">
-          {fighter.city}
+          {player.city} · {player.neighborhood}
         </span>
       </div>
-  
+
       <div class="flex items-center gap-2">
         <Logo class="h-5 w-auto text-theme-gold" />
         <div class="flex items-end bg-theme-cream/90 pl-0.5 py-0.5 rounded-sm">
@@ -220,6 +151,7 @@ transition-all duration-500">
   .stat-item:nth-child(2) { animation-delay: 0.2s; }
   .stat-item:nth-child(3) { animation-delay: 0.3s; }
   .stat-item:nth-child(4) { animation-delay: 0.4s; }
+  .stat-item:nth-child(5) { animation-delay: 0.5s; }
 
   @keyframes fadeInUp {
     from {
@@ -232,7 +164,6 @@ transition-all duration-500">
     }
   }
 
-  /* Estilo dorado exacto como el original */
   .boxer-detail-name {
     color: #fef3c7;
     background: linear-gradient(

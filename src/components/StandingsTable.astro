@@ -1,6 +1,5 @@
 ---
 // Tabla de posiciones para torneo de PES
-import { FIGHTERS } from '@/consts/fighters'
 
 export interface Props {
   standings?: Array<{
@@ -32,15 +31,15 @@ const {
   qualificationPositions = [1, 2, 3, 4]
 } = Astro.props
 
-// Datos simulados basados en tus fighters
+// Datos simulados basados en los jugadores
 const simulatedStandings = [
   {
     position: 1,
     team: {
-      id: 'peereira',
-      name: 'Peereira',
-      manager: 'Pablo Ramos',
-      logo: '/images/fighters/cards/peereira.webp'
+      id: 'alex',
+      name: 'Álex',
+      manager: 'Alejandro García',
+      logo: '/images/fighters/cards/alex.webp'
     },
     played: 10,
     wins: 8,
@@ -55,10 +54,10 @@ const simulatedStandings = [
   {
     position: 2,
     team: {
-      id: 'rivaldios',
-      name: 'Rivaldios',
-      manager: 'Rivaldo',
-      logo: '/images/fighters/cards/rivaldios.webp'
+      id: 'sofia',
+      name: 'Sofía',
+      manager: 'Sofía Ramírez',
+      logo: '/images/fighters/cards/sofia.webp'
     },
     played: 10,
     wins: 7,
@@ -73,10 +72,10 @@ const simulatedStandings = [
   {
     position: 3,
     team: {
-      id: 'djmariio',
-      name: 'DjMaRIIO',
-      manager: 'DjMaRIIO',
-      logo: '/images/fighters/cards/djmariio.webp'
+      id: 'maria',
+      name: 'María',
+      manager: 'María F. Torres',
+      logo: '/images/fighters/cards/maria.webp'
     },
     played: 10,
     wins: 6,
@@ -91,10 +90,10 @@ const simulatedStandings = [
   {
     position: 4,
     team: {
-      id: 'ibai',
-      name: 'Ibai Llanos',
-      manager: 'Ibai',
-      logo: '/images/fighters/cards/ibai.webp'
+      id: 'ana',
+      name: 'Ana',
+      manager: 'Ana Belén Castro',
+      logo: '/images/fighters/cards/ana.webp'
     },
     played: 10,
     wins: 5,
@@ -109,10 +108,10 @@ const simulatedStandings = [
   {
     position: 5,
     team: {
-      id: 'spursito',
-      name: 'Spursito',
-      manager: 'Spursito',
-      logo: '/images/fighters/cards/spursito.webp'
+      id: 'javier',
+      name: 'Javier',
+      manager: 'Javier Ruiz',
+      logo: '/images/fighters/cards/javier.webp'
     },
     played: 10,
     wins: 4,
@@ -127,10 +126,10 @@ const simulatedStandings = [
   {
     position: 6,
     team: {
-      id: 'xocas',
-      name: 'Xocas',
-      manager: 'Xocas',
-      logo: '/images/fighters/cards/xocas.webp'
+      id: 'laura',
+      name: 'Laura',
+      manager: 'Laura Martínez',
+      logo: '/images/fighters/cards/laura.webp'
     },
     played: 10,
     wins: 3,
@@ -145,10 +144,10 @@ const simulatedStandings = [
   {
     position: 7,
     team: {
-      id: 'carreraa',
-      name: 'Carreraa',
-      manager: 'Carreraa',
-      logo: '/images/fighters/cards/carreraa.webp'
+      id: 'carlos',
+      name: 'Carlos',
+      manager: 'Carlos Sánchez',
+      logo: '/images/fighters/cards/carlos.webp'
     },
     played: 10,
     wins: 2,
@@ -163,10 +162,10 @@ const simulatedStandings = [
   {
     position: 8,
     team: {
-      id: 'elxokas',
-      name: 'ElXokas',
-      manager: 'Xokas',
-      logo: '/images/fighters/cards/elxokas.webp'
+      id: 'pablo',
+      name: 'Pablo',
+      manager: 'Pablo Martín',
+      logo: '/images/fighters/cards/pablo.webp'
     },
     played: 10,
     wins: 1,
@@ -210,7 +209,7 @@ const getFormIcon = (result: 'W' | 'D' | 'L') => {
 }
 ---
 
-<div class="standings-container w-full max-w-6xl mx-auto animate-fade-in-up">
+<div class="standings-container pt-10 w-full max-w-6xl mx-auto animate-fade-in-up">
 {/* Título de la tabla */}
 <div class="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
   
@@ -281,7 +280,7 @@ const getFormIcon = (result: 'W' | 'D' | 'L') => {
               {/* Imagen del jugador */}
               {team.team.logo && (
                 <a 
-                  href={`/luchador/${team.team.id}`}
+                  href={`/jugador/${team.team.id}`}
                   class="flex-shrink-0 transition-transform duration-300 hover:scale-110"
                 >
                   <img 
@@ -296,7 +295,7 @@ const getFormIcon = (result: 'W' | 'D' | 'L') => {
               {/* Nombre y manager con enlace */}
               <div class="flex flex-col">
                 <a 
-                  href={`/luchador/${team.team.id}`}
+                  href={`/jugador/${team.team.id}`}
                   class="font-cinzel text-xs font-bold uppercase tracking-wide text-theme-cream hover:text-theme-gold transition-colors duration-300"
                 >
                   {team.team.name}

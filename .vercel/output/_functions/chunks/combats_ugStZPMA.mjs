@@ -1,23 +1,21 @@
-import type { Combat} from "../types/Combat";
-
-export const COMBATS: Combat[] = [
+const COMBATS = [
   {
     id: "1-thunder-vs-blaze",
     number: 1,
-    fighters: ["thunder","blaze"],
+    fighters: ["thunder", "blaze"],
     title: "Thunder Wolves vs Blaze Phoenix",
     video: ""
   },
   {
     id: "2-shadow-vs-frost",
     number: 2,
-    fighters: ["shadow","frost"],
+    fighters: ["shadow", "frost"],
     title: "Shadow Reapers vs Frost Giants",
-    video:""
+    video: ""
   },
   {
     id: "3-iron-vs-storm",
-    number:3,
+    number: 3,
     fighters: ["iron", "storm"],
     title: "Iron Bulls vs Storm Riders",
     video: ""
@@ -43,5 +41,6 @@ export const COMBATS: Combat[] = [
     title: "Wild Cobras vs Steel Warriors",
     video: ""
   }
+];
 
-]
+export { COMBATS as C };

@@ -1,0 +1,189 @@
+---
+import Layout from '@/layouts/Layout.astro'
+import { COMBATS } from '@/consts/combats'
+import DuelCard from '@/components/DuelCard.astro'
+
+const combats = COMBATS.sort((a, b) => a.number - b.number)
+
+const simulatedDetails: Record<string, { hour: string; date: string; venue: string; stage: string }> = {
+  "1-thunder-vs-blaze": { hour: "18:00", date: "SÁB 12 JUL", venue: "CANCHA LA 93", stage: "CUARTOS DE FINAL" },
+  "2-shadow-vs-frost":  { hour: "18:45", date: "SÁB 12 JUL", venue: "CANCHA LA 93", stage: "CUARTOS DE FINAL" },
+  "3-iron-vs-storm":    { hour: "19:30", date: "SÁB 12 JUL", venue: "CANCHA LA 93", stage: "CUARTOS DE FINAL" },
+  "4-night-vs-golden":  { hour: "20:15", date: "SÁB 12 JUL", venue: "CANCHA LA 93", stage: "CUARTOS DE FINAL" },
+  "5-red-vs-dark":      { hour: "21:00", date: "SÁB 12 JUL", venue: "CANCHA LA 93", stage: "SEMIFINALES" },
+  "6-wild-vs-steel":    { hour: "21:45", date: "SÁB 12 JUL", venue: "CANCHA LA 93", stage: "SEMIFINALES" },
+}
+---
+
+<Layout>
+  <section class="combates-root">
+    <div class="combates-bg" aria-hidden="true">
+      <div class="combates-glow combates-glow--green"></div>
+      <div class="combates-glow combates-glow--purple"></div>
+      <div class="combates-stars"></div>
+    </div>
+
+    <div class="combates-content">
+      <header class="combates-header">
+        <div class="combates-ornament">
+          <span class="combates-orn-line"></span>
+          <span class="combates-orn-diamond combates-orn-diamond--gold"></span>
+          <span class="combates-orn-diamond combates-orn-diamond--sm combates-orn-diamond--purple"></span>
+          <span class="combates-orn-diamond combates-orn-diamond--gold"></span>
+          <span class="combates-orn-line"></span>
+        </div>
+        <h1 class="combates-h1">COMBATES</h1>
+        <p class="combates-desc">{combats.length} DUELOS PROGRAMADOS</p>
+      </header>
+
+      <div class="combates-grid">
+        {combats.map((combat) => {
+          const details = simulatedDetails[combat.id] || {}
+          return (
+            <DuelCard
+              id={combat.id}
+              team1Id={combat.fighters[0]}
+              team2Id={combat.fighters[1]}
+              title={combat.title}
+              hour={details.hour}
+              date={details.date}
+              venue={details.venue}
+              stage={details.stage}
+            />
+          )
+        })}
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .combates-root {
+    position: relative;
+    min-height: 100vh;
+    background: radial-gradient(ellipse at 50% -10%, #0b2a1a 0%, #050d08 55%, #03080e 100%);
+    padding: 6rem 1.5rem 5rem;
+    overflow: hidden;
+    isolation: isolate;
+  }
+
+  .combates-bg { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
+
+  .combates-glow {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.3;
+  }
+  .combates-glow--green {
+    width: 60vw; height: 50vh;
+    top: -10%; left: 20%;
+    background: radial-gradient(circle, #00ff88 0%, transparent 70%);
+    animation: combGlow 8s ease-in-out infinite alternate;
+  }
+  .combates-glow--purple {
+    width: 40vw; height: 40vh;
+    bottom: 10%; right: -5%;
+    background: radial-gradient(circle, #7c3aed 0%, transparent 70%);
+    opacity: 0.2;
+    animation: combGlow 10s ease-in-out infinite alternate-reverse;
+  }
+  @keyframes combGlow {
+    0%   { opacity: 0.2; transform: scale(1); }
+    100% { opacity: 0.4; transform: scale(1.1); }
+  }
+
+  .combates-stars {
+    position: absolute; inset: 0;
+    background-image:
+      radial-gradient(1.5px 1.5px at 10% 20%, #fff, transparent),
+      radial-gradient(1px 1px at 30% 65%, #aaffcc, transparent),
+      radial-gradient(2px 2px at 55% 15%, #a855f7, transparent),
+      radial-gradient(1px 1px at 70% 80%, #fff, transparent),
+      radial-gradient(2px 2px at 85% 40%, #00ff88, transparent);
+    background-size: 300px 300px;
+    opacity: 0.5;
+    animation: combStars 7s ease-in-out infinite alternate;
+  }
+  @keyframes combStars {
+    0%   { opacity: 0.3; }
+    100% { opacity: 0.6; }
+  }
+
+  .combates-content {
+    position: relative;
+    z-index: 10;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .combates-header {
+    text-align: center;
+    margin-bottom: 3rem;
+  }
+
+  .combates-ornament {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    margin-bottom: 1.25rem;
+  }
+  .combates-orn-line {
+    display: block;
+    width: 6rem;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--color-theme-gold), transparent);
+  }
+  .combates-orn-diamond {
+    display: block;
+    transform: rotate(45deg);
+  }
+  .combates-orn-diamond--gold {
+    width: 8px; height: 8px;
+    background: var(--color-theme-gold);
+    box-shadow: 0 0 10px var(--color-theme-gold);
+  }
+  .combates-orn-diamond--sm { width: 5px; height: 5px; }
+  .combates-orn-diamond--purple {
+    background: #a855f7;
+    box-shadow: 0 0 8px #a855f7;
+  }
+
+  .combates-h1 {
+    font-family: var(--font-cinzel), serif;
+    font-size: clamp(2.5rem, 7vw, 5rem);
+    font-weight: 900;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    background: linear-gradient(135deg, #fef3c7 0%, var(--color-theme-gold) 40%, #a855f7 75%, #c084fc 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin-bottom: 0.6rem;
+    filter: drop-shadow(0 0 20px rgba(0,255,136,0.2));
+  }
+
+  .combates-desc {
+    font-family: var(--font-cinzel), serif;
+    font-size: 0.65rem;
+    letter-spacing: 0.3em;
+    color: color-mix(in srgb, var(--color-theme-cream) 55%, transparent);
+    text-transform: uppercase;
+  }
+
+  .combates-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    justify-items: center;
+  }
+
+  @media (min-width: 640px) {
+    .combates-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  @media (min-width: 1024px) {
+    .combates-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+</style>

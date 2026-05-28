@@ -1,23 +1,13 @@
 ---
-import { FIGHTERS } from '@/consts/fighters'
+import { PLAYERS } from '@/consts/fighters'
 import Layout from '@/layouts/Layout.astro'
 
-const totalBoxers = FIGHTERS.length
+const totalBoxers = PLAYERS.length
 
-const countryNames: Record<string, string> = {
-  es: 'España', mx: 'México', ar: 'Argentina', co: 'Colombia', pe: 'Perú', cl: 'Chile', us: 'EE.UU'
-}
-const countryFlags: Record<string, string> = {
-  es: '🇪🇸', mx: '🇲🇽', ar: '🇦🇷', co: '🇨🇴', pe: '🇵🇪', cl: '🇨🇱', us: '🇺🇸'
-}
-
-const boxerCards = FIGHTERS.map((fighter) => ({
-  id: fighter.id,
-  name: fighter.name,
-  country: fighter.country,
-  countryName: countryNames[fighter.country] || fighter.country,
-  flag: countryFlags[fighter.country] || '🏳️',
-  gender: fighter.gender === 'masculino' ? 'M' : 'F',
+const playerCards = PLAYERS.map((player) => ({
+  id: player.id,
+  name: player.name,
+  neighborhood: player.neighborhood,
 }))
 ---
 <Layout >
@@ -52,9 +42,9 @@ const boxerCards = FIGHTERS.map((fighter) => ({
   
       <!-- GRID -->
       <div class="players-grid">
-        {boxerCards.map((fighter, i) => (
+        {playerCards.map((player, i) => (
           <a
-            href={`/luchador/${fighter.id}`}
+            href={`/jugador/${player.id}`}
             class="pcard"
             style={`animation-delay:${i * 0.04}s`}
           >
@@ -66,14 +56,13 @@ const boxerCards = FIGHTERS.map((fighter) => ({
 
             <div class="pcard-img-wrap">
               <img
-                src={`/images/fighters/cards/${fighter.id}.webp`}
-                alt={fighter.name}
+                src={`/images/fighters/cards/${player.id}.webp`}
+                alt={player.name}
                 class="pcard-img"
                 loading="lazy"
               />
    
               <div class="pcard-overlay"></div>
-              <!-- rayo lateral izquierdo -->
               <div class="pcard-lightning pcard-lightning--l"></div>
               <div class="pcard-lightning pcard-lightning--r"></div>
             </div>
@@ -84,10 +73,9 @@ const boxerCards = FIGHTERS.map((fighter) => ({
 
             <div class="pcard-info">
               <div class="pcard-divider"></div>
-              <h2 class="pcard-name">{fighter.name}</h2>
+              <h2 class="pcard-name">{player.name}</h2>
               <div class="pcard-country">
-                <span class="pcard-flag">{fighter.flag}</span>
-                <span class="pcard-country-name">{fighter.countryName}</span>
+                <span class="pcard-country-name">{player.neighborhood}</span>
               </div>
             </div>
           </a>

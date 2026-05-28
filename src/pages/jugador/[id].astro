@@ -1,5 +1,5 @@
 ---
-import { FIGHTERS } from '@/consts/fighters'
+import { PLAYERS } from '@/consts/fighters'
 import { fixedTitle } from '@/consts/pageTitles'
 
 import Layout from '@/layouts/Layout.astro'
@@ -8,19 +8,12 @@ import TournamentCards from '@/components/TournamentCards.astro'
 
 const { id } = Astro.params
 
-const fighter = FIGHTERS.find((fighter) => fighter.id === id)
+const player = PLAYERS.find((p) => p.id === id)
 
-if (!fighter) {
+if (!player) {
   return Astro.redirect('/404')
 }
 
-const birthDate = fighter.birthDate.toLocaleDateString('es-ES', {
-  year: 'numeric',
-  month: 'short',
-  day: 'numeric',
-})
-
-// ================= DATOS SIMULADOS DE TORNEOS =================
 const simulatedTournaments = [
   {
     id: 'champions-2025',
@@ -114,11 +107,10 @@ const simulatedTournaments = [
   }
 ]
 
-// Usa torneos reales o simulados
-const tournaments = fighter.tournaments ?? simulatedTournaments
+const tournaments = simulatedTournaments
 ---
 
-<Layout title={`${fighter.name} | ${fixedTitle}`}>
+<Layout title={`${player.name} | ${fixedTitle}`}>
   <section class="relative flex lg:min-h-screen w-full flex-col-reverse lg:flex-row">
 
 
@@ -136,13 +128,12 @@ const tournaments = fighter.tournaments ?? simulatedTournaments
         >
           <img
             src={`/images/fighters/big/jugador_mistery.webp`}
-            alt={`Retrato de ${fighter.name}`}
+            alt={`Retrato de ${player.name}`}
             class="animate-fade-in mask-image-fade-bottom h-full w-full object-contain transition-all duration-700 hover:scale-105"
             transition:name={`image-${id}`}
           />
         </div>
 
-        <!-- Perfil -->
         <div
           class="w-[95%] md:w-full lg:w-1/2
           px-1
@@ -154,20 +145,18 @@ const tournaments = fighter.tournaments ?? simulatedTournaments
           text-white"
         >
           <BoxerProfileCard
-            fighter={fighter}
-            birthDate={birthDate}
+            player={player}
           />
         </div>
-
       </div>
     </div>
   </section>
 
   <!-- NUEVO COMPONENTE DE TORNEOS -->
-  <TournamentCards
-    fighterId={fighter.id}
+  <!-- <TournamentCards
+    fighterId={player.id}
     tournaments={tournaments}
-  />
+  /> -->
 
 
 

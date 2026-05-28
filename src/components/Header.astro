@@ -1,7 +1,7 @@
 ---
 const { pathname } = Astro.url
 
-const shouldShowLogo = pathname !== '/' && !pathname.startsWith('/jugadores')
+const shouldShowLogo = pathname !== '/' && pathname !== '/jugadores'
 
 // Comprueba si la ruta actual está activa
 const isActive = (path: string) => pathname === path

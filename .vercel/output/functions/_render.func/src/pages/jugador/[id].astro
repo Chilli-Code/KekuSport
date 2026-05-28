@@ -1,5 +1,5 @@
 ---
-import { FIGHTERS } from '@/consts/fighters'
+import { PLAYERS } from '@/consts/fighters'
 import { fixedTitle } from '@/consts/pageTitles'
 
 import Layout from '@/layouts/Layout.astro'
@@ -8,19 +8,12 @@ import TournamentCards from '@/components/TournamentCards.astro'
 
 const { id } = Astro.params
 
-const fighter = FIGHTERS.find((fighter) => fighter.id === id)
+const player = PLAYERS.find((p) => p.id === id)
 
-if (!fighter) {
+if (!player) {
   return Astro.redirect('/404')
 }
 
-const birthDate = fighter.birthDate.toLocaleDateString('es-ES', {
-  year: 'numeric',
-  month: 'short',
-  day: 'numeric',
-})
-
-// ================= DATOS SIMULADOS DE TORNEOS =================
 const simulatedTournaments = [
   {
     id: 'champions-2025',
@@ -114,11 +107,10 @@ const simulatedTournaments = [
   }
 ]
 
-// Usa torneos reales o simulados
-const tournaments = fighter.tournaments ?? simulatedTournaments
+const tournaments = simulatedTournaments
 ---
 
-<Layout title={`${fighter.name} | ${fixedTitle}`}>
+<Layout title={`${player.name} | ${fixedTitle}`}>
   <section class="relative flex lg:min-h-screen w-full flex-col-reverse lg:flex-row">
 
 
@@ -136,13 +128,12 @@ const tournaments = fighter.tournaments ?? simulatedTournaments
         >
           <img
             src={`/images/fighters/big/jugador_mistery.webp`}
-            alt={`Retrato de ${fighter.name}`}
+            alt={`Retrato de ${player.name}`}
             class="animate-fade-in mask-image-fade-bottom h-full w-full object-contain transition-all duration-700 hover:scale-105"
             transition:name={`image-${id}`}
           />
         </div>
 
-        <!-- Perfil -->
         <div
           class="w-[95%] md:w-full lg:w-1/2
           px-1
@@ -154,18 +145,16 @@ const tournaments = fighter.tournaments ?? simulatedTournaments
           text-white"
         >
           <BoxerProfileCard
-            fighter={fighter}
-            birthDate={birthDate}
+            player={player}
           />
         </div>
-
       </div>
     </div>
   </section>
 
   <!-- NUEVO COMPONENTE DE TORNEOS -->
   <TournamentCards
-    fighterId={fighter.id}
+    fighterId={player.id}
     tournaments={tournaments}
   />
 
@@ -193,5 +182,50 @@ const tournaments = fighter.tournaments ?? simulatedTournaments
     -webkit-mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
   }
 
+  .boxer-detail-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 1.3rem;
+    border-radius: 9999px;
+    font-family: 'Cinzel', var(--font-fallback);
+    font-size: 0.6rem;
+    font-weight: 800;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition:
+      transform 250ms ease,
+      background-color 250ms ease,
+      color 250ms ease,
+      box-shadow 250ms ease;
+  }
 
+  @media (min-width: 640px) {
+    .boxer-detail-cta {
+      font-size: 0.5rem;
+      padding: 0.8rem 1.5rem;
+    }
+  }
+
+  .boxer-detail-cta-ghost {
+    background: transparent;
+    color: color-mix(in srgb, var(--color-theme-cream) 80%, transparent);
+
+    box-shadow:
+      inset 0 0 0 1px
+      color-mix(in srgb, var(--color-theme-gold) 35%, transparent);
+  }
+
+  .boxer-detail-cta-ghost:hover,
+  .boxer-detail-cta-ghost:focus-visible {
+    color: var(--color-theme-cream);
+
+    box-shadow:
+      inset 0 0 0 1px
+      color-mix(in srgb, var(--color-theme-gold) 70%, transparent);
+
+    transform: translateY(-1px);
+    outline: none;
+  }
 </style>

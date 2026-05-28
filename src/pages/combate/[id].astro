@@ -1,7 +1,31 @@
 ---
-import { FIGHTERS } from "@/consts/fighters";
-const { id } = Astro.params;
+import HeroEvent from '@/components/Heroevent.astro'
+import Layout from '@/layouts/Layout.astro'
+import { COMBATS } from '@/consts/combats'
+import { TEAMS } from '@/consts/teams'
+import { PLAYERS } from '@/consts/fighters'
 
-const fighter = FIGHTERS.find((fighter) => fighter.id === id);
-if (!fighter) return Astro.redirect('/404')
+const { id } = Astro.params
+
+const combat = COMBATS.find(c => c.id === id)
+if (!combat) return Astro.redirect('/combates')
+
+const [team1Id, team2Id] = combat.fighters
+const team1Data = TEAMS.find(t => t.id === team1Id)
+const team2Data = TEAMS.find(t => t.id === team2Id)
+if (!team1Data || !team2Data) return Astro.redirect('/combates')
+
+const team1Players = PLAYERS.filter(p => p.team === team1Id).map(p => ({ id: p.id, name: p.name }))
+const team2Players = PLAYERS.filter(p => p.team === team2Id).map(p => ({ id: p.id, name: p.name }))
 ---
+<Layout>
+  <HeroEvent
+    teamA={{ id: team1Data.id, name: team1Data.name, players: team1Players }}
+    teamB={{ id: team2Data.id, name: team2Data.name, players: team2Players }}
+    date="SÁB 12 JUL"
+    venue="CANCHA LA 93 · BARRANQUILLA"
+    eventName="TORNEO JUGADORES"
+    edition="PRESENCIAL"
+    platform="BARRANQUILLA · COLOMBIA"
+  />
+</Layout>

@@ -1,14 +1,14 @@
 ---
-import { FIGHTERS } from '@/consts/fighters'
+import { PLAYERS } from '@/consts/fighters'
 import FighterSelector from './FighterSelector.astro'
 
-const { hideLogo } = Astro.props
+const { hideLogo, teamLogo } = Astro.props
 
-const firstRow = FIGHTERS.slice(0, 6)
+const firstRow = PLAYERS.slice(0, 6)
 const leftRow = firstRow.slice(0, 3)
 const rightRow = firstRow.slice(3)
-const secondRow = FIGHTERS.slice(6)
-const allFighters = FIGHTERS
+const secondRow = PLAYERS.slice(6)
+const allPlayers = PLAYERS
 ---
 
 <section class="relative flex min-h-screen w-full">
@@ -34,9 +34,9 @@ const allFighters = FIGHTERS
       <figure class="animate-fade-in relative mt-8">
         <img
           class="relative z-20 h-auto w-64"
-          src="/images/logobg.png"
+          src={teamLogo || "/images/logobg.png"}
           fetchpriority="high"
-          alt="La Velada del Año V"
+          alt={teamLogo ? "Logo del equipo" : "La Velada del Año V"}
           decoding="async"
         />
         <div class="absolute top-0 z-0 size-64 bg-emerald-500/80 blur-2xl"></div>
@@ -57,15 +57,15 @@ const allFighters = FIGHTERS
     <div class="relative hidden h-full w-full max-w-6xl flex-col items-center justify-end gap-4 p-8 pb-2 md:flex">
       <div class="flex w-full flex-wrap justify-between px-4">
         <div class="flex flex-wrap justify-start gap-4">
-          {leftRow.map(({ id, name, versus }) => <FighterSelector id={id} name={name} versus={versus} boxerCardClass='animate-fade-in-right animate-delay-500' />)}
+          {leftRow.map(({ id, name }) => <FighterSelector id={id} name={name} boxerCardClass='animate-fade-in-right animate-delay-500' />)}
         </div>
         <div class="flex flex-wrap justify-end gap-4">
-          {rightRow.map(({ id, name, versus }) => <FighterSelector id={id} name={name} versus={versus} boxerCardClass='animate-fade-in-left animate-delay-500' />)}
+          {rightRow.map(({ id, name }) => <FighterSelector id={id} name={name} boxerCardClass='animate-fade-in-left animate-delay-500' />)}
         </div>
       </div>
 
       <div class="flex flex-wrap justify-between gap-4">
-        {secondRow.map(({ id, name, versus }) => <FighterSelector id={id} name={name} versus={versus} boxerCardClass='animate-fade-in-up animate-delay-700' />)}
+        {secondRow.map(({ id, name }) => <FighterSelector id={id} name={name} boxerCardClass='animate-fade-in-up animate-delay-700' />)}
       </div>
     </div>
 
@@ -73,11 +73,10 @@ const allFighters = FIGHTERS
     <div class="relative flex h-full w-full flex-col items-center justify-end gap-4 p-4 md:hidden">
       <div class="w-full overflow-x-auto overflow-y-visible pb-2">
         <div class="flex min-w-max items-center justify-start gap-4 px-2">
-          {allFighters.map(({ id, name, versus }) => (
+          {allPlayers.map(({ id, name }) => (
             <FighterSelector 
               id={id} 
               name={name} 
-              versus={versus} 
               boxerCardClass='flex-shrink-0' 
             />
           ))}

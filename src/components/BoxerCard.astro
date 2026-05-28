@@ -1,10 +1,9 @@
 ---
-const { id, name, versus, class: extraClass, cardLink, cardImage } = Astro.props
+const { id, name, class: extraClass, cardLink, cardImage } = Astro.props
 
 interface Props {
   id: string
   name: string
-  versus: string
   class: string
   cardLink?: string
   cardImage?: string
@@ -15,9 +14,8 @@ interface Props {
   class={`boxer-card ${extraClass} inline-block transition-all 
     w-20 sm:w-14 md:w-16 lg:w-24 xl:w-26 
     group relative rounded-lg duration-300 hover:scale-110 hover:shadow-lg hover:z-20`}
-  href={cardLink || `/luchador/${id}`}
+  href={cardLink || `/jugador/${id}`}
   data-id={id}
-  data-versus={versus}
 >
   <div class="relative overflow-hidden rounded-lg">
     <img
@@ -119,8 +117,6 @@ interface Props {
   document.addEventListener('astro:page-load', () => {
     const boxerCards = document.querySelectorAll('.boxer-card')
     let timeoutId: ReturnType<typeof setTimeout> | null = null
-    let versusCard: HTMLAnchorElement | null = null
-    let versusCardDiv: HTMLDivElement | null = null
 
     boxerCards.forEach((singleBoxerCard, index) => {
       singleBoxerCard.addEventListener('mouseenter', () => {
@@ -137,35 +133,9 @@ interface Props {
           })
           document.dispatchEvent(event)
         }
-        // Aplicar la clase 'grayscale-100' a todas las tarjetas
         boxerCards.forEach((card) => card.classList.add('grayscale-100', 'opacity-40'))
 
-        // Quitar la clase solo de la tarjeta sobre la que se está haciendo hover
         singleBoxerCard.classList.remove('grayscale-100', 'opacity-40')
-
-        // Quitar la clase también de su par si existe
-        const versus = singleBoxerCard.getAttribute('data-versus')
-        if (versus) {
-          versusCard = document.querySelector(`[data-id=${versus}]`) as HTMLAnchorElement
-          
-          versusCardDiv = versusCard.children[1] as HTMLDivElement
-        
-          versusCardDiv.classList.remove('translate-y-2')
-          versusCardDiv.classList.add('opacity-100',"translate-y-0")
-
-          versusCard.classList.remove('grayscale-100', 'opacity-40')
-          versusCard.classList.add("shadow-lg")
-
-          versusCard.children[0].children[2].classList.add('border-2',"opacity-100")
-          versusCard.children[0].children[1].classList.add('translate-x-full')
-          versusCard.children[0].children[0].classList.add('scale-110')
-
-          versusCard.children[2].classList.add('w-2/3')
-          // select the second div inside the versusCard
-    
-        
-       
-        }
       })
 
       singleBoxerCard.addEventListener('mouseleave', () => {
@@ -174,24 +144,7 @@ interface Props {
           document.dispatchEvent(event)
         }, 500)
 
-        // Restaurar la clase en todas las tarjetas cuando el mouse salga
         boxerCards.forEach((card) => card.classList.remove('grayscale-100', 'opacity-40'))
-        // Quitar la clase de la tarjeta versus si existe
-        if (versusCard) {
-          versusCard.classList.remove("shadow-lg")
-          versusCardDiv?.classList.remove('opacity-100',"translate-y-0")
-          versusCardDiv?.classList.add('translate-y-2')
-
-            
-          versusCard.children[0].children[2].classList.remove('border-2',"opacity-100")
-          versusCard.children[0].children[1].classList.remove('translate-x-full')
-          versusCard.children[0].children[0].classList.remove('scale-110')
-          versusCard.children[2].classList.remove('w-2/3')
-
-          versusCardDiv = null
-          versusCard = null
-        }
-
       })
 
       singleBoxerCard.addEventListener('focus', () => {

@@ -1,7 +1,7 @@
 ---
-import { FIGHTERS } from "@/consts/fighters";
+import { PLAYERS } from "@/consts/fighters";
 const { id } = Astro.params;
 
-const fighter = FIGHTERS.find((fighter) => fighter.id === id);
-if (!fighter) return Astro.redirect('/404')
+const player = PLAYERS.find((p) => p.id === id);
+if (!player) return Astro.redirect('/404')
 ---

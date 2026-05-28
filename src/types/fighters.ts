@@ -1,61 +1,17 @@
 import type { Social } from "@/types/social";
 
-type fighterId =
-  | "peereira"
-  | "perxitaa"
-  | "abby"
-  | "roro"
-  | "gaspi"
-  | "rivaldios"
-  | "andoni"
-  | "viruzz"
-  | "alana"
-  | "grefg"
-  | "westcol"
-  | "arigeli"
-  | "tomas"
-  | "carlos";
-
-type fighterName =
-  | "Peereira"
-  | "Perxitaa"
-  | "Abby"
-  | "Roro"
-  | "Gaspi"
-  | "Rivaldios"
-  | "Andoni"
-  | "Viruzz"
-  | "Alana"
-  | "Grefg"
-  | "Westcol"
-  | "Arigeli"
-  | "Tomás"
-  | "Carlos";
-
-interface Clips {
-  text: string;
-  url: string;
-}
-
-export interface Fighters {
-  id: fighterId;
-  name: fighterName;
-  fightName?: string;
-  city?: string;
+export interface Player {
+  id: string;
+  name: string;
   realName: string;
-  gender: "masculino" | "femenino" | "otro";
-  targetWeight?: number;
-  targetGloves?: string;
-  birthDate: Date;
-  height: number;
   age: number;
-  weight: number;
   country: string;
-  versus: fighterId;
+  city: string;
+  neighborhood: string;
+  preferredFoot: string;
+  team: string;
+  position: string;
+  number: number;
+  bio: string;
   socials: Social[];
-  clips: Clips[];
-  workout?: {
-    videoID: string;
-    thumbnail: string;
-  };
 }

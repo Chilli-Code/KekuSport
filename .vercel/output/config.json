@@ -28,6 +28,14 @@
 			"dest": "_render"
 		},
 		{
+			"src": "^/combates/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/jugador/([^/]+?)/?$",
+			"dest": "_render"
+		},
+		{
 			"src": "^/jugadores/([^/]+?)/?$",
 			"dest": "_render"
 		},
@@ -37,10 +45,6 @@
 		},
 		{
 			"src": "^/la-porra/?$",
-			"dest": "_render"
-		},
-		{
-			"src": "^/luchador/([^/]+?)/?$",
 			"dest": "_render"
 		},
 		{
