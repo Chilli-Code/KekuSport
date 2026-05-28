@@ -1,4 +1,4 @@
-import { c as createSvgComponent, X, I as Instagram } from './instagram_LPj4T-EE.mjs';
+import { c as createSvgComponent, X, I as Instagram } from './instagram_DIK3IyMq.mjs';
 
 const Youtube = createSvgComponent({"meta":{"src":"/_astro/youtube.CfGbveIs.svg","width":35,"height":48,"format":"svg"},"attributes":{"width":"35px","height":"48px","viewBox":"0 0 35 32","role":"img","aria-label":"YouTube"},"children":"\r\n    <g>\r\n        <path style=\"stroke:none;fill-rule:nonzero;fill:currentColor;fill-opacity:1;\" d=\"M34.2 7.6c-.4-1.6-1.6-2.9-3.2-3.2C28.4 3.5 17.5 3.5 17.5 3.5s-10.9 0-13.5.9c-1.6.4-2.9 1.6-3.2 3.2C0 10.2 0 16 0 16s0 5.8.9 8.4c.4 1.6 1.6 2.9 3.2 3.2 2.6.9 13.5.9 13.5.9s10.9 0 13.5-.9c1.6-.4 2.9-1.6 3.2-3.2.9-2.6.9-8.4.9-8.4s0-5.8-.9-8.4ZM14 21.3V10.7L23.2 16 14 21.3Z\" />\r\n    </g>\r\n"});
 

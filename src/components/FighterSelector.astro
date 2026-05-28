@@ -1,11 +1,11 @@
 ---
 import BoxerCard from "./BoxerCard.astro";
 
-const { id, name, boxerCardClass, versus } = Astro.props;
+const { id, name, boxerCardClass, versus, cardLink, cardImage, bigImageSrc } = Astro.props;
 ---
 
 <div>
-  <BoxerCard id={id} name={name} class={`peer ${boxerCardClass}`} versus={versus} />
+  <BoxerCard id={id} name={name} class={`peer ${boxerCardClass}`} versus={versus} cardLink={cardLink} cardImage={cardImage} />
   <div
     id='fighter-container'
     class='pointer-events-none absolute inset-0 flex-col items-center hidden peer-hover:flex peer-focus:flex peer-focus-visible:flex'
@@ -35,7 +35,7 @@ const { id, name, boxerCardClass, versus } = Astro.props;
       <img
         transition:name={`image-${id}`}
         data-id={`hero-image-${id}`}
-        src={`/images/fighters/big/jugador_mistery.webp`}
+        src={bigImageSrc || `/images/fighters/big/jugador_mistery.webp`}
         alt={name}
         decoding='async'
         class='w-auto h-full absolute'

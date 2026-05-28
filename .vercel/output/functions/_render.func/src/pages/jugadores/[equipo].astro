@@ -1,0 +1,18 @@
+---
+import Layout from "@/layouts/Layout.astro";
+import Hero from "@/components/Hero.astro";
+import { TEAMS } from "@/consts/teams";
+
+export async function getStaticPaths() {
+  return TEAMS.map((team) => ({
+    params: { equipo: team.id },
+  }));
+}
+
+const { equipo } = Astro.params;
+const team = TEAMS.find((t) => t.id === equipo);
+---
+
+<Layout>
+  <Hero />
+</Layout>

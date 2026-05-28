@@ -1,8 +1,8 @@
-import { b as createAstro, c as createComponent, d as addAttribute, g as renderScript, a as renderTemplate, m as maybeRenderHead, r as renderComponent, i as renderHead, j as renderSlot } from './astro/server_B1RsrXwl.mjs';
+import { b as createAstro, c as createComponent, d as addAttribute, e as renderScript, a as renderTemplate, m as maybeRenderHead, r as renderComponent, i as renderHead, j as renderSlot } from './astro/server_DpPHlMO2.mjs';
 import 'kleur/colors';
 import 'clsx';
 /* empty css                         */
-import { c as createSvgComponent, X, I as Instagram } from './instagram_LPj4T-EE.mjs';
+import { c as createSvgComponent, X, I as Instagram } from './instagram_DIK3IyMq.mjs';
 
 const $$Astro$2 = createAstro("https://la-velada-clone.vercel.app/");
 const $$ClientRouter = createComponent(($$result, $$props, $$slots) => {

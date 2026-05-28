@@ -121,10 +121,7 @@ const tournaments = fighter.tournaments ?? simulatedTournaments
 <Layout title={`${fighter.name} | ${fixedTitle}`}>
   <section class="relative flex lg:min-h-screen w-full flex-col-reverse lg:flex-row">
 
-    <!-- Fondo -->
-    <div
-      class="mask-fade-bottom absolute inset-0 w-full bg-[url('/images/herp.jpeg')] bg-cover bg-center opacity-50"
-    ></div>
+
 
     <!-- Contenido -->
     <div class="ssss">
@@ -138,7 +135,7 @@ const tournaments = fighter.tournaments ?? simulatedTournaments
           class="relative mt-8 px-6 lg:px-2 flex h-[60vh] w-full lg:min-w-sm items-center justify-center lg:mt-0 lg:h-[80vh] lg:w-1/2"
         >
           <img
-            src={`/images/fighters/big/${id}.webp`}
+            src={`/images/fighters/big/jugador_mistery.webp`}
             alt={`Retrato de ${fighter.name}`}
             class="animate-fade-in mask-image-fade-bottom h-full w-full object-contain transition-all duration-700 hover:scale-105"
             transition:name={`image-${id}`}
@@ -172,84 +169,8 @@ const tournaments = fighter.tournaments ?? simulatedTournaments
     tournaments={tournaments}
   />
 
-  <!-- Redes Sociales -->
-  <!-- <section class="py-6 px-4">
 
-    <div class="flex items-center gap-3 mb-6">
-      <span class="size-1.5 rotate-45 bg-theme-gold/70"></span>
 
-      <h2
-        class="font-cinzel text-xl sm:text-left font-black uppercase tracking-[0.2em] text-theme-gold/90 sm:text-2xl"
-      >
-        REDES SOCIALES
-      </h2>
-
-      <span
-        class="hidden sm:inline-block h-px w-12 bg-linear-to-r from-theme-gold/45 to-transparent"
-      ></span>
-    </div>
-
-    <div class="flex flex-wrap justify-center gap-3">
-
-      {(fighter.socials || []).map(({ url, image, name, label, followers }) => (
-
-        <a
-          href={url}
-          target="_blank"
-          aria-label={label ?? name}
-          class="group relative w-24 overflow-hidden rounded-xl bg-gradient-to-br from-theme-midnight/80 to-theme-midnight/60 backdrop-blur-sm border border-theme-gold/20 transition-all duration-300 hover:scale-110 hover:border-theme-gold/60 hover:shadow-xl"
-        >
-
-          <div
-            class="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/15 to-transparent transition-transform duration-700 ease-in-out group-hover:translate-x-full"
-          ></div>
-
-          <div
-            class="absolute inset-0 opacity-0 bg-gradient-to-br from-purple-500/10 to-emerald-500/10 transition-opacity duration-300 group-hover:opacity-100"
-          ></div>
-
-          <div class="relative flex flex-col items-center justify-center p-3 text-center">
-
-            <div
-              class="mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-theme-gold/10 transition-all duration-300 group-hover:scale-110"
-            >
-              <image.logo
-                class="h-5 w-5 text-theme-cream transition-all duration-300 group-hover:text-theme-gold"
-                aria-hidden="true"
-              />
-            </div>
-
-            <span
-              class="font-cinzel text-[0.6rem] font-bold uppercase tracking-wide text-theme-cream/70 transition-all duration-300 group-hover:text-theme-gold"
-            >
-              {name}
-            </span>
-
-            <div class="mt-1">
-              <span
-                class="font-mono text-sm font-black bg-gradient-to-r from-purple-400 to-emerald-400 bg-clip-text text-transparent"
-              >
-                {followers}
-              </span>
-            </div>
-
-          </div>
-        </a>
-
-      ))}
-    </div>
-
-  </section> -->
-
-  <!-- CTA -->
-  <div class="flex justify-center pb-12">
-    <a
-      href="/boxeadores"
-      class="boxer-detail-cta boxer-detail-cta-ghost"
-    >
-      Todos los boxeadores
-    </a>
-  </div>
 
 </Layout>
 
