@@ -1,7 +1,7 @@
 ---
 const { pathname } = Astro.url
 
-const shouldShowLogo = pathname !== '/' && pathname !== '/jugadores'
+const shouldShowLogo = pathname !== '/' && pathname !== '/jugadores' && pathname !== '/torneos'
 
 // Comprueba si la ruta actual está activa
 const isActive = (path: string) => pathname === path
@@ -58,7 +58,7 @@ const isActive = (path: string) => pathname === path
             {/* Línea rosa que se anima desde la izquierda */}
             <div
               class:list={[
-                'absolute bottom-0 left-0 h-full bg-[color:var(--color-theme-tickle-me-pink)] transition-all duration-250 ease-out',
+                'absolute bottom-0 left-0 h-full bg-[color:var(--color-purple-500)] transition-all duration-250 ease-out',
                 isActive('/jugadores') ? 'w-[51%]' : 'w-0 group-hover:w-[51%]',
               ]}
             >
@@ -66,7 +66,7 @@ const isActive = (path: string) => pathname === path
             {/* Línea turquesa que se anima desde la derecha */}
             <div
               class:list={[
-                'absolute right-0 bottom-0 h-full bg-[color:var(--color-theme-turquoise)] transition-all duration-250 ease-out',
+                'absolute right-0 bottom-0 h-full bg-[color:var(--color-theme-gold)] transition-all duration-250 ease-out',
                 isActive('jugadores') ? 'w-[51%]' : 'w-0 group-hover:w-[51%]',
               ]}
             >
@@ -84,7 +84,7 @@ const isActive = (path: string) => pathname === path
             {/* Línea rosa que se anima desde la izquierda */}
             <div
               class:list={[
-                'absolute bottom-0 left-0 h-full bg-[color:var(--color-theme-tickle-me-pink)] transition-all duration-300 ease-out',
+                'absolute bottom-0 left-0 h-full bg-[color:var(--color-theme-gold)] transition-all duration-300 ease-out',
                 isActive('/combates') ? 'w-[51%]' : 'w-0 group-hover:w-[51%]',
               ]}
             >
@@ -92,7 +92,7 @@ const isActive = (path: string) => pathname === path
             {/* Línea turquesa que se anima desde la derecha */}
             <div
               class:list={[
-                'absolute right-0 bottom-0 h-full bg-[color:var(--color-theme-turquoise)] transition-all duration-300 ease-out',
+                'absolute right-0 bottom-0 h-full bg-[color:var(--color-purple-500)] transition-all duration-300 ease-out',
                 isActive('/combates') ? 'w-[51%]' : 'w-0 group-hover:w-[51%]',
               ]}
             >
