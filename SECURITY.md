@@ -1,21 +1,24 @@
 # Security Policy
 
-## Supported Versions
-
-Use this section to tell people about which versions of your project are
-currently being supported with security updates.
-
-| Version | Supported          |
-| ------- | ------------------ |
-| 5.1.x   | :white_check_mark: |
-| 5.0.x   | :x:                |
-| 4.0.x   | :white_check_mark: |
-| < 4.0   | :x:                |
-
 ## Reporting a Vulnerability
 
-Use this section to tell people how to report a vulnerability.
+Si descubres una vulnerabilidad de seguridad en KekuSport, 
+por favor repórtala de inmediato a:
 
-Tell them where to go, how often they can expect to get an update on a
-reported vulnerability, what to expect if the vulnerability is accepted or
-declined, etc.
+**Keku Enterprise**  
+Correo: security@keku.enterprise
+
+Esperamos recibir un reporte detallado que incluya:
+
+- Descripción del problema
+- Pasos para reproducirlo
+- Posible impacto
+- Versión afectada
+
+## Policy
+
+- Te responderemos en un plazo máximo de 48 horas.
+- Mantendremos la confidencialidad del reporte mientras trabajamos en la solución.
+- Agradecemos la divulgación responsable y coordinada.
+
+Este es un proyecto de software privado con ánimo de lucro propiedad de Keku Enterprise.
