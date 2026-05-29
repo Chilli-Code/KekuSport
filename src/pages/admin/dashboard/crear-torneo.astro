@@ -1,0 +1,981 @@
+---
+import Layout from "../../../layouts/Layout.astro";
+---
+
+<Layout>
+<div class="dash-root ">
+
+
+
+  <div class="relative pt-24 z-10 flex min-h-svh w-full items-start justify-center px-4 py-6">
+
+    <aside class="dash-sidebar flex flex-col w-64 shrink-0 border-r border-white/[0.06] py-8 px-5 gap-6">
+
+      <!-- Logo -->
+      <div class="mb-2">
+        <div class="flex items-center gap-2.5 mb-1">
+          <span class="w-7 h-7 rounded-lg flex items-center justify-center text-sm" style="background:rgba(0,255,136,.15);border:1px solid rgba(0,255,136,.3)">🏆</span>
+          <span class="font-cinzel text-sm font-black tracking-widest text-white">COPA <span class="dash-green">CHONTADURO</span></span>
+        </div>
+        <p class="text-[0.48rem] tracking-[0.25em] uppercase text-white/25 pl-[38px]">Panel Administrador</p>
+      </div>
+
+      <div class="h-px w-full" style="background:linear-gradient(to right,rgba(0,255,136,.2),transparent)"></div>
+
+      <!-- Nav -->
+      <nav class="flex flex-col gap-1 flex-1">
+        {[
+          { icon: '📊', label: 'Dashboard',   href: '/dashboard/admin',          active: false },
+          { icon: '🏆', label: 'Torneos',      href: '/dashboard/admin/torneos',  active: false },
+          { icon: '➕', label: 'Crear Torneo', href: '#',                          active: true  },
+          { icon: '👥', label: 'Equipos',      href: '/dashboard/admin/equipos',  active: false },
+          { icon: '⚽', label: 'Jugadores',    href: '/dashboard/admin/jugadores',active: false },
+          { icon: '📅', label: 'Calendario',   href: '/dashboard/admin/calendar', active: false },
+          { icon: '📋', label: 'Reportes',     href: '/dashboard/admin/reportes', active: false },
+        ].map(item => (
+          <a
+            href={item.href}
+            class={`sidebar-link ${item.active ? 'sidebar-link--active' : ''}`}
+          >
+            <span class="text-base leading-none">{item.icon}</span>
+            <span>{item.label}</span>
+          </a>
+        ))}
+      </nav>
+
+      <!-- User -->
+      <div class="flex items-center gap-3 pt-4 border-t border-white/[0.06]">
+        <div class="w-8 h-8 rounded-full flex items-center justify-content text-sm font-black" style="background:linear-gradient(135deg,#00ff88,#34d399);color:#0a0e1a;display:flex;align-items:center;justify-content:center">A</div>
+        <div class="flex-1 min-w-0">
+          <p class="font-cinzel text-[0.6rem] font-bold text-white/80 uppercase tracking-wide truncate">Administrador</p>
+          <p class="text-[0.48rem] text-white/30 truncate">admin@copa.com</p>
+        </div>
+        <a href="/login" class="text-white/20 hover:text-white/60 transition-colors text-sm">↩</a>
+      </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col min-w-0 px-4 md:px-8 py-8">
+
+      <!-- Header -->
+      <div class="flex items-center gap-4 mb-8">
+        <div>
+          <div class="flex items-center gap-2 mb-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-[#00ff88] shadow-[0_0_8px_#00ff88]"></span>
+            <p class="text-[0.5rem] font-bold uppercase tracking-[0.3em] text-[#00ff88]/60">Administrador · Torneos</p>
+          </div>
+          <h1 class="font-cinzel text-2xl md:text-3xl font-black uppercase tracking-wide text-white">
+            Crear <span class="dash-green">Torneo</span>
+          </h1>
+        </div>
+        <!-- Steps indicator -->
+        <div class="ml-auto hidden sm:flex items-center gap-2" id="steps-indicator">
+          {['Info', 'Formato', 'Equipos', 'Premios'].map((s, i) => (
+            <div class="flex items-center gap-2">
+              <div class={`step-pill ${i === 0 ? 'step-pill--active' : ''}`} data-step={i}>
+                <span class="step-num">{i + 1}</span>
+                <span class="step-label">{s}</span>
+              </div>
+              {i < 3 && <div class="w-6 h-px bg-white/10"></div>}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <!-- ══ FORMULARIO ══ -->
+      <form id="tournament-form" novalidate class="flex-1 flex flex-col gap-6">
+
+        <!-- ── PASO 1: Info general ── -->
+        <div class="form-step" data-step="0">
+          <div class="section-card">
+            <div class="section-header">
+              <span class="section-icon">🏆</span>
+              <div>
+                <h2 class="section-title">Información General</h2>
+                <p class="section-sub">Nombre, descripción e identidad visual del torneo</p>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+
+              <!-- Nombre -->
+              <div class="md:col-span-2 field-wrap">
+                <label class="field-label" for="t-name">Nombre del torneo <span class="text-[#00ff88]">*</span></label>
+                <input id="t-name" name="name" type="text" placeholder="ej. Copa Chontaduro 2025" class="field-input" required />
+              </div>
+
+              <!-- Descripción -->
+              <div class="md:col-span-2 field-wrap">
+                <label class="field-label" for="t-desc">Descripción</label>
+                <textarea id="t-desc" name="description" rows="3" placeholder="Describe el torneo, sus objetivos, historia…" class="field-input resize-none"></textarea>
+              </div>
+
+              <!-- Logo upload -->
+              <div class="field-wrap">
+                <label class="field-label">Logo del torneo</label>
+                <div class="logo-drop" id="logo-drop">
+                  <div class="logo-drop-inner" id="logo-preview-wrap">
+                    <span class="text-3xl">🖼️</span>
+                    <p class="text-[0.58rem] text-white/40 mt-2 text-center">Arrastra o <span class="text-[#00ff88] cursor-pointer underline" id="logo-click">haz click</span></p>
+                    <p class="text-[0.48rem] text-white/20 mt-1">PNG, JPG, SVG · Máx 2MB</p>
+                  </div>
+                  <input type="file" id="logo-input" accept="image/*" class="hidden" />
+                </div>
+              </div>
+
+              <!-- Banner color -->
+              <div class="field-wrap">
+                <label class="field-label">Color del equipo A</label>
+                <div class="flex gap-3 flex-wrap mt-1">
+                  {['#00ff88','#38bdf8','#f59e0b','#f43f5e','#a78bfa','#fb923c'].map(c => (
+                    <button type="button" class="color-swatch" data-color={c} style={`background:${c}`}></button>
+                  ))}
+                  <input type="color" id="custom-color" class="w-8 h-8 rounded-lg cursor-pointer border-0 bg-transparent" title="Color personalizado" />
+                </div>
+                <label class="field-label mt-3">Color del equipo B</label>
+                <div class="flex gap-3 flex-wrap mt-1">
+                  {['#f59e0b','#f43f5e','#a78bfa','#38bdf8','#00ff88','#fb923c'].map(c => (
+                    <button type="button" class="color-swatch color-swatch--b" data-color={c} style={`background:${c}`}></button>
+                  ))}
+                </div>
+              </div>
+
+              <!-- Sede -->
+              <div class="field-wrap">
+                <label class="field-label" for="t-venue">Sede / Cancha <span class="text-[#00ff88]">*</span></label>
+                <div class="field-input-wrap">
+                  <span class="field-icon">📍</span>
+                  <input id="t-venue" name="venue" type="text" placeholder="ej. Cancha La 93" class="field-input pl-8" required />
+                </div>
+              </div>
+
+              <!-- Ciudad -->
+              <div class="field-wrap">
+                <label class="field-label" for="t-city">Ciudad</label>
+                <div class="field-input-wrap">
+                  <span class="field-icon">🌍</span>
+                  <input id="t-city" name="city" type="text" placeholder="ej. Bogotá, Colombia" class="field-input pl-8" />
+                </div>
+              </div>
+
+              <!-- Fecha inicio -->
+              <div class="field-wrap">
+                <label class="field-label" for="t-start">Fecha de inicio <span class="text-[#00ff88]">*</span></label>
+                <div class="field-input-wrap">
+                  <span class="field-icon">📅</span>
+                  <input id="t-start" name="startDate" type="date" class="field-input pl-8" required />
+                </div>
+              </div>
+
+              <!-- Fecha fin -->
+              <div class="field-wrap">
+                <label class="field-label" for="t-end">Fecha de fin</label>
+                <div class="field-input-wrap">
+                  <span class="field-icon">🏁</span>
+                  <input id="t-end" name="endDate" type="date" class="field-input pl-8" />
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- ── PASO 2: Formato ── -->
+        <div class="form-step" data-step="1">
+          <div class="section-card">
+            <div class="section-header">
+              <span class="section-icon">⚙️</span>
+              <div>
+                <h2 class="section-title">Formato del Torneo</h2>
+                <p class="section-sub">Tipo de competición, equipos y estructura de fases</p>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+
+              <!-- Tipo de torneo -->
+              <div class="md:col-span-2 field-wrap">
+                <label class="field-label">Tipo de torneo <span class="text-[#00ff88]">*</span></label>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-1">
+                  {[
+                    { id: 'liga',       label: 'Liga',        icon: '🔄', desc: 'Todos vs todos' },
+                    { id: 'copa',       label: 'Copa',        icon: '🏆', desc: 'Eliminación directa' },
+                    { id: 'grupos',     label: 'Grupos + KO', icon: '🎯', desc: 'Fase de grupos + playoff' },
+                    { id: 'amistoso',   label: 'Amistoso',    icon: '🤝', desc: 'Sin clasificación' },
+                  ].map(t => (
+                    <button
+                      type="button"
+                      class="format-btn"
+                      data-format={t.id}
+                    >
+                      <span class="text-2xl mb-1">{t.icon}</span>
+                      <span class="font-cinzel text-[0.6rem] font-bold uppercase tracking-wide text-white/80">{t.label}</span>
+                      <span class="text-[0.48rem] text-white/35">{t.desc}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <!-- Num equipos -->
+              <div class="field-wrap">
+                <label class="field-label" for="t-teams">Número de equipos <span class="text-[#00ff88]">*</span></label>
+                <div class="field-input-wrap">
+                  <span class="field-icon">👥</span>
+                  <select id="t-teams" name="numTeams" class="field-input pl-8">
+                    {[2,4,6,8,10,12,16,24,32].map(n => (
+                      <option value={n}>{n} equipos</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <!-- Jugadores por equipo -->
+              <div class="field-wrap">
+                <label class="field-label" for="t-players">Jugadores por equipo <span class="text-[#00ff88]">*</span></label>
+                <div class="field-input-wrap">
+                  <span class="field-icon">⚽</span>
+                  <select id="t-players" name="playersPerTeam" class="field-input pl-8">
+                    {[3,4,5,6,7,8,9,10,11,12,15].map(n => (
+                      <option value={n} selected={n === 5}>{n} jugadores</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <!-- Duración partido -->
+              <div class="field-wrap">
+                <label class="field-label" for="t-duration">Duración por partido</label>
+                <div class="field-input-wrap">
+                  <span class="field-icon">⏱</span>
+                  <input id="t-duration" name="matchDuration" type="number" min="5" max="120" placeholder="90" class="field-input pl-8" />
+                  <span class="absolute right-3 text-[0.52rem] text-white/30">min</span>
+                </div>
+              </div>
+
+              <!-- Puntos por victoria -->
+              <div class="field-wrap">
+                <label class="field-label" for="t-points">Puntos por victoria</label>
+                <div class="flex gap-3">
+                  {[2,3].map(n => (
+                    <button type="button" class={`pts-btn ${n === 3 ? 'pts-btn--active' : ''}`} data-pts={n}>
+                      <span class="font-cinzel text-lg font-black" style={n === 3 ? 'color:#00ff88' : ''}>{n}</span>
+                      <span class="text-[0.48rem] text-white/40">pts</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <!-- Reglas extra -->
+              <div class="md:col-span-2 field-wrap">
+                <label class="field-label">Reglas adicionales</label>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  {[
+                    { id: 'overtime',    label: 'Prórroga',     icon: '⏰' },
+                    { id: 'penalties',   label: 'Penaltis',     icon: '🥅' },
+                    { id: 'yellowcard',  label: 'Tarjeta amarilla', icon: '🟨' },
+                    { id: 'redcard',     label: 'Tarjeta roja', icon: '🟥' },
+                    { id: 'var',         label: 'VAR',          icon: '📹' },
+                    { id: 'fairplay',    label: 'Fair Play',    icon: '🤝' },
+                  ].map(r => (
+                    <button type="button" class="rule-tag" data-rule={r.id}>
+                      {r.icon} {r.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- ── PASO 3: Inscripciones ── -->
+        <div class="form-step" data-step="2">
+          <div class="section-card">
+            <div class="section-header">
+              <span class="section-icon">📋</span>
+              <div>
+                <h2 class="section-title">Inscripciones</h2>
+                <p class="section-sub">Requisitos, cupo y fecha límite para participar</p>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+
+              <!-- Inscripción abierta toggle -->
+              <div class="md:col-span-2 flex items-center justify-between p-4 rounded-xl border border-white/[0.07] bg-white/[0.02]">
+                <div>
+                  <p class="font-cinzel text-[0.65rem] font-bold uppercase tracking-wide text-white/80">Inscripción abierta al público</p>
+                  <p class="text-[0.5rem] text-white/35 mt-0.5">Los equipos pueden solicitar su inscripción directamente</p>
+                </div>
+                <button type="button" class="toggle-btn" id="open-reg-toggle" aria-pressed="true">
+                  <span class="toggle-thumb"></span>
+                </button>
+              </div>
+
+              <!-- Fecha límite inscripción -->
+              <div class="field-wrap">
+                <label class="field-label" for="t-reg-end">Fecha límite inscripción</label>
+                <div class="field-input-wrap">
+                  <span class="field-icon">📅</span>
+                  <input id="t-reg-end" name="regDeadline" type="date" class="field-input pl-8" />
+                </div>
+              </div>
+
+              <!-- Costo inscripción -->
+              <div class="field-wrap">
+                <label class="field-label" for="t-fee">Costo de inscripción</label>
+                <div class="field-input-wrap">
+                  <span class="field-icon text-[0.6rem] font-bold">$</span>
+                  <input id="t-fee" name="registrationFee" type="number" min="0" placeholder="0" class="field-input pl-8" />
+                </div>
+              </div>
+
+              <!-- Edad mínima / máxima -->
+              <div class="field-wrap">
+                <label class="field-label" for="t-age-min">Edad mínima</label>
+                <div class="field-input-wrap">
+                  <span class="field-icon">👤</span>
+                  <input id="t-age-min" name="minAge" type="number" min="5" max="99" placeholder="16" class="field-input pl-8" />
+                </div>
+              </div>
+              <div class="field-wrap">
+                <label class="field-label" for="t-age-max">Edad máxima</label>
+                <div class="field-input-wrap">
+                  <span class="field-icon">👤</span>
+                  <input id="t-age-max" name="maxAge" type="number" min="5" max="99" placeholder="45" class="field-input pl-8" />
+                </div>
+              </div>
+
+              <!-- Requisitos texto -->
+              <div class="md:col-span-2 field-wrap">
+                <label class="field-label" for="t-reqs">Requisitos adicionales</label>
+                <textarea id="t-reqs" name="requirements" rows="3" placeholder="Documentos necesarios, condiciones físicas, uniformes…" class="field-input resize-none"></textarea>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- ── PASO 4: Premios ── -->
+        <div class="form-step" data-step="3">
+          <div class="section-card">
+            <div class="section-header">
+              <span class="section-icon">🥇</span>
+              <div>
+                <h2 class="section-title">Premios & Reconocimientos</h2>
+                <p class="section-sub">Define los incentivos para los participantes</p>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[
+                { pos: 1, label: '1er Lugar',  icon: '🥇', color: '#fbbf24', glow: 'rgba(251,191,36,.2)' },
+                { pos: 2, label: '2do Lugar',  icon: '🥈', color: '#94a3b8', glow: 'rgba(148,163,184,.15)' },
+                { pos: 3, label: '3er Lugar',  icon: '🥉', color: '#e09050', glow: 'rgba(224,144,80,.15)' },
+              ].map(p => (
+                <div class="prize-card" style={`border-color:${p.color}33;box-shadow:0 0 20px ${p.glow}`}>
+                  <span class="text-4xl mb-2">{p.icon}</span>
+                  <span class="font-cinzel text-[0.58rem] font-bold uppercase tracking-widest mb-3" style={`color:${p.color}`}>{p.label}</span>
+                  <div class="field-input-wrap w-full">
+                    <span class="field-icon text-[0.6rem] font-bold">$</span>
+                    <input
+                      type="number" min="0"
+                      name={`prize${p.pos}`}
+                      placeholder="0.00"
+                      class="field-input pl-8 text-center"
+                    />
+                  </div>
+                  <input
+                    type="text"
+                    name={`prize${p.pos}desc`}
+                    placeholder="Trofeo, medalla, etc…"
+                    class="field-input mt-2 text-center text-[0.55rem]"
+                  />
+                </div>
+              ))}
+            </div>
+
+            <!-- Premios individuales -->
+            <div class="mt-5">
+              <p class="field-label mb-3">Premios individuales</p>
+              <div class="flex flex-wrap gap-2" id="ind-prizes">
+                {[
+                  { id: 'mvp',      label: 'MVP',              icon: '⭐' },
+                  { id: 'goleador', label: 'Goleador',         icon: '⚽' },
+                  { id: 'portero',  label: 'Mejor Portero',    icon: '🧤' },
+                  { id: 'tecnico',  label: 'Mejor Técnico',    icon: '📋' },
+                  { id: 'fairplay', label: 'Fair Play',        icon: '🤝' },
+                ].map(a => (
+                  <button type="button" class="award-tag" data-award={a.id}>
+                    {a.icon} {a.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <!-- Notas finales -->
+            <div class="field-wrap mt-5">
+              <label class="field-label" for="t-notes">Notas adicionales</label>
+              <textarea id="t-notes" name="notes" rows="3" placeholder="Cualquier detalle extra sobre el torneo…" class="field-input resize-none"></textarea>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ══ BOTONES DE ACCIÓN ══ -->
+        <div class="flex items-center justify-between gap-4 pt-2 pb-8">
+          <button type="button" id="btn-save-draft" class="btn-ghost">
+            💾 Guardar borrador
+          </button>
+          <div class="flex gap-3">
+            <button type="button" id="btn-preview" class="btn-ghost">
+              👁 Vista previa
+            </button>
+            <button type="submit" class="btn-primary" id="btn-create">
+              <span id="btn-create-text">🚀 Crear Torneo</span>
+              <span id="btn-create-loader" class="hidden items-center gap-2">
+                <svg class="spin-anim w-4 h-4" viewBox="0 0 16 16" fill="none">
+                  <circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5" stroke-dasharray="20 18"/>
+                </svg>
+                Creando...
+              </span>
+            </button>
+          </div>
+        </div>
+
+      </form>
+
+    </main>
+
+    <!-- ══ PANEL DERECHO: Resumen en vivo ══ -->
+    <aside class="flex flex-col w-72 shrink-0 border-l border-white/[0.06] py-8 px-5 gap-5">
+      <div>
+        <p class="font-cinzel text-[0.5rem] font-bold uppercase tracking-[0.25em] text-[#00ff88]/60 mb-3">Vista Previa</p>
+
+        <!-- Mini card del torneo -->
+        <div class="preview-card" id="preview-card">
+          <div class="preview-logo" id="preview-logo">🏆</div>
+          <h3 class="font-cinzel text-sm font-black uppercase tracking-wide text-white mt-2 text-center" id="preview-name">Nombre del torneo</h3>
+          <div class="flex items-center gap-1.5 mt-1.5">
+            <span class="preview-badge" id="preview-type">Liga</span>
+            <span class="preview-badge preview-badge--dim" id="preview-teams">8 equipos</span>
+          </div>
+          <div class="w-full h-px mt-3 mb-3" style="background:linear-gradient(to right,transparent,rgba(0,255,136,.2),transparent)"></div>
+          <div class="w-full space-y-1.5">
+            <div class="flex justify-between items-center">
+              <span class="text-[0.48rem] text-white/30 uppercase tracking-wide">Sede</span>
+              <span class="text-[0.52rem] text-white/60 font-cinzel font-bold" id="prev-venue">—</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-[0.48rem] text-white/30 uppercase tracking-wide">Inicio</span>
+              <span class="text-[0.52rem] text-white/60 font-cinzel font-bold" id="prev-date">—</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-[0.48rem] text-white/30 uppercase tracking-wide">Jugadores/equipo</span>
+              <span class="text-[0.52rem] text-white/60 font-cinzel font-bold" id="prev-players">—</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-[0.48rem] text-white/30 uppercase tracking-wide">Premio 1er lugar</span>
+              <span class="text-[0.52rem] font-cinzel font-bold" style="color:#fbbf24" id="prev-prize">—</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Checklist completado -->
+        <div class="mt-4 space-y-2" id="checklist">
+          {[
+            { id: 'chk-name',   label: 'Nombre del torneo' },
+            { id: 'chk-venue',  label: 'Sede definida' },
+            { id: 'chk-date',   label: 'Fecha de inicio' },
+            { id: 'chk-format', label: 'Formato elegido' },
+            { id: 'chk-teams',  label: 'Equipos configurados' },
+          ].map(c => (
+            <div class="flex items-center gap-2.5" id={c.id}>
+              <span class="chk-dot chk-dot--empty"></span>
+              <span class="text-[0.52rem] text-white/35">{c.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </aside>
+
+  </div>
+
+</div>
+</Layout>
+
+<script>
+  // ── Logo upload preview ──
+  const logoDrop  = document.getElementById('logo-drop')!
+  const logoInput = document.getElementById('logo-input') as HTMLInputElement
+  const logoClick = document.getElementById('logo-click')
+  const logoWrap  = document.getElementById('logo-preview-wrap')!
+
+  logoClick?.addEventListener('click', () => logoInput.click())
+  logoDrop.addEventListener('dragover',  e => { e.preventDefault(); logoDrop.classList.add('logo-drop--over') })
+  logoDrop.addEventListener('dragleave', () => logoDrop.classList.remove('logo-drop--over'))
+  logoDrop.addEventListener('drop', e => {
+    e.preventDefault(); logoDrop.classList.remove('logo-drop--over')
+    const file = e.dataTransfer?.files[0]
+    if (file) showLogoPreview(file)
+  })
+  logoInput.addEventListener('change', () => {
+    if (logoInput.files?.[0]) showLogoPreview(logoInput.files[0])
+  })
+  function showLogoPreview(file: File) {
+    const url = URL.createObjectURL(file)
+    logoWrap.innerHTML = `<img src="${url}" alt="Logo" class="w-20 h-20 object-contain rounded-xl" />`
+    ;(document.getElementById('preview-logo') as HTMLElement).innerHTML = `<img src="${url}" alt="Logo" class="w-12 h-12 object-contain" />`
+  }
+
+  // ── Color swatches ──
+  document.querySelectorAll<HTMLButtonElement>('.color-swatch').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const isB = btn.classList.contains('color-swatch--b')
+      document.querySelectorAll(isB ? '.color-swatch--b' : '.color-swatch:not(.color-swatch--b)').forEach(b => b.classList.remove('active'))
+      btn.classList.add('active')
+    })
+  })
+
+  // ── Formato ──
+  document.querySelectorAll<HTMLButtonElement>('.format-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.format-btn').forEach(b => b.classList.remove('format-btn--active'))
+      btn.classList.add('format-btn--active')
+      const el = document.getElementById('preview-type')
+      if (el) el.textContent = btn.querySelector('span:nth-child(2)')?.textContent ?? ''
+      checkField('chk-format', true)
+    })
+  })
+
+  // ── Puntos ──
+  document.querySelectorAll<HTMLButtonElement>('.pts-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.pts-btn').forEach(b => b.classList.remove('pts-btn--active'))
+      btn.classList.add('pts-btn--active')
+    })
+  })
+
+  // ── Reglas y premios individuales ──
+  document.querySelectorAll<HTMLButtonElement>('.rule-tag, .award-tag').forEach(btn => {
+    btn.addEventListener('click', () => btn.classList.toggle('tag--active'))
+  })
+
+  // ── Toggle ──
+  const openReg = document.getElementById('open-reg-toggle')!
+  openReg.addEventListener('click', () => {
+    const pressed = openReg.getAttribute('aria-pressed') === 'true'
+    openReg.setAttribute('aria-pressed', String(!pressed))
+    openReg.classList.toggle('toggle-btn--on', !pressed)
+  })
+  openReg.classList.add('toggle-btn--on')
+
+  // ── Live preview ──
+  function checkField(id: string, ok: boolean) {
+    const el = document.getElementById(id)
+    if (!el) return
+    const dot = el.querySelector('.chk-dot')!
+    dot.className = ok ? 'chk-dot chk-dot--ok' : 'chk-dot chk-dot--empty'
+    el.querySelector('span:last-child')!.className = ok ? 'text-[0.52rem] text-white/70' : 'text-[0.52rem] text-white/35'
+  }
+
+  document.getElementById('t-name')?.addEventListener('input', e => {
+    const v = (e.target as HTMLInputElement).value
+    const el = document.getElementById('preview-name')
+    if (el) el.textContent = v || 'Nombre del torneo'
+    checkField('chk-name', v.trim().length > 0)
+  })
+  document.getElementById('t-venue')?.addEventListener('input', e => {
+    const v = (e.target as HTMLInputElement).value
+    const el = document.getElementById('prev-venue')
+    if (el) el.textContent = v || '—'
+    checkField('chk-venue', v.trim().length > 0)
+  })
+  document.getElementById('t-start')?.addEventListener('change', e => {
+    const v = (e.target as HTMLInputElement).value
+    const el = document.getElementById('prev-date')
+    if (el) el.textContent = v ? new Date(v + 'T00:00').toLocaleDateString('es-CO', { day:'2-digit', month:'short', year:'numeric' }) : '—'
+    checkField('chk-date', v.length > 0)
+  })
+  document.getElementById('t-teams')?.addEventListener('change', e => {
+    const v = (e.target as HTMLSelectElement).value
+    const el = document.getElementById('preview-teams')
+    if (el) el.textContent = `${v} equipos`
+    checkField('chk-teams', true)
+  })
+  document.getElementById('t-players')?.addEventListener('change', e => {
+    const v = (e.target as HTMLSelectElement).value
+    const el = document.getElementById('prev-players')
+    if (el) el.textContent = v
+  })
+  document.querySelector('[name="prize1"]')?.addEventListener('input', e => {
+    const v = (e.target as HTMLInputElement).value
+    const el = document.getElementById('prev-prize')
+    if (el) el.textContent = v ? `$${Number(v).toLocaleString()}` : '—'
+  })
+
+  // ── Submit ──
+  document.getElementById('tournament-form')?.addEventListener('submit', async e => {
+    e.preventDefault()
+    const btn  = document.getElementById('btn-create') as HTMLButtonElement
+    const text = document.getElementById('btn-create-text')!
+    const load = document.getElementById('btn-create-loader')!
+    text.classList.add('hidden')
+    load.classList.remove('hidden')
+    load.classList.add('flex')
+    btn.disabled = true
+    await new Promise(r => setTimeout(r, 1600))
+    window.location.href = '/dashboard/admin/torneos'
+  })
+
+  // ── Draft ──
+  document.getElementById('btn-save-draft')?.addEventListener('click', () => {
+    const btn = document.getElementById('btn-save-draft') as HTMLButtonElement
+    btn.textContent = '✅ Borrador guardado'
+    setTimeout(() => { btn.textContent = '💾 Guardar borrador' }, 2000)
+  })
+</script>
+
+<style>
+  .dash-root {
+    position: relative;
+    width: 100%;
+    min-height: 100svh;
+    isolation: isolate;
+  }
+
+  .dash-stars {
+    position: absolute; inset: 0;
+    background-image:
+      radial-gradient(1.5px 1.5px at 8%  15%, #fff, transparent),
+      radial-gradient(1px   1px   at 25% 60%, #aaffcc, transparent),
+      radial-gradient(2px   2px   at 52% 10%, #a855f7, transparent),
+      radial-gradient(1px   1px   at 72% 78%, #fff, transparent),
+      radial-gradient(2px   2px   at 88% 38%, #00ff88, transparent),
+      radial-gradient(1px   1px   at 16% 85%, #c084fc, transparent),
+      radial-gradient(1.5px 1.5px at 62% 50%, #fff, transparent);
+    background-size: 280px 280px;
+    opacity: .35;
+    animation: twinkle 7s ease-in-out infinite alternate;
+  }
+  @keyframes twinkle { 0%{opacity:.15} 100%{opacity:.5} }
+
+  .dash-scanlines {
+    background: repeating-linear-gradient(
+      0deg, transparent, transparent 3px,
+      rgba(0,255,136,.006) 3px, rgba(0,255,136,.006) 4px
+    );
+  }
+
+  .dash-green {
+    background: linear-gradient(to right, #00ff88, #34d399);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    filter: drop-shadow(0 0 12px rgba(0,255,136,.4));
+  }
+
+  /* Sidebar links */
+  .sidebar-link {
+    display: flex; align-items: center; gap: 2.5; gap: .7rem;
+    padding: .55rem .75rem;
+    border-radius: 10px;
+    font-size: .58rem; font-weight: 700;
+    letter-spacing: .1em; text-transform: uppercase;
+    color: rgba(232,220,200,.4);
+    text-decoration: none;
+    transition: background .2s, color .2s;
+  }
+  .sidebar-link:hover { background: rgba(255,255,255,.04); color: rgba(232,220,200,.8); }
+  .sidebar-link--active {
+    background: rgba(0,255,136,.1);
+    color: #00ff88;
+    border: 1px solid rgba(0,255,136,.2);
+  }
+
+  /* Steps */
+  .step-pill {
+    display: flex; align-items: center; gap: .4rem;
+    padding: .3rem .75rem; border-radius: 99px;
+    border: 1px solid rgba(255,255,255,.08);
+    background: rgba(255,255,255,.02);
+    cursor: default;
+    transition: all .3s;
+  }
+  .step-pill--active {
+    border-color: rgba(0,255,136,.4);
+    background: rgba(0,255,136,.08);
+  }
+  .step-num {
+    font-family: var(--font-cinzel,'Cinzel'),serif;
+    font-size: .52rem; font-weight: 900;
+    color: rgba(232,220,200,.35);
+  }
+  .step-pill--active .step-num { color: #00ff88; }
+  .step-label {
+    font-size: .5rem; font-weight: 700;
+    letter-spacing: .1em; text-transform: uppercase;
+    color: rgba(232,220,200,.3);
+  }
+  .step-pill--active .step-label { color: rgba(232,220,200,.8); }
+
+  /* Section card */
+  .section-card {
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,.07);
+    background: linear-gradient(160deg,
+      color-mix(in srgb,#0a0e1a 90%,#00ff88) 0%,
+      #0a0e1a 100%
+    );
+    padding: 1.5rem;
+  }
+  .section-header {
+    display: flex; align-items: flex-start; gap: .75rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(255,255,255,.06);
+  }
+  .section-icon {
+    font-size: 1.5rem; line-height: 1;
+    width: 44px; height: 44px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 12px; flex-shrink: 0;
+    background: rgba(0,255,136,.08);
+    border: 1px solid rgba(0,255,136,.18);
+  }
+  .section-title {
+    font-family: var(--font-cinzel,'Cinzel'),serif;
+    font-size: clamp(.85rem,2vw,1rem); font-weight: 900;
+    letter-spacing: .06em; text-transform: uppercase;
+    color: rgba(232,220,200,.9);
+  }
+  .section-sub {
+    font-size: .52rem; color: rgba(232,220,200,.35);
+    margin-top: .2rem; text-transform: none; letter-spacing: .02em;
+    font-family: sans-serif;
+  }
+
+  /* Fields */
+  .field-wrap { display: flex; flex-direction: column; }
+  .field-label {
+    font-size: .52rem; font-weight: 700;
+    letter-spacing: .15em; text-transform: uppercase;
+    color: rgba(232,220,200,.45);
+    margin-bottom: 6px;
+  }
+  .field-input-wrap { position: relative; display: flex; align-items: center; }
+  .field-icon {
+    position: absolute; left: 10px;
+    color: rgba(232,220,200,.25);
+    font-size: .75rem;
+    display: flex; align-items: center; pointer-events: none;
+  }
+  .field-input {
+    width: 100%; padding: .65rem .75rem;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,.08);
+    background: rgba(255,255,255,.03);
+    color: rgba(232,220,200,.9);
+    font-family: var(--font-cinzel,'Cinzel'),serif;
+    font-size: .65rem; letter-spacing: .03em;
+    outline: none;
+    transition: border-color .2s, background .2s, box-shadow .2s;
+    -webkit-appearance: none;
+  }
+  .field-input::placeholder { color: rgba(232,220,200,.2); }
+  .field-input:focus {
+    border-color: rgba(0,255,136,.35);
+    background: rgba(0,255,136,.03);
+    box-shadow: 0 0 0 3px rgba(0,255,136,.05);
+  }
+  select.field-input { cursor: pointer; }
+  select.field-input option { background: #0a0e1a; }
+
+  /* Logo drop */
+  .logo-drop {
+    width: 100%; aspect-ratio: 4/3;
+    border-radius: 14px;
+    border: 1.5px dashed rgba(0,255,136,.2);
+    background: rgba(0,255,136,.02);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: border-color .2s, background .2s;
+  }
+  .logo-drop:hover, .logo-drop--over {
+    border-color: rgba(0,255,136,.5);
+    background: rgba(0,255,136,.06);
+  }
+  .logo-drop-inner {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    width: 100%; height: 100%;
+  }
+
+  /* Color swatches */
+  .color-swatch {
+    width: 28px; height: 28px; border-radius: 8px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: transform .15s, box-shadow .15s, border-color .15s;
+  }
+  .color-swatch:hover { transform: scale(1.15); }
+  .color-swatch.active {
+    border-color: white;
+    box-shadow: 0 0 0 1px rgba(255,255,255,.4);
+    transform: scale(1.1);
+  }
+
+  /* Format buttons */
+  .format-btn {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: .85rem .5rem; border-radius: 12px; gap: .15rem;
+    border: 1px solid rgba(255,255,255,.07);
+    background: rgba(255,255,255,.02);
+    cursor: pointer;
+    transition: border-color .2s, background .2s, transform .15s;
+  }
+  .format-btn:hover { border-color: rgba(255,255,255,.15); transform: translateY(-1px); }
+  .format-btn--active {
+    border-color: rgba(0,255,136,.4);
+    background: rgba(0,255,136,.08);
+    box-shadow: 0 0 18px rgba(0,255,136,.1);
+  }
+
+  /* Points buttons */
+  .pts-btn {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    width: 56px; height: 56px; border-radius: 12px;
+    border: 1px solid rgba(255,255,255,.08);
+    background: rgba(255,255,255,.02);
+    cursor: pointer;
+    transition: border-color .2s, background .2s;
+  }
+  .pts-btn--active {
+    border-color: rgba(0,255,136,.4);
+    background: rgba(0,255,136,.08);
+  }
+
+  /* Tags */
+  .rule-tag, .award-tag {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .35rem .75rem; border-radius: 99px;
+    border: 1px solid rgba(255,255,255,.1);
+    background: rgba(255,255,255,.03);
+    font-family: var(--font-cinzel,'Cinzel'),serif;
+    font-size: .5rem; font-weight: 700;
+    letter-spacing: .08em; text-transform: uppercase;
+    color: rgba(232,220,200,.45);
+    cursor: pointer;
+    transition: border-color .2s, background .2s, color .2s;
+  }
+  .rule-tag:hover, .award-tag:hover { border-color: rgba(255,255,255,.22); color: rgba(232,220,200,.8); }
+  .rule-tag.tag--active, .award-tag.tag--active {
+    border-color: rgba(0,255,136,.45);
+    background: rgba(0,255,136,.1);
+    color: #00ff88;
+  }
+
+  /* Toggle */
+  .toggle-btn {
+    position: relative; width: 44px; height: 24px;
+    border-radius: 99px;
+    border: 1px solid rgba(255,255,255,.12);
+    background: rgba(255,255,255,.06);
+    cursor: pointer;
+    transition: background .3s, border-color .3s;
+    flex-shrink: 0;
+  }
+  .toggle-btn--on {
+    background: rgba(0,255,136,.2);
+    border-color: rgba(0,255,136,.4);
+  }
+  .toggle-thumb {
+    position: absolute; top: 3px; left: 3px;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: rgba(255,255,255,.3);
+    transition: transform .3s, background .3s;
+  }
+  .toggle-btn--on .toggle-thumb {
+    transform: translateX(20px);
+    background: #00ff88;
+    box-shadow: 0 0 8px rgba(0,255,136,.6);
+  }
+
+  /* Prize cards */
+  .prize-card {
+    display: flex; flex-direction: column; align-items: center;
+    padding: 1.5rem 1rem;
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,.07);
+    background: rgba(255,255,255,.02);
+  }
+
+  /* Preview card */
+  .preview-card {
+    border-radius: 14px;
+    border: 1px solid rgba(0,255,136,.15);
+    background: linear-gradient(160deg, rgba(0,255,136,.04) 0%, rgba(10,14,26,.9) 100%);
+    padding: 1.25rem;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .preview-logo {
+    width: 56px; height: 56px; border-radius: 12px;
+    border: 1px solid rgba(0,255,136,.2);
+    background: rgba(0,255,136,.07);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.75rem;
+  }
+  .preview-badge {
+    font-family: var(--font-cinzel,'Cinzel'),serif;
+    font-size: .48rem; font-weight: 700;
+    letter-spacing: .1em; text-transform: uppercase;
+    padding: 2px 8px; border-radius: 99px;
+    border: 1px solid rgba(0,255,136,.3);
+    color: #00ff88; background: rgba(0,255,136,.1);
+  }
+  .preview-badge--dim {
+    border-color: rgba(255,255,255,.1);
+    color: rgba(232,220,200,.4);
+    background: rgba(255,255,255,.03);
+  }
+
+  /* Checklist dots */
+  .chk-dot {
+    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  }
+  .chk-dot--empty { background: rgba(255,255,255,.1); }
+  .chk-dot--ok { background: #00ff88; box-shadow: 0 0 6px rgba(0,255,136,.6); }
+
+  /* Action buttons */
+  .btn-ghost {
+    display: inline-flex; align-items: center; gap: .4rem;
+    padding: .6rem 1.25rem; border-radius: 10px;
+    border: 1px solid rgba(255,255,255,.1);
+    background: transparent;
+    font-family: var(--font-cinzel,'Cinzel'),serif;
+    font-size: .58rem; font-weight: 700;
+    letter-spacing: .12em; text-transform: uppercase;
+    color: rgba(232,220,200,.5);
+    cursor: pointer;
+    transition: border-color .2s, color .2s, background .2s;
+  }
+  .btn-ghost:hover { border-color: rgba(255,255,255,.25); color: rgba(232,220,200,.85); background: rgba(255,255,255,.03); }
+
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: .4rem;
+    padding: .65rem 1.75rem; border-radius: 10px;
+    border: none;
+    background: var(--color-theme-gold, #c7a86b);
+    font-family: var(--font-cinzel,'Cinzel'),serif;
+    font-size: .62rem; font-weight: 800;
+    letter-spacing: .18em; text-transform: uppercase;
+    color: var(--color-theme-midnight, #0a0e1a);
+    cursor: pointer;
+    transition: transform .2s, filter .2s, box-shadow .2s;
+    box-shadow: 0 0 20px rgba(199,168,107,.2);
+  }
+  .btn-primary:hover:not(:disabled) {
+    transform: translateY(-1px); filter: brightness(1.1);
+    box-shadow: 0 0 32px rgba(199,168,107,.35);
+  }
+  .btn-primary:disabled { opacity: .7; cursor: not-allowed; }
+
+  .spin-anim { animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>

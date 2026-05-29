@@ -10,11 +10,8 @@ export default defineConfig({
   vite: {
     plugins: [tailwindcss()],
   },
-server: {
-  allowedHosts: true
-},
-  experimental: {
-    svg: true,
+  server: {
+    allowedHosts: true,
   },
   build: {
     inlineStylesheets: "always",
