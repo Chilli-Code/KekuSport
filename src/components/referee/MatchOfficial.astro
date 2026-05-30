@@ -1,0 +1,1065 @@
+---
+
+
+/**
+ * MatchOfficial.astro
+ * Panel árbitro / plantillero — diseño Copa Chontaduro
+ * Misma lógica, nuevo look: fondo espacial, colores de la app, HUD corners, verde eléctrico.
+ */
+---
+
+
+
+<div id="mo-app" class="mo-root">
+
+  <!-- ════ FONDO ESPACIAL ════ -->
+  <div class="mo-bg" aria-hidden="true">
+    <div class="mo-bg-glow-top"></div>
+    <div class="mo-bg-stars"></div>
+    <div class="mo-bg-scanlines"></div>
+    <div class="mo-field-arc"></div>
+  </div>
+
+  <!-- ════ VISTA: LISTA DE PARTIDOS ════ -->
+  <div id="mo-view-list" class="mo-page">
+
+    <header class="mo-topbar">
+      <div class="flex items-center gap-3">
+        <span class="mo-live-dot"></span>
+        <div>
+          <p class="mo-eyebrow">PANEL PLANTILLERO</p>
+          <p class="mo-topbar-title">Mis Partidos</p>
+        </div>
+      </div>
+      <span class="mo-role-chip">Jornada 4</span>
+    </header>
+
+    <p class="mo-section-label mt-6 mb-3">Partidos asignados · Jornada 4</p>
+
+    <div class="flex flex-col gap-6" id="mo-cards-container"></div>
+
+  </div>
+
+  <!-- ════ VISTA: PARTIDO ACTIVO ════ -->
+  <div id="mo-view-match" class="mo-page hidden">
+
+    <header class="mo-topbar">
+      <button id="mo-back-btn" class="mo-back-btn" aria-label="Volver a partidos">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+        Volver
+      </button>
+      <span class="mo-section-label truncate text-center flex-1 !mb-0 !mt-0" id="mo-match-round"></span>
+      <span class="mo-role-chip" id="mo-match-role-chip"></span>
+    </header>
+
+    <!-- ─── Marcador ─── -->
+    <div id="mo-scoreboard" class="mo-scoreboard mt-5">
+      <div id="mo-sb-topbar" class="mo-sb-topbar"></div>
+      <div class="mo-sb-scanlines" aria-hidden="true"></div>
+
+      <div class="mo-sb-team">
+        <div class="mo-sb-color-bar" id="mo-sb-color-a"></div>
+        <span class="mo-sb-name" id="mo-sb-name-a"></span>
+        <span class="mo-sb-score" id="mo-sb-score-a">0</span>
+      </div>
+
+      <div class="mo-sb-center">
+        <span class="mo-timer-display font-mono" id="mo-timer-display">00:00</span>
+        <button id="mo-timer-btn" class="mo-timer-btn">
+          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          <span id="mo-timer-label">Iniciar</span>
+        </button>
+        <span class="mo-vs-text">VS</span>
+      </div>
+
+      <div class="mo-sb-team mo-sb-team--right">
+        <div class="mo-sb-color-bar mo-sb-color-bar--right" id="mo-sb-color-b"></div>
+        <span class="mo-sb-name" id="mo-sb-name-b"></span>
+        <span class="mo-sb-score" id="mo-sb-score-b">0</span>
+      </div>
+    </div>
+
+    <!-- ─── Acciones ─── -->
+    <p class="mo-section-label mt-7 mb-3">Registrar evento</p>
+    <div class="mo-actions-grid">
+
+      <button data-type="yellow" class="mo-action-btn">
+        <span class="mo-action-icon" style="background:rgba(120,53,15,.5);border-color:rgba(251,191,36,.2);color:#fbbf24">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/></svg>
+        </span>
+        <span class="mo-action-label">Amarilla</span>
+      </button>
+
+      <button data-type="red" class="mo-action-btn">
+        <span class="mo-action-icon" style="background:rgba(127,29,29,.5);border-color:rgba(248,113,113,.2);color:#f87171">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/></svg>
+        </span>
+        <span class="mo-action-label">Roja</span>
+      </button>
+
+      <button data-type="goal" class="mo-action-btn">
+        <span class="mo-action-icon" style="background:rgba(6,78,59,.5);border-color:rgba(0,255,136,.2);color:#00ff88">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+        </span>
+        <span class="mo-action-label">Gol</span>
+      </button>
+
+      <button data-type="change" class="mo-action-btn">
+        <span class="mo-action-icon" style="background:rgba(76,29,149,.5);border-color:rgba(196,181,253,.2);color:#c4b5fd">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+        </span>
+        <span class="mo-action-label">Cambio</span>
+      </button>
+
+      <button data-type="shot" class="mo-action-btn">
+        <span class="mo-action-icon" style="background:rgba(12,74,110,.5);border-color:rgba(125,211,252,.2);color:#7dd3fc">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </span>
+        <span class="mo-action-label">Tiro</span>
+      </button>
+
+      <button data-type="foul" class="mo-action-btn">
+        <span class="mo-action-icon" style="background:rgba(39,39,42,.7);border-color:rgba(161,161,170,.15);color:#a1a1aa">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </span>
+        <span class="mo-action-label">Falta</span>
+      </button>
+
+    </div>
+
+    <!-- ─── Log ─── -->
+    <div class="flex items-center justify-between mt-7 mb-3">
+      <p class="mo-section-label !mb-0 !mt-0">Eventos del partido</p>
+      <button id="mo-log-clear" class="mo-clear-btn">Limpiar todo</button>
+    </div>
+    <div class="flex flex-col gap-2 pb-12  p-2" id="mo-log-list"></div>
+
+  </div>
+
+  <!-- ════ MODAL ════ -->
+<div id="mo-modal-overlay"
+  class="hidden fixed inset-0 bg-black/85 backdrop-blur-sm z-50 items-end justify-center"
+    aria-modal="true" role="dialog" aria-label="Registrar evento">
+
+    <div class="mo-modal">
+      <div class="mo-modal-handle"></div>
+      <!-- Esquinas HUD -->
+      <span class="hud-corner hud-corner--tl"></span>
+      <span class="hud-corner hud-corner--tr"></span>
+      <span class="hud-corner hud-corner--bl"></span>
+      <span class="hud-corner hud-corner--br"></span>
+
+      <div class="px-5 pt-5 pb-3 flex flex-col gap-1.5">
+        <span id="mo-modal-badge" class="mo-event-badge w-fit"></span>
+        <h3 id="mo-modal-title" class="text-base font-bold text-[var(--cream)] font-cinzel tracking-wide uppercase"></h3>
+      </div>
+
+      <div class="px-5 pb-4 flex flex-col gap-4">
+        <div class="mo-field-group">
+          <label class="mo-field-label" for="mo-m-team">Equipo</label>
+          <select id="mo-m-team" class="mo-select"></select>
+        </div>
+        <div class="mo-field-group">
+          <label class="mo-field-label" for="mo-m-player">Jugador</label>
+          <input id="mo-m-player" type="text" placeholder="Nombre o número" autocomplete="off" class="mo-input" />
+        </div>
+        <div id="mo-m-extra"></div>
+<div class="mo-field-group">
+  <label class="mo-field-label">Minuto</label>
+  <div class="flex items-center gap-3">
+    <button id="mo-min-minus" class="mo-min-adj" type="button">−</button>
+    <input id="mo-m-minute" type="number" min="0" max="150" placeholder="0" class="mo-input text-center text-xl font-black flex-1" />
+    <button id="mo-min-plus" class="mo-min-adj" type="button">+</button>
+  </div>
+</div>
+      </div>
+
+      <div class="px-5 justify-between pb-5 pt-4 flex gap-2.5 border-t border-[rgba(199,168,107,.12)]">
+        <button id="mo-modal-cancel" class="mo-btn-ghost">Cancelar</button>
+        <button id="mo-modal-save"   class="mo-btn-primary">Guardar evento</button>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<style>
+  /* ════════════════════════════════
+     TOKENS
+  ════════════════════════════════ */
+  #mo-app {
+    --gold:     var(--color-theme-gold,    #c7a86b);
+    --cream:    var(--color-theme-cream,   #e8dcc8);
+    --midnight: var(--color-theme-midnight,#0a0e1a);
+    --green:    #00ff88;
+    --border:   rgba(199,168,107,.14);
+    --surface:  rgba(255,255,255,.03);
+  }
+.mo-min-adj {
+  width: 44px; height: 44px;
+  border-radius: 12px;
+  font-size: 1.2rem;
+  font-weight: 900;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.06);
+  color: rgba(232,220,200,.6);
+  cursor: pointer;
+  transition: all .15s;
+}
+.mo-min-adj:hover {
+  background: rgba(255,255,255,.12);
+  color: var(--cream);
+}
+  /* ════════════════════════════════
+     ROOT
+  ════════════════════════════════ */
+  .mo-root {
+    position: relative;
+    min-height: 100svh;
+    background: radial-gradient(ellipse at 50% -10%,#0b2a1a 0%,#050d08 55%,#03080e 100%);
+    overflow-x: hidden;
+    padding: 6rem 1.5rem 5rem;
+  }
+  .mo-page {
+    position: relative; z-index: 1;
+    max-width: 500px; margin: 0 auto;
+    padding: 1.25rem 1rem 2rem;
+  }
+
+  /* ════════════════════════════════
+     FONDO
+  ════════════════════════════════ */
+  .mo-bg { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+  .mo-bg-glow-top {
+    position: absolute; top: -15%; left: 50%; transform: translateX(-50%);
+    width: 65%; height: 55%;
+    background: radial-gradient(ellipse,rgba(0,255,136,.14) 0%,transparent 70%);
+    filter: blur(70px);
+    animation: glowPulse 6s ease-in-out infinite alternate;
+  }
+  @keyframes glowPulse { 0%{opacity:.35} 100%{opacity:.85} }
+
+  .mo-bg-stars {
+    position: absolute; inset: 0;
+    background-image:
+      radial-gradient(1.5px 1.5px at 8%  15%,#fff,transparent),
+      radial-gradient(1px   1px   at 25% 60%,#aaffcc,transparent),
+      radial-gradient(2px   2px   at 51% 10%,#a855f7,transparent),
+      radial-gradient(1px   1px   at 70% 78%,#fff,transparent),
+      radial-gradient(2px   2px   at 87% 35%,#00ff88,transparent),
+      radial-gradient(1px   1px   at 17% 84%,#c084fc,transparent),
+      radial-gradient(1.5px 1.5px at 61% 49%,#fff,transparent);
+    background-size: 260px 260px; opacity:.35;
+    animation: twinkle 7s ease-in-out infinite alternate;
+  }
+  @keyframes twinkle { 0%{opacity:.15} 100%{opacity:.5} }
+
+  .mo-bg-scanlines {
+    position: absolute; inset: 0;
+    background: repeating-linear-gradient(
+      0deg,transparent,transparent 3px,
+      rgba(0,255,136,.007) 3px,rgba(0,255,136,.007) 4px
+    );
+  }
+  .mo-field-arc {
+    position: absolute; bottom: -6vw; left: 50%; transform: translateX(-50%);
+    width: 60vw; height: 15vw;
+    border-radius: 50% 50% 0 0/100% 100% 0 0;
+    border: 1px solid rgba(0,255,136,.06);
+  }
+
+  /* ════════════════════════════════
+     TOPBAR
+  ════════════════════════════════ */
+  .mo-topbar {
+    display: flex; align-items: center; justify-content: space-between; gap: .75rem;
+    padding: .85rem 1.1rem;
+    background: rgba(0,0,0,.3);
+    backdrop-filter: blur(14px);
+    border: 1px solid rgba(255,255,255,.07);
+    border-radius: 16px; margin-bottom: .5rem;
+  }
+  .mo-eyebrow { font-size: .44rem; font-weight: 700; letter-spacing: .25em; text-transform: uppercase; color: rgba(0,255,136,.5); }
+  .mo-topbar-title { font-size: .82rem; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; color: var(--cream); }
+  .mo-live-dot {
+    width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0;
+    background: var(--green); box-shadow: 0 0 12px var(--green);
+    animation: blink 1.2s ease-in-out infinite;
+  }
+  @keyframes liveBlink { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.3;transform:scale(.7)} }
+
+  .mo-role-chip {
+    display: flex; align-items: center; gap: .35rem;
+    font-size: .5rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+    color: rgba(232,220,200,.5);
+    border: 1px solid var(--border);
+    border-radius: 99px; padding: .25rem .7rem;
+    background: var(--surface);
+    white-space: nowrap;
+  }
+
+  .mo-back-btn {
+    display: flex; align-items: center; gap: .4rem;
+    font-size: .55rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+    color: rgba(232,220,200,.4); background: none; border: none; cursor: pointer;
+    transition: color .2s;
+  }
+  .mo-back-btn:hover { color: var(--green); }
+
+  /* ════════════════════════════════
+     SECTION LABEL
+  ════════════════════════════════ */
+  .mo-section-label {
+    display: block;
+    font-size: .5rem; font-weight: 700; letter-spacing: .25em; text-transform: uppercase;
+    color: rgba(0,255,136,.6);
+    margin-bottom: .5rem;
+  }
+
+  /* ════════════════════════════════
+     MATCH CARDS
+  ════════════════════════════════ */
+.mo-card {
+  background: linear-gradient(160deg, 
+    color-mix(in srgb, var(--midnight) 88%, var(--green)) 0%, 
+    var(--midnight) 100%);
+  border: 1px solid rgba(199, 168, 107, 0.12);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mo-card:hover {
+  border-color: rgba(199, 168, 107, 0.3);
+}
+  .mo-card-topline { position: absolute; top:0;left:0;right:0;height:2px; }
+  .mo-card-glow {
+    position: absolute; inset:0; pointer-events:none;
+    background: radial-gradient(ellipse at 50% 0%,rgba(0,255,136,.06),transparent 55%);
+    opacity:0; transition:opacity .25s;
+  }
+  .mo-card:hover .mo-card-glow { opacity:1; }
+
+  /* Esquinas HUD en cards */
+.hud-corner {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-style: solid;
+  border-color: rgba(199, 168, 107, 0.25);
+  pointer-events: none;
+  z-index: 2;
+  transition: all 0.3s ease;
+}
+  .hud-corner--tl{top:6px;left:6px;border-width:1.5px 0 0 1.5px}
+  .hud-corner--tr{top:6px;right:6px;border-width:1.5px 1.5px 0 0}
+  .hud-corner--bl{bottom:6px;left:6px;border-width:0 0 1.5px 1.5px}
+  .hud-corner--br{bottom:6px;right:6px;border-width:0 1.5px 1.5px 0}
+  .mo-card:hover .hud-corner {
+  border-color: rgba(0, 255, 136, 0.5);
+  width: 16px;
+  height: 16px;
+}
+
+  .mo-modal  .hud-corner { border-color:color-mix(in srgb,var(--gold) 35%,transparent); }
+
+  /* Status chips */
+  .mo-status-live     { background:rgba(6,78,59,.8);     color:#34d399; border:1px solid rgba(52,211,153,.3); }
+  .mo-status-upcoming { background:rgba(39,39,42,.8);    color:#a1a1aa; border:1px solid rgba(161,161,170,.2); }
+  .mo-status-finished { background:rgba(76,29,149,.8);   color:#c4b5fd; border:1px solid rgba(196,181,253,.3); }
+.mo-modal-handle {
+  width: 40px;
+  height: 4px;
+  border-radius: 99px;
+  background: rgba(255,255,255,.12);
+  margin: 12px auto 0;
+}
+.hud-corner--tl { top: 12px; left: 12px; border-width: 2px 0 0 2px; }
+.hud-corner--tr { top: 12px; right: 12px; border-width: 2px 2px 0 0; }
+.hud-corner--bl { bottom: 12px; left: 12px; border-width: 0 0 2px 2px; }
+.hud-corner--br { bottom: 12px; right: 12px; border-width: 0 2px 2px 0; }
+  /* ════════════════════════════════
+     SCOREBOARD
+  ════════════════════════════════ */
+  .mo-scoreboard {
+    position: relative;
+    display: grid; grid-template-columns: 1fr auto 1fr;
+    align-items: center; gap: .75rem;
+    background: linear-gradient(160deg,
+      color-mix(in srgb,var(--midnight) 88%,#00ff88) 0%,
+      var(--midnight) 100%
+    );
+    border: 1px solid var(--border);
+    border-radius: 18px; padding: 1.1rem 1rem;
+    overflow: hidden;
+  }
+  .mo-sb-topbar {
+    position:absolute;top:0;left:0;right:0;height:2px;opacity:.65;
+  }
+  .mo-sb-scanlines {
+    position:absolute;inset:0;pointer-events:none;
+    background:repeating-linear-gradient(
+      0deg,transparent,transparent 3px,
+      rgba(0,255,136,.008) 3px,rgba(0,255,136,.008) 4px
+    );
+  }
+
+  .mo-sb-team { display:flex;flex-direction:column;gap:.35rem;position:relative;z-index:1; }
+  .mo-sb-team--right { align-items:flex-end; }
+  .mo-sb-color-bar { height:3px;width:24px;border-radius:99px; }
+  .mo-sb-color-bar--right { margin-left:auto; }
+  .mo-sb-name {
+    font-size:.6rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+    color:rgba(232,220,200,.55);
+  }
+  .mo-sb-score {
+    font-size:2.8rem;font-weight:900;line-height:1;
+    color:var(--cream);
+  }
+
+  .mo-sb-center {
+    display:flex;flex-direction:column;align-items:center;gap:.45rem;
+    position:relative;z-index:1;
+  }
+  .mo-timer-display {
+    font-size:1.3rem;font-weight:700;letter-spacing:.04em;color:var(--cream);
+  }
+  .mo-timer-btn {
+    display:flex;align-items:center;gap:.35rem;
+    font-family:var(--font-cinzel,'Cinzel'),serif;
+    font-size:.48rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+    color:rgba(0,255,136,.7);
+    background:rgba(0,255,136,.07);
+    border:1px solid rgba(0,255,136,.25);
+    border-radius:99px;padding:.3rem .7rem;
+    cursor:pointer;transition:background .2s,border-color .2s,color .2s,box-shadow .2s;
+  }
+  .mo-timer-btn:hover,.mo-timer-btn.active {
+    background:rgba(0,255,136,.14);border-color:rgba(0,255,136,.55);
+    color:var(--green);box-shadow:0 0 14px rgba(0,255,136,.2);
+  }
+  .mo-vs-text {
+    font-size:.55rem;font-weight:900;letter-spacing:.15em;
+    color:rgba(0,255,136,.4);
+  }
+
+  /* ════════════════════════════════
+     ACTION BUTTONS
+  ════════════════════════════════ */
+  .mo-actions-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem; }
+
+  .mo-action-btn {
+    display:flex;flex-direction:column;align-items:center;gap:.55rem;
+    padding:.9rem .5rem;
+    background:linear-gradient(160deg,
+      color-mix(in srgb,var(--midnight) 88%,#00ff88) 0%,
+      var(--midnight) 100%
+    );
+    border:1px solid var(--border);border-radius:14px;
+    cursor:pointer;transition:border-color .2s,transform .15s,box-shadow .2s,background .2s;
+    position:relative;overflow:hidden;
+  }
+  .mo-action-btn:hover {
+    border-color:rgba(0,255,136,.3);transform:translateY(-2px);
+    box-shadow:0 0 16px rgba(0,255,136,.08);
+  }
+  .mo-action-btn:active { transform:scale(.96); }
+  .mo-action-icon {
+    width:40px;height:40px;border-radius:10px;border:1px solid;
+    display:flex;align-items:center;justify-content:center;
+    transition:transform .2s,box-shadow .2s;
+  }
+  .mo-action-btn:hover .mo-action-icon { transform:scale(1.08); }
+  .mo-action-label {
+    font-size:.52rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+    color:rgba(232,220,200,.55);transition:color .2s;
+  }
+  .mo-action-btn:hover .mo-action-label { color:rgba(232,220,200,.85); }
+
+  /* ════════════════════════════════
+     LOG
+  ════════════════════════════════ */
+  .mo-clear-btn {
+    font-size:.5rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+    color:rgba(232,220,200,.25);background:none;border:none;cursor:pointer;
+    transition:color .2s;
+  }
+  .mo-clear-btn:hover { color:#ef4444; }
+
+  .mo-log-entry {
+    display:flex;align-items:flex-start;gap:.75rem;
+    background:linear-gradient(160deg,
+      color-mix(in srgb,var(--midnight) 90%,#00ff88) 0%,
+      var(--midnight) 100%
+    );
+    border:1px solid var(--border);border-radius:12px;
+    padding:.7rem .85rem;
+    animation:logIn .2s ease both;
+  }
+  @keyframes logIn { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:none} }
+
+  .mo-log-min {
+    font-family:monospace;font-size:.62rem;font-weight:700;
+    color:rgba(0,255,136,.6);min-width:26px;padding-top:.05rem;
+  }
+  .mo-log-icon {
+    width:26px;height:26px;border-radius:8px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:.85rem;flex-shrink:0;border:1px solid;
+  }
+  .mo-log-info { flex:1;min-width:0; }
+  .mo-log-event-title {
+    font-size:.65rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--cream);line-height:1.3;
+  }
+  .mo-log-event-sub {
+    font-size:.55rem;color:rgba(232,220,200,.4);margin-top:.15rem;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .mo-log-del {
+    color:rgba(232,220,200,.2);background:none;border:none;cursor:pointer;
+    flex-shrink:0;padding-top:.1rem;transition:color .2s;
+  }
+  .mo-log-del:hover { color:#ef4444; }
+
+  /* ════════════════════════════════
+     MODAL
+  ════════════════════════════════ */
+  .mo-modal {
+    position:relative;
+    background:linear-gradient(160deg,
+      color-mix(in srgb,var(--midnight) 88%,#00ff88) 0%,
+      var(--midnight) 100%
+    );
+    border:1px solid color-mix(in srgb,var(--gold) 22%,transparent);
+    border-radius:18px;width:100%;max-width:360px;overflow:hidden;
+    animation:modalIn .22s cubic-bezier(.22,1,.36,1) both;
+    border-radius: 24px 24px 0 0;
+  }
+  @keyframes modalIn { 
+  from{opacity:0;transform:translateY(60px)} 
+  to{opacity:1;transform:none} 
+}
+
+  .mo-event-badge {
+    display:inline-block;
+    font-size:.48rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;
+    padding:.2rem .65rem;border-radius:99px;border:1px solid;
+  }
+
+  /* Form fields */
+  .mo-field-group { display:flex;flex-direction:column;gap:.35rem; }
+  .mo-field-label {
+    font-size:.48rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase;
+    color:rgba(232,220,200,.4);
+  }
+  .mo-input, .mo-select {
+    width:100%;
+    padding:.65rem .85rem;
+    border-radius:10px;
+    border:1px solid color-mix(in srgb,var(--gold) 18%,transparent);
+    background:rgba(255,255,255,.03);
+    color:var(--cream);
+    font-size:.68rem;letter-spacing:.04em;
+    outline:none;caret-color:var(--green);
+    transition:border-color .2s,box-shadow .2s,background .2s;
+  }
+  .mo-input::placeholder { color:rgba(232,220,200,.2);font-size:.62rem; }
+  .mo-input:focus,.mo-select:focus {
+    border-color:rgba(0,255,136,.4);background:rgba(0,255,136,.025);
+    box-shadow:0 0 0 3px rgba(0,255,136,.06);
+  }
+  .mo-select option { background:var(--midnight);color:var(--cream); }
+
+  /* Buttons */
+  .mo-btn-ghost {
+    font-size:.58rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+    color:rgba(232,220,200,.45);
+    background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
+    border-radius:99px;padding:.5rem 1rem;cursor:pointer;
+    transition:background .2s,color .2s;
+  }
+  .mo-btn-ghost:hover { background:rgba(255,255,255,.07);color:rgba(232,220,200,.75); }
+
+  .mo-btn-primary {
+    font-size:.58rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--midnight);
+    background:var(--gold);
+    border:none;border-radius:99px;padding:.5rem 1.25rem;cursor:pointer;
+    transition:filter .2s,transform .15s,box-shadow .2s;
+  }
+  .mo-btn-primary:hover {
+    filter:brightness(1.1);transform:translateY(-1px);
+    box-shadow:0 0 20px rgba(199,168,107,.3);
+  }
+  .mo-btn-primary:active { transform:scale(.97); }
+</style>
+
+<script>
+(function () {
+
+  /* ── DATOS ── */
+  const MATCHES = [
+    {
+      id:'m1',round:'Jornada 4 · Partido 1',status:'live',
+      role:'Árbitro principal',time:'14:00',field:'Cancha A',
+      teamA:{name:'Los Vikingos', color:'#00ff88',players:['Peereira7','Perxitaa','Abby','Andoni','Alana']},
+      teamB:{name:'Los Guerreros',color:'#f59e0b',players:['TheGrefg','Westcol','Viruzz','T.Mazza','Arigeli']},
+    },
+    {
+      id:'m2',round:'Jornada 4 · Partido 2',status:'upcoming',
+      role:'Plantillero',time:'16:30',field:'Cancha B',
+      teamA:{name:'Los Ángeles',color:'#a78bfa',players:['Rubius','AuronPlay','Ibai','Spreen','Coscu']},
+      teamB:{name:'Los Diablos', color:'#f87171',players:['Rivers','Luzu','Momo','Paracetamor','JuanSG']},
+    },
+    {
+      id:'m3',round:'Jornada 4 · Partido 3',status:'finished',
+      role:'Plantillero',time:'10:00',field:'Cancha A',
+      teamA:{name:'Equipo Norte',color:'#38bdf8',players:['A1','A2','A3','A4','A5']},
+      teamB:{name:'Equipo Sur',  color:'#e2ff5d',players:['B1','B2','B3','B4','B5']},
+    },
+  ];
+
+  const EVENT_META = {
+    yellow:{label:'Amarilla',icon:'🟨',iconBg:'rgba(120,53,15,.6)',  iconColor:'#fbbf24',iconBorder:'rgba(251,191,36,.25)'},
+    red:   {label:'Roja',    icon:'🟥',iconBg:'rgba(127,29,29,.6)',  iconColor:'#f87171',iconBorder:'rgba(248,113,113,.25)'},
+    goal:  {label:'Gol',     icon:'⚽',iconBg:'rgba(6,78,59,.6)',    iconColor:'#00ff88',iconBorder:'rgba(0,255,136,.3)'},
+    change:{label:'Cambio',  icon:'🔄',iconBg:'rgba(76,29,149,.6)',  iconColor:'#c4b5fd',iconBorder:'rgba(196,181,253,.25)'},
+    shot:  {label:'Tiro',    icon:'🎯',iconBg:'rgba(12,74,110,.6)',  iconColor:'#7dd3fc',iconBorder:'rgba(125,211,252,.25)'},
+    foul:  {label:'Falta',   icon:'⚠️',iconBg:'rgba(39,39,42,.8)',   iconColor:'#a1a1aa',iconBorder:'rgba(161,161,170,.15)'},
+  };
+
+  const STATUS_CFG = {
+    live:     {label:'En juego',   cls:'mo-status-live'},
+    upcoming: {label:'Próximo',    cls:'mo-status-upcoming'},
+    finished: {label:'Finalizado', cls:'mo-status-finished'},
+  };
+
+  /* ── STORAGE ── */
+  const sKey  = id => 'velada_log_'   + id;
+  const tKey  = id => 'velada_timer_' + id;
+  const scKey = id => 'velada_score_' + id;
+
+  const loadLog   = id => { try{return JSON.parse(localStorage.getItem(sKey(id)))||[];}catch{return[];} };
+  const saveLog   = (id,v) => localStorage.setItem(sKey(id),JSON.stringify(v));
+  const loadScore = id => { try{return JSON.parse(localStorage.getItem(scKey(id)))||{a:0,b:0};}catch{return{a:0,b:0};} };
+  const saveScore = (id,v) => localStorage.setItem(scKey(id),JSON.stringify(v));
+  const loadTimer = id => parseInt(localStorage.getItem(tKey(id))||'0',10);
+  const saveTimer = (id,v) => localStorage.setItem(tKey(id),String(v));
+
+  /* ── STATE ── */
+  let activeMatch=null, timerSec=0, timerRunning=false;
+  let timerInterval=null, currentEventType=null;
+
+  const $=id=>document.getElementById(id);
+
+  /* ── SHARED FIELD CLASSES para innerHTML dinámico ── */
+  const INPUT_CLS  = 'mo-input';
+  const SELECT_CLS = 'mo-select';
+  const LABEL_CLS  = 'mo-field-label';
+
+  /* ── RENDER CARDS ── */
+function renderCards(){
+  const container = $('mo-cards-container');
+  container.innerHTML = MATCHES.map(m => {
+    const log = loadLog(m.id);
+    const score = loadScore(m.id);
+    const showSc = m.status !== 'upcoming';
+    const st = STATUS_CFG[m.status];
+    
+    return `
+      <div data-id="${m.id}" class="mo-card group relative oxer-profile-card bg-theme-midnight/70 backdrop-blur-xs
+transition-all duration-500 rounded-xl overflow-hidden transition-all duration-500 hover:scale-[1.01] hover:shadow-2xl cursor-pointer">
+        
+        <!-- EFECTO SHINE (brillo que cruza al hover) -->
+        <div class="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/15 to-transparent transition-transform duration-700 ease-in-out group-hover:translate-x-full"></div>
+        
+        <!-- GLOW DE FONDO (resplandor detrás de la card) -->
+        <div class="absolute inset-0 bg-theme-gold/0 group-hover:bg-theme-gold/5 transition-all duration-500 rounded-xl -z-0"></div>
+        
+        <!-- Borde superior con colores de equipos -->
+      
+        
+        <!-- HUD corners -->
+        <span class="hud-corner hud-corner--tl"></span>
+        <span class="hud-corner hud-corner--tr"></span>
+        <span class="hud-corner hud-corner--bl"></span>
+        <span class="hud-corner hud-corner--br"></span>
+        
+        <!-- Contenido principal -->
+        <div class="relative z-10 p-5">
+          
+          <!-- Header con round y status -->
+          <div class="flex items-center gap-2 mb-3">
+            <span class="text-[0.52rem] font-semibold tracking-[0.08em] uppercase text-theme-cream/40 flex-1">
+              ${m.round}
+            </span>
+            <span class="text-[0.5rem] text-red-400 font-bold tracking-[0.12em] uppercase px-2 py-1 rounded-full ${st.cls}">${st.label}</span>
+            </div>
+            <span class="text-xs justify-center py-2 text-amber-200 flex items-center gap-1">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+              </svg>
+              ${m.time} · ${m.field}
+            </span>
+          
+          <!-- Equipos y marcador -->
+          <div class="flex items-center justify-between gap-3 mb-3">
+            
+            <!-- Equipo A -->
+            <div class="flex-1 flex flex-col gap-1">
+              <div class="h-0.5 w-6 rounded-full transition-all duration-300 group-hover:w-8" style="background: ${m.teamA.color}"></div>
+              <span class="text-[0.7rem] font-bold tracking-[0.06em] uppercase text-theme-cream/90 transition-all duration-300 group-hover:text-theme-cream">${m.teamA.name}</span>
+              ${showSc ? `<span class="text-[1.8rem] font-black leading-none text-theme-cream/90 transition-all duration-300 group-hover:scale-105 group-hover:text-theme-cream inline-block">${score.a}</span>` : ''}
+            </div>
+            
+            <!-- VS -->
+            <span class="text-[0.55rem] font-black tracking-[0.15em] text-theme-gold/40 transition-all duration-300 group-hover:text-theme-gold/60">VS</span>
+            
+            <!-- Equipo B -->
+            <div class="flex-1 flex flex-col items-end gap-1">
+              <div class="h-0.5 w-6 rounded-full transition-all duration-300 group-hover:w-8" style="background: ${m.teamB.color}"></div>
+              <span class="text-[0.7rem] font-bold tracking-[0.06em] uppercase text-theme-cream/90 transition-all duration-300 group-hover:text-theme-cream">${m.teamB.name}</span>
+              ${showSc ? `<span class="text-[1.8rem] font-black leading-none text-theme-cream/90 transition-all duration-300 group-hover:scale-105 group-hover:text-theme-cream inline-block">${score.b}</span>` : ''}
+            </div>
+          </div>
+          
+          <!-- Footer de la card -->
+          <div class="flex items-center justify-between pt-3 mt-2 border-t border-theme-gold/10">
+            <span class="text-[0.5rem] text-amber-200">
+              ${log.length} evento${log.length !== 1 ? 's' : ''} registrado${log.length !== 1 ? 's' : ''}
+            </span>
+            <span class="text-[0.5rem] font-bold tracking-[0.1em] uppercase text-green-500 bg-theme-green/10 border border-theme-green/25 rounded-full px-2 py-1">
+              ${m.role}
+            </span>
+            
+            <!-- BOTÓN FLECHA - SOLO ESTO ABRE EL PARTIDO -->
+            <button class="open-match-btn w-7 h-7 rounded-lg flex items-center justify-center transition-all duration-300 hover:bg-theme-gold/20 group-hover:translate-x-1 cursor-pointer"
+                    data-id="${m.id}">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="text-green-300 transition-all duration-300 group-hover:text-theme-gold">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </button>
+          </div>
+          
+        </div>
+      </div>`;
+  }).join('');
+
+  // ELIMINA ESTO (el click en toda la card)
+  // container.querySelectorAll('.mo-card').forEach(c =>
+  //   c.addEventListener('click', () => openMatch(c.dataset.id))
+  // );
+
+  // SOLO LA FLECHA ABRE EL PARTIDO
+  container.querySelectorAll('.open-match-btn').forEach(btn =>
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openMatch(btn.dataset.id);
+    })
+  );
+}
+
+  /* ── OPEN MATCH ── */
+  function openMatch(id){
+    activeMatch = MATCHES.find(m=>m.id===id);
+    $('mo-view-list').classList.add('hidden');
+    $('mo-view-match').classList.remove('hidden');
+
+    $('mo-match-round').textContent     = activeMatch.round+' · '+activeMatch.field;
+    $('mo-match-role-chip').textContent = activeMatch.role;
+    $('mo-sb-name-a').textContent = activeMatch.teamA.name;
+    $('mo-sb-name-b').textContent = activeMatch.teamB.name;
+    $('mo-sb-color-a').style.background = activeMatch.teamA.color;
+    $('mo-sb-color-b').style.background = activeMatch.teamB.color;
+    $('mo-sb-topbar').style.background  =
+      `linear-gradient(90deg,${activeMatch.teamA.color} 0%,transparent 50%,${activeMatch.teamB.color} 100%)`;
+
+    const score = loadScore(activeMatch.id);
+    $('mo-sb-score-a').textContent = score.a;
+    $('mo-sb-score-b').textContent = score.b;
+
+    timerSec = loadTimer(activeMatch.id);
+    timerRunning = false;
+    clearInterval(timerInterval);
+    renderTimerDisplay();
+    resetTimerBtn();
+    renderLog();
+    window.scrollTo(0,0);
+  }
+
+  function goBack(){
+    if(timerRunning)stopTimer();
+    $('mo-view-match').classList.add('hidden');
+    $('mo-view-list').classList.remove('hidden');
+    renderCards();
+    activeMatch=null;
+  }
+  $('mo-back-btn').addEventListener('click',goBack);
+
+  /* ── TIMER ── */
+  function renderTimerDisplay(){
+    const m=Math.floor(timerSec/60).toString().padStart(2,'0');
+    const s=(timerSec%60).toString().padStart(2,'0');
+    $('mo-timer-display').textContent=m+':'+s;
+  }
+  function resetTimerBtn(){
+    const btn=$('mo-timer-btn');
+    btn.classList.remove('active');
+    $('mo-timer-label').textContent='Iniciar';
+  }
+  function stopTimer(){
+    timerRunning=false;clearInterval(timerInterval);
+    $('mo-timer-btn').classList.remove('active');
+    $('mo-timer-label').textContent='Reanudar';
+  }
+  $('mo-timer-btn').addEventListener('click',()=>{
+    if(timerRunning){stopTimer();return;}
+    timerRunning=true;
+    $('mo-timer-btn').classList.add('active');
+    $('mo-timer-label').textContent='Pausar';
+    timerInterval=setInterval(()=>{
+      timerSec++;saveTimer(activeMatch.id,timerSec);renderTimerDisplay();
+    },1000);
+  });
+
+  /* ── ACTION BUTTONS ── */
+  document.querySelectorAll('.mo-action-btn').forEach(btn=>
+    btn.addEventListener('click',()=>openModal(btn.dataset.type))
+  );
+
+  /* ── MODAL ── */
+  function openModal(type){
+    currentEventType=type;
+    const meta=EVENT_META[type];
+    const badge=$('mo-modal-badge');
+    badge.textContent=meta.label;
+    badge.style.background=meta.iconBg;
+    badge.style.color=meta.iconColor;
+    badge.style.borderColor=meta.iconBorder;
+    $('mo-modal-title').textContent='Registrar · '+meta.label;
+    $('mo-m-team').innerHTML=`
+      <option value="a">${activeMatch.teamA.name}</option>
+      <option value="b">${activeMatch.teamB.name}</option>`;
+    $('mo-m-player').value='';
+    $('mo-m-minute').value=Math.floor(timerSec/60)||'';
+
+    const extra=$('mo-m-extra');
+    if(type==='change'){
+      extra.innerHTML=`
+        <div class="mo-field-group flex flex-col gap-0.5 relative">
+          <label class="text-xs gap-2 uppercase text-[rgba(232,220,200,.4)]" for="mo-m-out">Sale</label>
+         <input
+  id="mo-m-out"
+  type="text"
+  placeholder="Nombre o número"
+  autocomplete="off"
+  class="
+    w-full
+    px-[0.85rem]
+    py-[0.65rem]
+    rounded-[10px]
+    border
+    border-[color-mix(in_srgb,var(--gold)_18%,transparent)]
+    bg-white/[0.03]
+    text-[var(--cream)]
+    text-xs
+    tracking-[0.04em]
+    outline-none
+    caret-[var(--green)]
+    transition-all
+    duration-200
+  "
+>
+        </div>
+<div class="mo-field-group flex flex-col gap-0.5 relative" style="margin-top:.75rem">
+  <label
+    class="text-xs gap-2 uppercase text-[rgba(232,220,200,.4)]"
+    for="mo-m-in"
+  >
+    Entra
+  </label>
+
+  <input
+    id="mo-m-in"
+    type="text"
+    placeholder="Nombre o número"
+    autocomplete="off"
+    class="
+      w-full
+      px-[0.85rem]
+      py-[0.65rem]
+      rounded-[10px]
+      border
+      border-[color-mix(in_srgb,var(--gold)_18%,transparent)]
+      bg-white/[0.03]
+      text-[var(--cream)]
+      text-xs
+      tracking-[0.04em]
+      outline-none
+      caret-[var(--green)]
+      transition-all
+      duration-200
+    "
+  >
+</div>`;
+    }else if(type==='shot'){
+      extra.innerHTML=`
+<div class="mo-field-group flex flex-col gap-0.5 relative">
+  <label
+    class="text-xs gap-2 uppercase text-[rgba(232,220,200,.4)]"
+    for="mo-m-shottype"
+  >
+    Tipo de tiro
+  </label>
+
+  <select
+    id="mo-m-shottype"
+    class="
+      w-full
+      px-[0.85rem]
+      py-[0.65rem]
+      rounded-[10px]
+      border
+      border-[color-mix(in_srgb,var(--gold)_18%,transparent)]
+      bg-white/[0.03]
+      text-[var(--cream)]
+      text-xs
+      tracking-[0.04em]
+      outline-none
+      caret-[var(--green)]
+      transition-all
+      duration-200
+    "
+  >
+    <option>Al arco</option>
+    <option>Gol (suma marcador)</option>
+    <option>Bloqueado</option>
+    <option>Afuera</option>
+  </select>
+</div>`;
+    }else{extra.innerHTML='';}
+
+    const overlay=$('mo-modal-overlay');
+    overlay.classList.remove('hidden');overlay.classList.add('flex');
+
+  }
+
+  function closeModal(){
+    $('mo-modal-overlay').classList.add('hidden');
+    $('mo-modal-overlay').classList.remove('flex');
+    currentEventType=null;
+  }
+  $('mo-modal-cancel').addEventListener('click',closeModal);
+  
+
+  $('mo-modal-save').addEventListener('click',()=>{
+    const teamVal =$('mo-m-team').value;
+    const player  =($('mo-m-player').value||'').trim()||'—';
+    const rawMin  =parseInt($('mo-m-minute').value,10);
+    const minute  =isNaN(rawMin)?Math.floor(timerSec/60):rawMin;
+    const teamName=teamVal==='a'?activeMatch.teamA.name:activeMatch.teamB.name;
+
+    let detail='';
+    if(currentEventType==='change'){
+      const out=($('mo-m-out')?.value||'').trim()||'—';
+      const inp=($('mo-m-in')?.value ||'').trim()||'—';
+      detail=`Sale: ${out}  ·  Entra: ${inp}`;
+    }else if(currentEventType==='shot'){
+      detail=$('mo-m-shottype')?.value||'Al arco';
+    }
+
+    const log=loadLog(activeMatch.id);
+    log.unshift({id:Date.now(),type:currentEventType,team:teamVal,teamName,player,minute,detail});
+    saveLog(activeMatch.id,log);
+
+    if(currentEventType==='goal'||(currentEventType==='shot'&&detail==='Gol (suma marcador)')){
+      const score=loadScore(activeMatch.id);
+      score[teamVal]++;
+      saveScore(activeMatch.id,score);
+      $('mo-sb-score-'+teamVal).textContent=score[teamVal];
+    }
+    closeModal();renderLog();
+  });
+
+  /* ── LOG ── */
+// ── LOG CON TAILWIND CSS ──
+function renderLog(){
+  const log = loadLog(activeMatch.id);
+  const list = $('mo-log-list');
+  if(!log.length){
+    list.innerHTML = '<div class="text-center py-8"><p class="text-xs text-green-400/30 tracking-wider uppercase">Sin eventos registrados</p><p class="text-[0.52rem] text-cream/15 mt-2">Registra el primer evento del partido</p></div>';
+    return;
+  }
+  
+  list.innerHTML = log.map(e => {
+    const m = EVENT_META[e.type] || EVENT_META.foul;
+    const teamColor = e.team === 'a' ? activeMatch.teamA.color : activeMatch.teamB.color;
+    return `
+      <div class="mo-log-entry group relative flex items-start gap-3 p-3 rounded-xl border transition-all duration-200 hover:translate-x-0.5" 
+           style="background: linear-gradient(160deg, color-mix(in srgb, var(--midnight) 92%, var(--gold)) 0%, var(--midnight) 100%); border-color: var(--border);">
+        
+        <!-- Línea lateral de color del equipo -->
+        <div class="absolute left-0 top-0 bottom-0 w-1 rounded-l-xl" style="background: ${teamColor};"></div>
+        
+        <!-- Minuto -->
+        <span class="mo-log-min font-mono text-sm font-extrabold min-w-[2.5rem] text-center py-0.5 px-1.5 rounded-md"
+              style="color: var(--gold); background: rgba(199,168,107,0.12);">${e.minute}'</span>
+        
+        <!-- Icono del evento -->
+        <span class="mo-log-icon w-8 h-8 rounded-lg flex items-center justify-center text-base flex-shrink-0 border transition-transform duration-150 group-hover:scale-105 group-hover:shadow-md"
+              style="background: ${m.iconBg}; color: ${m.iconColor}; border-color: ${m.iconBorder}; box-shadow: 0 0 8px ${teamColor}40;">${m.icon}</span>
+        
+        <!-- Información del evento -->
+        <div class="mo-log-info flex-1 min-w-0">
+          <p class="mo-log-event-title text-xs font-extrabold tracking-wide uppercase"
+             style="color: var(--cream);">${m.label} · ${e.teamName}</p>
+          <p class="mo-log-event-sub text-[0.58rem] font-medium mt-0.5 truncate"
+             style="color: rgba(232,220,200,0.5);">${e.player}${e.detail ? ' · ' + e.detail : ''}</p>
+        </div>
+        
+        <!-- Botón eliminar -->
+        <button data-eid="${e.id}" class="mo-log-del flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center transition-all duration-200 hover:scale-105"
+                style="color: rgba(232,220,200,0.25); background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05);"
+                aria-label="Eliminar evento">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>`;
+  }).join('');
+
+  // Event listeners para botones eliminar
+  list.querySelectorAll('.mo-log-del').forEach(btn =>
+    btn.addEventListener('click', () => {
+      saveLog(activeMatch.id, loadLog(activeMatch.id).filter(e => e.id !== Number(btn.dataset.eid)));
+      renderLog();
+    })
+  );
+}
+
+  $('mo-log-clear').addEventListener('click',()=>{
+    if(!confirm('¿Eliminar todos los eventos de este partido?'))return;
+    saveLog(activeMatch.id,[]);
+    saveScore(activeMatch.id,{a:0,b:0});
+    $('mo-sb-score-a').textContent='0';
+    $('mo-sb-score-b').textContent='0';
+    renderLog();
+  });
+  $('mo-min-minus')?.addEventListener('click', () => {
+  const input = $('mo-m-minute');
+  if (input) {
+    let v = parseInt(input.value || '0', 10);
+    if (v > 0) input.value = v - 1;
+  }
+});
+$('mo-min-plus')?.addEventListener('click', () => {
+  const input = $('mo-m-minute');
+  if (input) {
+    let v = parseInt(input.value || '0', 10);
+    input.value = v + 1;
+  }
+});
+$('mo-modal-handle')?.addEventListener('click', closeModal);
+  renderCards();
+})();
+</script>

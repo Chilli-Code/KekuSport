@@ -8,7 +8,7 @@ type Span = 'big' | 'small'
 interface Video {
   id: string
   title: string
-  videoId: string | null
+  videoSrc: string | null
   poster: string | null
   active: boolean
   span: Span
@@ -18,7 +18,7 @@ const VIDEOS: Video[] = [
   {
     id: 'presentacion',
     title: 'La Presentación',
-    videoId: 'h-jWhM3ne5U',
+    videoSrc: '/videos/presentacion.mp4',
     poster: '/videos/thumbnails/presentacion.webp',
     active: true,
     span: 'big',
@@ -26,7 +26,7 @@ const VIDEOS: Video[] = [
   {
     id: 'pesaje',
     title: 'El Pesaje',
-    videoId: null,
+    videoSrc: null,
     poster: null,
     active: false,
     span: 'small',
@@ -34,7 +34,7 @@ const VIDEOS: Video[] = [
   {
     id: 'cara-a-cara',
     title: 'Cara a Cara',
-    videoId: null,
+    videoSrc: null,
     poster: null,
     active: false,
     span: 'small',
@@ -77,13 +77,13 @@ const SPAN_CLASSES: Record<Span, string> = {
     <div
       class="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:aspect-[24/9] lg:grid-cols-3 lg:grid-rows-2 lg:gap-4"
     >
-      {VIDEOS.map(({ title, videoId, poster, active, span }) => {
+      {VIDEOS.map(({ title, videoSrc, poster, active, span }) => {
         const Tag = active ? 'button' : 'div'
         return (
           <Tag
             type={active ? 'button' : undefined}
             data-video-tile={active ? '' : undefined}
-            data-video-id={active ? videoId : undefined}
+            data-video-src={active ? videoSrc : undefined}
             data-video-title={active ? title : undefined}
             aria-label={active ? `Reproducir vídeo: ${title}` : `${title}. Próximamente.`}
             aria-disabled={active ? undefined : 'true'}
@@ -253,31 +253,34 @@ const SPAN_CLASSES: Record<Span, string> = {
     const titleEl = document.querySelector('[data-video-dialog-title]')
     const frame = document.querySelector('[data-video-dialog-frame]')
     if (!frame) return
+function openVideo(videoSrc: string, title: string) {
+  if (titleEl) titleEl.textContent = title
 
-    function openVideo(videoId: string, title: string) {
-      if (titleEl) titleEl.textContent = title
-      const iframe = document.createElement('iframe')
-      iframe.src = `https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}?autoplay=1&rel=0&playsinline=1`
-      iframe.allow =
-        'accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen'
-      iframe.setAttribute('allowfullscreen', '')
-      iframe.title = title
-      iframe.className = 'h-full w-full border-0'
-      frame.replaceChildren(iframe)
-      dialog.showModal()
-    }
+  const video = document.createElement('video')
+
+  video.src = videoSrc
+  video.controls = true
+  video.autoplay = true
+  video.playsInline = true
+
+  video.className = 'h-full w-full object-cover'
+
+  frame?.replaceChildren(video)
+
+  ;(dialog as HTMLDialogElement).showModal()
+}
 
     function closeVideo() {
-      if (!dialog.open) return
-      dialog.close()
+      if (!(dialog as HTMLDialogElement).open) return
+      ;(dialog as HTMLDialogElement).close()
     }
 
     tiles.forEach((tile) => {
       tile.addEventListener('click', () => {
-        const videoId = tile.getAttribute('data-video-id')
+        const videoSrc = tile.getAttribute('data-video-src')
         const title = tile.getAttribute('data-video-title') ?? ''
-        if (!videoId) return
-        openVideo(videoId, title)
+        if (!videoSrc) return
+        openVideo(videoSrc, title)
       })
     })
 
