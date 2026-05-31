@@ -1,0 +1,438 @@
+---
+const FORMATIONS = ['4-3-3','4-4-2','4-2-3-1','3-5-2','5-3-2','4-3-2-1'];
+
+interface MatchInfo {
+  id: string;
+  jornada: string;
+  partido: string;
+  cancha: string;
+  hora: string;
+  badge: string;
+  badgeClass: string;
+  rival: string;
+  accent: string;
+}
+
+const MATCHES: MatchInfo[] = [
+  { id: 'm1', jornada: 'JORNADA 4', partido: 'PARTIDO 1', cancha: 'CANCHA A', hora: '14:00', badge: 'EN 2 DÍAS', badgeClass: 'tec-badge-live', rival: 'LOS GUERREROS', accent: '#f59e0b' },
+  { id: 'm2', jornada: 'JORNADA 5', partido: 'PARTIDO 1', cancha: 'CANCHA B', hora: '16:00', badge: 'EN 9 DÍAS', badgeClass: 'tec-badge-upcoming', rival: 'LOS ÁNGELES', accent: '#a78bfa' },
+];
+---
+
+<div class="tec-scroll-content">
+
+  <!-- ══════ MATCH LIST VIEW ══════ -->
+  <div id="match-list-view">
+    <p class="tec-section-label mb-3">PRÓXIMOS DUELOS</p>
+    <div class="flex flex-col gap-4">
+      {MATCHES.map(m => (
+        <div class="duel-card" style="max-width:100%" data-match-id={m.id}>
+          <div class="duel-inner">
+            <div class="flex items-center justify-between gap-2">
+              <div class="duel-stage" style="text-align:left;margin:0">{m.jornada} · {m.partido}</div>
+              <span class={m.badgeClass}>{m.badge}</span>
+            </div>
+            <p class="text-[.45rem] text-white/25 tracking-widest uppercase font-[family-name:var(--font-display)]">{m.cancha} · {m.hora}</p>
+            <div class="duel-teams">
+              <div class="duel-side duel-side--left">
+                <div class="duel-avatar-wrap">
+                  <div class="duel-avatar-bg"></div>
+                  <img class="duel-avatar" src="/images/Logo_Default.png" alt="MI EQUIPO" loading="lazy" />
+                </div>
+                <span class="duel-name">MI EQUIPO</span>
+              </div>
+              <div class="duel-vs" aria-hidden="true">
+                <span class="duel-vs-circle">
+                  <span class="duel-vs-text">VS</span>
+                </span>
+                <div class="duel-vs-line"></div>
+              </div>
+              <div class="duel-side duel-side--right">
+                <div class="duel-avatar-wrap">
+                  <div class="duel-avatar-bg"></div>
+                  <img class="duel-avatar" src="/images/Logo_Default.png" alt={m.rival} loading="lazy" />
+                </div>
+                <span class="duel-name">{m.rival}</span>
+              </div>
+            </div>
+            <div class="border-t border-white/[0.05] pt-3 flex justify-center">
+              <button class="tec-edit-lineup-btn" data-match={m.id}>EDITAR ALINEACIÓN</button>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+
+  <!-- ══════ MATCH EDITOR VIEW (hidden by default) ══════ -->
+  <div id="match-editor-view" class="hidden">
+    <div class="tec-duel-header">
+      <button id="btn-volver-duelos" class="tec-volver-btn">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+        VOLVER
+      </button>
+      <span id="editor-match-label" class="tec-label !mb-0"></span>
+    </div>
+
+    <!-- SISTEMA DE JUEGO -->
+    <div class="flex items-center gap-3 mb-4 flex-wrap">
+      <p class="tec-section-label !mb-0">SISTEMA</p>
+      <div class="flex flex-wrap gap-1.5" id="match-formation-btns">
+        {FORMATIONS.map((f, i) => (
+          <button class={`tec-formation-btn ${i === 0 ? 'tec-formation-btn--active' : ''}`} data-formation={f}>
+            {f}
+          </button>
+        ))}
+      </div>
+    </div>
+
+    <!-- CAMPO -->
+    <div class="tec-field-wrap">
+      <div class="tec-field" id="match-field">
+        <div class="tec-field-line--mid"></div>
+        <div class="tec-field-circle"></div>
+        <div class="tec-field-box tec-field-box--top"></div>
+        <div class="tec-field-box tec-field-box--bot"></div>
+        <div class="tec-field-goal tec-field-goal--top"></div>
+        <div class="tec-field-goal tec-field-goal--bot"></div>
+        <div id="match-field-players"></div>
+      </div>
+    </div>
+
+    <!-- SUPLENTES -->
+    <div class="mt-5">
+      <p class="tec-section-label mb-2">SUPLENTES</p>
+      <div class="flex flex-wrap gap-2" id="match-bench-list">
+        <p class="tec-empty">Agrega jugadores para asignar posiciones.</p>
+      </div>
+    </div>
+
+    <!-- SUSTITUCIONES -->
+    <p class="tec-section-label mt-6 mb-3">SUSTITUCIONES</p>
+    <div class="flex flex-col gap-1.5 mb-2" id="match-subs-list"></div>
+    <button class="tec-add-sub-btn" id="btn-add-match-sub">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      AÑADIR SUSTITUCIÓN
+    </button>
+  </div>
+
+</div>
+
+<!-- ══════ MODAL: SUSTITUCIÓN ══════ -->
+<div id="modal-sub" class="tec-overlay tec-overlay--bottom hidden">
+  <div class="tec-modal tec-modal--sheet">
+    <div class="tec-modal-handle"></div>
+    <span class="hud-c hud-c--tl"></span><span class="hud-c hud-c--tr"></span>
+    <span class="hud-c hud-c--bl"></span><span class="hud-c hud-c--br"></span>
+    <div class="px-5 pt-5 pb-3">
+      <h3 class="tec-modal-title">SUSTITUCIÓN</h3>
+    </div>
+    <div class="px-5 pb-4 flex flex-col gap-4">
+      <div>
+        <label class="tec-field-label mb-1.5 block" for="sub-out"><span style="color:#ef4444">↓</span> SALE</label>
+        <input id="sub-out" type="text" placeholder="Nombre o dorsal" class="tec-input" />
+      </div>
+      <div>
+        <label class="tec-field-label mb-1.5 block" for="sub-in"><span style="color:#34d399">↑</span> ENTRA</label>
+        <input id="sub-in" type="text" placeholder="Nombre o dorsal" class="tec-input" />
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="tec-field-label mb-1.5 block" for="sub-min">MINUTO</label>
+          <input id="sub-min" type="number" min="1" max="120" placeholder="60" class="tec-input font-mono text-center" />
+        </div>
+        <div>
+          <label class="tec-field-label mb-1.5 block" for="sub-reason">MOTIVO</label>
+          <select id="sub-reason" class="tec-input">
+            <option>TÁCTICA</option>
+            <option>LESIÓN</option>
+            <option>CANSANCIO</option>
+            <option>T. AMARILLA</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="px-5 justify-between pb-5 pt-4 flex gap-2.5 border-t border-[rgba(199,168,107,.12)]">
+      <button class="tec-btn-ghost" data-close="modal-sub">CANCELAR</button>
+      <button class="tec-btn-primary" id="btn-save-sub">GUARDAR</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ MODAL: POSICIÓN ══════ -->
+<div id="modal-position" class="tec-overlay tec-overlay--bottom hidden">
+  <div class="tec-modal tec-modal--sheet">
+    <div class="tec-modal-handle"></div>
+    <span class="hud-c hud-c--tl"></span><span class="hud-c hud-c--tr"></span>
+    <span class="hud-c hud-c--bl"></span><span class="hud-c hud-c--br"></span>
+    <div class="px-5 pt-5 pb-3">
+      <h3 class="tec-modal-title">ASIGNAR JUGADOR</h3>
+      <p class="text-[.5rem] mt-1 tracking-widest uppercase font-[family-name:var(--font-display)]" style="color:rgba(251,191,36,.5)" id="pos-slot-label">POSICIÓN</p>
+    </div>
+    <div class="px-5 pb-4">
+      <label class="tec-field-label mb-1.5 block" for="pos-player-select">JUGADOR</label>
+      <input id="pos-player-select" type="text" placeholder="Escribe el nombre del jugador..." autocomplete="off" class="tec-input" />
+    </div>
+    <div class="px-5 justify-between pb-5 pt-4 flex gap-2.5 border-t border-[rgba(199,168,107,.12)]">
+      <button class="tec-btn-ghost" data-close="modal-position">CANCELAR</button>
+      <button class="tec-btn-primary" id="btn-save-position">ASIGNAR</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const FORMATIONS_DATA = {
+    '4-3-3':   [['POR',50,92],['LD',15,73],['DC',37,73],['DCI',63,73],['LI',85,73],['MC',25,52],['MCO',50,52],['MCI',75,52],['ED',20,27],['DC2',50,24],['EI',80,27]],
+    '4-4-2':   [['POR',50,92],['LD',15,73],['DC',37,73],['DCI',63,73],['LI',85,73],['ED',15,52],['MC',38,52],['MCI',62,52],['EI',85,52],['DC1',35,24],['DC2',65,24]],
+    '4-2-3-1': [['POR',50,92],['LD',15,73],['DC',37,73],['DCI',63,73],['LI',85,73],['MCD1',35,60],['MCD2',65,60],['ED',20,40],['MC',50,40],['EI',80,40],['DC',50,20]],
+    '3-5-2':   [['POR',50,92],['DC1',30,73],['DC2',50,73],['DC3',70,73],['CAD',10,54],['MC1',30,54],['MC2',50,54],['MC3',70,54],['CAI',90,54],['DC1',35,24],['DC2',65,24]],
+    '5-3-2':   [['POR',50,92],['LD',8,72],['DC1',28,74],['DC2',50,74],['DC3',72,74],['LI',92,72],['MC1',28,50],['MC2',50,50],['MC3',72,50],['DC1',35,24],['DC2',65,24]],
+    '4-3-2-1': [['POR',50,92],['LD',15,73],['DC',37,73],['DCI',63,73],['LI',85,73],['MC1',25,56],['MC2',50,56],['MC3',75,56],['MI1',35,38],['MI2',65,38],['DC',50,20]],
+  };
+
+  const MATCH_LABELS = {
+    m1: 'JORNADA 4 · MI EQUIPO vs LOS GUERREROS',
+    m2: 'JORNADA 5 · LOS ÁNGELES vs MI EQUIPO',
+  };
+
+  // ── Shared state (squad from EquipoManager) ──
+  function getSquad() {
+    return JSON.parse(localStorage.getItem('tec_squad') || '[]');
+  }
+
+  function getDefaultLineup() {
+    return JSON.parse(localStorage.getItem('tec_lineup') || '{}');
+  }
+
+  function getDefaultFormation() {
+    return localStorage.getItem('tec_formation') || '4-3-3';
+  }
+
+  function getDefaultSubs() {
+    return JSON.parse(localStorage.getItem('tec_subs') || '{}');
+  }
+
+  // ── Match-specific state ──
+  let editingMatchId = null;
+  let currentFormation = '4-3-3';
+  let currentLineup = {};
+  let currentSubs = {};
+
+  function getMatchKey(prefix, matchId) {
+    return `tec_${prefix}_${matchId}`;
+  }
+
+  function loadMatchState(matchId) {
+    const savedFormation = localStorage.getItem(getMatchKey('formation', matchId));
+    const savedLineup = localStorage.getItem(getMatchKey('lineup', matchId));
+    const savedSubs = localStorage.getItem(getMatchKey('subs', matchId));
+
+    currentFormation = savedFormation || getDefaultFormation();
+    currentLineup = savedLineup ? JSON.parse(savedLineup) : JSON.parse(JSON.stringify(getDefaultLineup()));
+    currentSubs = savedSubs ? JSON.parse(savedSubs) : JSON.parse(JSON.stringify(getDefaultSubs()));
+  }
+
+  function saveMatchState() {
+    if (!editingMatchId) return;
+    localStorage.setItem(getMatchKey('formation', editingMatchId), currentFormation);
+    localStorage.setItem(getMatchKey('lineup', editingMatchId), JSON.stringify(currentLineup));
+    localStorage.setItem(getMatchKey('subs', editingMatchId), JSON.stringify(currentSubs));
+  }
+
+  // ── DOM refs ──
+  const $ = id => document.getElementById(id);
+  const matchListView = $('match-list-view');
+  const matchEditorView = $('match-editor-view');
+
+  // ── Open match editor ──
+  function openMatchEditor(matchId) {
+    editingMatchId = matchId;
+    loadMatchState(matchId);
+
+    matchListView.classList.add('hidden');
+    matchEditorView.classList.remove('hidden');
+
+    $('editor-match-label').textContent = MATCH_LABELS[matchId] || matchId;
+
+    // Sync formation buttons
+    document.querySelectorAll('#match-formation-btns .tec-formation-btn').forEach(btn => {
+      btn.classList.toggle('tec-formation-btn--active', btn.dataset.formation === currentFormation);
+    });
+
+    renderFormation();
+    renderSubs();
+  }
+
+  function closeMatchEditor() {
+    saveMatchState();
+    editingMatchId = null;
+    matchEditorView.classList.add('hidden');
+    matchListView.classList.remove('hidden');
+  }
+
+  // ── Formation renderer ──
+  function renderFormation() {
+    const positions = FORMATIONS_DATA[currentFormation] || FORMATIONS_DATA['4-3-3'];
+    const fp = $('match-field-players');
+    if (!fp) return;
+
+    const squad = getSquad();
+    const teamColor = localStorage.getItem('tec_teamColor') || '#00ff88';
+
+    fp.innerHTML = positions.map(([pos, x, y], i) => {
+      const assigned = currentLineup[`${currentFormation}_${i}`];
+      const p = assigned ? squad.find(s => s.id === assigned) : null;
+      return `
+        <div class="field-player" data-slot="${i}" style="left:${x}%;top:${y}%">
+          <div class="field-player-dot ${p ? '' : 'field-player-dot--empty'}"
+            style="${p ? `background:${teamColor};border-color:rgba(255,255,255,.25);box-shadow:0 0 14px ${teamColor}55, 0 2px 12px rgba(0,0,0,.6)` : ''}">
+            ${p ? p.emoji : `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`}
+          </div>
+          <span class="field-player-name">${p ? p.name : pos}</span>
+          ${p ? `<span class="field-player-pos">${p.pos}</span>` : ''}
+        </div>`;
+    }).join('');
+
+    fp.querySelectorAll('.field-player').forEach(el => {
+      el.addEventListener('click', () => openPositionModal(parseInt(el.dataset.slot)));
+    });
+
+    renderBench();
+  }
+
+  function renderBench() {
+    const squad = getSquad();
+    const assignedIds = Object.values(currentLineup);
+    const bench = squad.filter(p => !assignedIds.includes(p.id));
+    const bl = $('match-bench-list');
+    if (!bl) return;
+    const teamColor = localStorage.getItem('tec_teamColor') || '#00ff88';
+    if (!bench.length) {
+      bl.innerHTML = '<p class="tec-empty">Todos en el once o plantilla vacía.</p>'; return;
+    }
+    bl.innerHTML = bench.map(p => `
+      <div class="tec-bench-player">
+        <div class="tec-bench-dot" style="background:${teamColor}">${p.emoji}</div>
+        <span style="font-family:var(--font-display);font-size:.55rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:rgba(232,220,200,.7)">${p.name}</span>
+          <span style="font-family:var(--font-display);font-size:.4rem;letter-spacing:.12em;text-transform:uppercase;color:rgba(251,191,36,.45);margin-left:auto">${p.pos}</span>
+      </div>`).join('');
+  }
+
+  // ── Position modal ──
+  let currentSlot = null;
+
+  function openPositionModal(slot) {
+    const positions = FORMATIONS_DATA[currentFormation];
+    currentSlot = slot;
+    $('pos-slot-label').textContent = `POSICIÓN: ${positions[slot][0]}`;
+    const input = $('pos-player-select');
+    const currentId = currentLineup[`${currentFormation}_${slot}`];
+    const squad = getSquad();
+    const currentPlayer = squad.find(p => p.id === currentId);
+    input.value = currentPlayer ? currentPlayer.name : '';
+    input.focus();
+    $('modal-position').classList.remove('hidden');
+  }
+
+  $('btn-save-position').addEventListener('click', () => {
+    const input = $('pos-player-select');
+    const name = input.value.trim();
+    const key = `${currentFormation}_${currentSlot}`;
+    const squad = getSquad();
+    const match = squad.find(p => p.name.toLowerCase() === name.toLowerCase());
+
+    if (match) {
+      Object.keys(currentLineup).forEach(k => { if (currentLineup[k] === match.id) delete currentLineup[k]; });
+      currentLineup[key] = match.id;
+    } else {
+      delete currentLineup[key];
+    }
+
+    saveMatchState();
+    renderFormation();
+    $('modal-position').classList.add('hidden');
+  });
+
+  // ── Formation buttons ──
+  document.querySelectorAll('#match-formation-btns .tec-formation-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#match-formation-btns .tec-formation-btn').forEach(b => b.classList.remove('tec-formation-btn--active'));
+      btn.classList.add('tec-formation-btn--active');
+      currentFormation = btn.dataset.formation;
+      saveMatchState();
+      renderFormation();
+    });
+  });
+
+  // ── Edit buttons on match cards ──
+  document.querySelectorAll('.tec-edit-lineup-btn').forEach(btn => {
+    btn.addEventListener('click', () => openMatchEditor(btn.dataset.match));
+  });
+
+  // ── Volver button ──
+  $('btn-volver-duelos').addEventListener('click', closeMatchEditor);
+
+  // ── Subs ──
+  $('btn-add-match-sub').addEventListener('click', () => {
+    $('modal-sub').classList.remove('hidden');
+  });
+
+  $('btn-save-sub').addEventListener('click', () => {
+    const out = $('sub-out').value.trim();
+    const inn = $('sub-in').value.trim();
+    const min = parseInt($('sub-min').value) || 60;
+    const reason = $('sub-reason').value;
+    if (!out || !inn) return;
+    if (!currentSubs[editingMatchId]) currentSubs[editingMatchId] = [];
+    currentSubs[editingMatchId].push({ id: Date.now(), out, in: inn, min, reason });
+    saveMatchState();
+    renderSubs();
+    $('modal-sub').classList.add('hidden');
+    $('sub-out').value = '';
+    $('sub-in').value = '';
+    $('sub-min').value = '';
+  });
+
+  function renderSubs() {
+    const el = $('match-subs-list');
+    if (!el) return;
+    const list = currentSubs[editingMatchId] || [];
+    if (!list.length) { el.innerHTML = ''; return; }
+    el.innerHTML = list.map(s => `
+      <div class="tec-sub-item">
+        <span class="tec-sub-min">${s.min}'</span>
+        <div class="flex-1 flex items-center gap-2 min-w-0">
+          <span style="font-size:.55rem;color:#f87171;font-weight:700;font-family:var(--font-display)">↓ ${s.out}</span>
+          <span style="color:rgba(255,255,255,.15)">·</span>
+          <span style="font-size:.55rem;color:#34d399;font-weight:700;font-family:var(--font-display)">↑ ${s.in}</span>
+          <span style="font-family:var(--font-display);font-size:.38rem;color:rgba(232,220,200,.22);margin-left:auto;letter-spacing:.08em;white-space:nowrap">${s.reason}</span>
+        </div>
+        <button class="tec-sub-del" data-sid="${s.id}">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>`).join('');
+    el.querySelectorAll('.tec-sub-del').forEach(b => {
+      b.addEventListener('click', () => {
+        const sid = Number(b.dataset.sid);
+        if (currentSubs[editingMatchId]) {
+          currentSubs[editingMatchId] = currentSubs[editingMatchId].filter(s => s.id !== sid);
+          saveMatchState();
+          renderSubs();
+        }
+      });
+    });
+  }
+
+  // ── Modal close handlers ──
+  document.querySelectorAll('[data-close]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.close;
+      if (id === 'modal-sub' || id === 'modal-position') $(id).classList.add('hidden');
+    });
+  });
+  document.querySelectorAll('.tec-overlay').forEach(ov => {
+    ov.addEventListener('click', e => { if (e.target === ov) ov.classList.add('hidden'); });
+  });
+})();
+</script>

@@ -1,11 +1,11 @@
-import { c as createComponent, m as maybeRenderHead, b as addAttribute, r as renderComponent, a as renderTemplate, d as createAstro, e as renderScript, F as Fragment } from '../chunks/astro/server_CQLHzLBK.mjs';
-import 'kleur/colors';
-import { $ as $$Layout } from '../chunks/Layout_uZwaYLoU.mjs';
+import { a3 as createComponent, ab as maybeRenderHead, $ as addAttribute, ae as renderComponent, am as renderTemplate, a2 as createAstro, aj as renderScript, l as Fragment } from '../chunks/astro/server_C_1lLQnq.mjs';
+import 'piccolore';
+import { $ as $$Layout } from '../chunks/Layout_DVjlXbPa.mjs';
 import { T as TEAMS } from '../chunks/teams_C073Wyrp.mjs';
-import { $ as $$FighterSelector } from '../chunks/FighterSelector_puQJxULw.mjs';
+import { $ as $$FighterSelector } from '../chunks/FighterSelector_Cp9MzP-1.mjs';
 /* empty css                                 */
 import 'clsx';
-import { c as createSvgComponent } from '../chunks/instagram_Dexa1W1e.mjs';
+import { c as createSvgComponent } from '../chunks/instagram_D-6-DkN7.mjs';
 export { renderers } from '../renderers.mjs';
 
 const $$TeamsHero = createComponent(($$result, $$props, $$slots) => {
@@ -38,7 +38,7 @@ const $$StandingsTable = createComponent(($$result, $$props, $$slots) => {
         id: "alex",
         name: "\xC1lex",
         manager: "Alejandro Garc\xEDa",
-        logo: "/images/fighters/cards/alex.webp"
+        logo: "/images/Logo_Default.png"
       },
       played: 10,
       wins: 8,
@@ -56,7 +56,7 @@ const $$StandingsTable = createComponent(($$result, $$props, $$slots) => {
         id: "sofia",
         name: "Sof\xEDa",
         manager: "Sof\xEDa Ram\xEDrez",
-        logo: "/images/fighters/cards/sofia.webp"
+        logo: "/images/Logo_Default.png"
       },
       played: 10,
       wins: 7,
@@ -74,7 +74,7 @@ const $$StandingsTable = createComponent(($$result, $$props, $$slots) => {
         id: "maria",
         name: "Mar\xEDa",
         manager: "Mar\xEDa F. Torres",
-        logo: "/images/fighters/cards/maria.webp"
+        logo: "/images/Logo_Default.png"
       },
       played: 10,
       wins: 6,
@@ -92,7 +92,7 @@ const $$StandingsTable = createComponent(($$result, $$props, $$slots) => {
         id: "ana",
         name: "Ana",
         manager: "Ana Bel\xE9n Castro",
-        logo: "/images/fighters/cards/ana.webp"
+        logo: "/images/Logo_Default.png"
       },
       played: 10,
       wins: 5,
@@ -110,7 +110,7 @@ const $$StandingsTable = createComponent(($$result, $$props, $$slots) => {
         id: "javier",
         name: "Javier",
         manager: "Javier Ruiz",
-        logo: "/images/fighters/cards/javier.webp"
+        logo: "/images/Logo_Default.png"
       },
       played: 10,
       wins: 4,
@@ -128,7 +128,7 @@ const $$StandingsTable = createComponent(($$result, $$props, $$slots) => {
         id: "laura",
         name: "Laura",
         manager: "Laura Mart\xEDnez",
-        logo: "/images/fighters/cards/laura.webp"
+        logo: "/images/Logo_Default.png"
       },
       played: 10,
       wins: 3,
@@ -146,7 +146,7 @@ const $$StandingsTable = createComponent(($$result, $$props, $$slots) => {
         id: "carlos",
         name: "Carlos",
         manager: "Carlos S\xE1nchez",
-        logo: "/images/fighters/cards/carlos.webp"
+        logo: "/images/Logo_Default.png"
       },
       played: 10,
       wins: 2,
@@ -164,7 +164,7 @@ const $$StandingsTable = createComponent(($$result, $$props, $$slots) => {
         id: "pablo",
         name: "Pablo",
         manager: "Pablo Mart\xEDn",
-        logo: "/images/fighters/cards/pablo.webp"
+        logo: "/images/Logo_Default.png"
       },
       played: 10,
       wins: 1,
@@ -230,28 +230,28 @@ const $$TournamentBracket = createComponent(($$result, $$props, $$slots) => {
     finalDate = "30 DE MAYO",
     finalLocation = "BUDAPEST",
     groupA = [
-      { id: "alex", name: "\xC1lex", logo: "/images/fighters/cards/alex.webp", points: 9 },
-      { id: "maria", name: "Mar\xEDa", logo: "/images/fighters/cards/maria.webp", points: 6 },
-      { id: "javier", name: "Javier", logo: "/images/fighters/cards/javier.webp", points: 3 },
-      { id: "sergio", name: "Sergio", logo: "/images/fighters/cards/sergio.webp", points: 0 }
+      { id: "alex", name: "\xC1lex", logo: "/images/Logo_Default.png", points: 9 },
+      { id: "maria", name: "Mar\xEDa", logo: "/images/Logo_Default.png", points: 6 },
+      { id: "javier", name: "Javier", logo: "/images/Logo_Default.png", points: 3 },
+      { id: "sergio", name: "Sergio", logo: "/images/Logo_Default.png", points: 0 }
     ],
     groupB = [
-      { id: "sofia", name: "Sof\xEDa", logo: "/images/fighters/cards/sofia.webp", points: 9 },
-      { id: "ana", name: "Ana", logo: "/images/fighters/cards/ana.webp", points: 6 },
-      { id: "carlos", name: "Carlos", logo: "/images/fighters/cards/carlos.webp", points: 3 },
-      { id: "david", name: "David", logo: "/images/fighters/cards/david.webp", points: 0 }
+      { id: "sofia", name: "Sof\xEDa", logo: "/images/Logo_Default.png", points: 9 },
+      { id: "ana", name: "Ana", logo: "/images/Logo_Default.png", points: 6 },
+      { id: "carlos", name: "Carlos", logo: "/images/Logo_Default.png", points: 3 },
+      { id: "david", name: "David", logo: "/images/Logo_Default.png", points: 0 }
     ],
     groupC = [
-      { id: "laura", name: "Laura", logo: "/images/fighters/cards/laura.webp", points: 9 },
-      { id: "elena", name: "Elena", logo: "/images/fighters/cards/elena.webp", points: 6 },
-      { id: "miguel", name: "Miguel", logo: "/images/fighters/cards/miguel.webp", points: 3 },
-      { id: "valeria", name: "Valeria", logo: "/images/fighters/cards/valeria.webp", points: 0 }
+      { id: "laura", name: "Laura", logo: "/images/Logo_Default.png", points: 9 },
+      { id: "elena", name: "Elena", logo: "/images/Logo_Default.png", points: 6 },
+      { id: "miguel", name: "Miguel", logo: "/images/Logo_Default.png", points: 3 },
+      { id: "valeria", name: "Valeria", logo: "/images/Logo_Default.png", points: 0 }
     ],
     groupD = [
-      { id: "pablo", name: "Pablo", logo: "/images/fighters/cards/pablo.webp", points: 9 },
-      { id: "claudia", name: "Claudia", logo: "/images/fighters/cards/claudia.webp", points: 6 },
-      { id: "ana", name: "Ana", logo: "/images/fighters/cards/ana.webp", points: 3 },
-      { id: "laura", name: "Laura", logo: "/images/fighters/cards/laura.webp", points: 0 }
+      { id: "pablo", name: "Pablo", logo: "/images/Logo_Default.png", points: 9 },
+      { id: "claudia", name: "Claudia", logo: "/images/Logo_Default.png", points: 6 },
+      { id: "ana", name: "Ana", logo: "/images/Logo_Default.png", points: 3 },
+      { id: "laura", name: "Laura", logo: "/images/Logo_Default.png", points: 0 }
     ],
     leftQuarterFinals = [
       { id: "lqf1", team1: { id: "alex", name: "\xC1lex", points: 9 }, team2: { id: "ana", name: "Ana", points: 6 }, score1: 3, score2: 1, winner: "team1" },
@@ -300,7 +300,7 @@ const $$Videos = createComponent(($$result, $$props, $$slots) => {
     {
       id: "presentacion",
       title: "La Presentaci\xF3n",
-      videoId: "h-jWhM3ne5U",
+      videoSrc: "/videos/presentacion.mp4",
       poster: "/videos/thumbnails/presentacion.webp",
       active: true,
       span: "big"
@@ -308,7 +308,7 @@ const $$Videos = createComponent(($$result, $$props, $$slots) => {
     {
       id: "pesaje",
       title: "El Pesaje",
-      videoId: null,
+      videoSrc: null,
       poster: null,
       active: false,
       span: "small"
@@ -316,7 +316,7 @@ const $$Videos = createComponent(($$result, $$props, $$slots) => {
     {
       id: "cara-a-cara",
       title: "Cara a Cara",
-      videoId: null,
+      videoSrc: null,
       poster: null,
       active: false,
       span: "small"
@@ -330,9 +330,9 @@ const $$Videos = createComponent(($$result, $$props, $$slots) => {
 VÍDEOS
 </h2> <p class="mb-10 max-w-xl text-center font-cinzel text-xs font-medium tracking-[0.25em] text-theme-cream/55 sm:mb-14 sm:text-sm">
 Todo lo que rodea a La Copa Chontaduro
-</p>  <div class="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:aspect-[24/9] lg:grid-cols-3 lg:grid-rows-2 lg:gap-4"> ${VIDEOS.map(({ title, videoId, poster, active, span }) => {
+</p>  <div class="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:aspect-[24/9] lg:grid-cols-3 lg:grid-rows-2 lg:gap-4"> ${VIDEOS.map(({ title, videoSrc, poster, active, span }) => {
     const Tag = active ? "button" : "div";
-    return renderTemplate`${renderComponent($$result, "Tag", Tag, { "type": active ? "button" : void 0, "data-video-tile": active ? "" : void 0, "data-video-id": active ? videoId : void 0, "data-video-title": active ? title : void 0, "aria-label": active ? `Reproducir v\xEDdeo: ${title}` : `${title}. Pr\xF3ximamente.`, "aria-disabled": active ? void 0 : "true", "class:list": [
+    return renderTemplate`${renderComponent($$result, "Tag", Tag, { "type": active ? "button" : void 0, "data-video-tile": active ? "" : void 0, "data-video-src": active ? videoSrc : void 0, "data-video-title": active ? title : void 0, "aria-label": active ? `Reproducir v\xEDdeo: ${title}` : `${title}. Pr\xF3ximamente.`, "aria-disabled": active ? void 0 : "true", "class:list": [
       "group relative isolate flex aspect-video w-full overflow-hidden rounded-xl border text-left outline-none transition duration-500 lg:aspect-auto",
       SPAN_CLASSES[span],
       active ? "cursor-pointer border-theme-gold/20 bg-black/40 hover:border-theme-gold/60 hover:shadow-[0_18px_60px_-20px_rgba(251,191,36,0.55)] focus-visible:border-theme-gold/70 focus-visible:ring-2 focus-visible:ring-theme-gold/60 focus-visible:ring-offset-2 focus-visible:ring-offset-black" : "pointer-events-none cursor-not-allowed border-theme-gold/15 bg-black/60"

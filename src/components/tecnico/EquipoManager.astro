@@ -1,0 +1,343 @@
+---
+const COLORS = ['#00ff88','#f59e0b','#f87171','#a78bfa','#38bdf8','#e2ff5d','#ff6b6b','#c7a86b'];
+---
+
+<div class="tec-scroll-content">
+
+  <!-- ═══ HERO CARD ═══ -->
+  <div class="tec-hero-card" id="team-hero-card">
+    <span class="hud-c hud-c--tl"></span>
+    <span class="hud-c hud-c--tr"></span>
+    <span class="hud-c hud-c--bl"></span>
+    <span class="hud-c hud-c--br"></span>
+    <div class="tec-hero-glow" id="team-hero-glow"></div>
+    <div class="tec-hero-badge"></div>
+
+    <div class="relative z-10 flex items-start gap-4 mb-5">
+      <div class="tec-logo-wrap" id="team-logo-wrap">
+        <span class="text-4xl leading-none" id="team-logo-emoji">🛡️</span>
+        <button class="absolute -right-2.5 -bottom-2.5 w-6 h-6 rounded-full flex items-center justify-center text-xs cursor-pointer transition-transform hover:scale-110" style="background:var(--gold);color:var(--midnight);border:2px solid rgba(0,0,0,.3);box-shadow:0 0 10px rgba(251,191,36,.2)" id="btn-change-logo" title="Cambiar logo">✏️</button>
+      </div>
+
+      <div class="flex-1 min-w-0">
+        <p class="tec-label mb-1">NOMBRE DEL EQUIPO</p>
+        <div class="flex items-center gap-2 mb-3">
+          <h2 class="tec-team-name" id="team-name-display">SIN NOMBRE</h2>
+          <button class="tec-icon-btn" id="btn-edit-name" title="Editar">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+        </div>
+
+        <p class="tec-label mb-1.5">COLOR DEL EQUIPO</p>
+        <div class="flex flex-wrap gap-1.5">
+          {COLORS.map(c => (
+            <button class="tec-color-dot" data-color={c} style={`background:${c}`} title={c}></button>
+          ))}
+        </div>
+      </div>
+    </div>
+
+    <div class="relative z-10 grid grid-cols-4 gap-3 pt-4 border-t border-white/[0.06]">
+      {[
+        { label:'JUGADORES', id:'stat-players', val:'0', bar: '0%' },
+        { label:'VICTORIAS', id:'stat-wins',    val:'0', bar: '0%' },
+        { label:'GOLES',     id:'stat-goals',   val:'0', bar: '0%' },
+        { label:'RANKING',   id:'stat-rank',    val:'—', bar: '0%' },
+      ].map(s => (
+        <div class="flex flex-col items-center gap-1">
+          <span class="tec-stat-val" id={s.id}>{s.val}</span>
+          <span class="tec-stat-label">{s.label}</span>
+          <div class="tec-stat-bar">
+            <div class="tec-stat-bar-fill" id={`${s.id}-bar`} style="width:0%"></div>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+
+  <!-- ══════ PLANTILLA ══════ -->
+  <div class="flex items-center justify-between mt-6 mb-3">
+    <p class="tec-section-label !mb-0">PLANTILLA</p>
+    <span class="tec-chip" id="squad-count">0 / 15</span>
+  </div>
+  <div class="flex flex-col gap-2" id="squad-list">
+    <p class="tec-empty">Aún no hay jugadores. Invítalos desde buscador.</p>
+  </div>
+
+  <!-- ══════ BUSCAR E INVITAR ══════ -->
+  <div class="tec-card mt-6">
+    <span class="hud-c hud-c--tl"></span>
+    <span class="hud-c hud-c--tr"></span>
+    <p class="tec-section-label mb-3">BUSCAR JUGADORES</p>
+    <div class="relative">
+      <svg class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(251,191,36,.4)" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input id="player-search" type="text" placeholder="Buscar por nombre…" class="tec-input pl-9" autocomplete="off" />
+    </div>
+    <div class="flex flex-col gap-2 mt-3" id="search-results">
+      <p class="tec-empty">Escribe para buscar jugadores disponibles.</p>
+    </div>
+  </div>
+
+  <p class="tec-section-label mt-6 mb-3">INVITACIONES ENVIADAS</p>
+  <div class="flex flex-col gap-2" id="invites-list">
+    <p class="tec-empty">No hay invitaciones pendientes.</p>
+  </div>
+
+</div>
+
+<!-- ══════ MODAL: NOMBRE ══════ -->
+<div id="modal-name" class="tec-overlay hidden">
+  <div class="tec-modal">
+    <span class="hud-c hud-c--tl"></span><span class="hud-c hud-c--tr"></span>
+    <span class="hud-c hud-c--bl"></span><span class="hud-c hud-c--br"></span>
+    <div class="p-5 border-b border-white/[0.06]">
+      <h3 class="tec-modal-title">EDITAR NOMBRE</h3>
+    </div>
+    <div class="p-5">
+      <label class="tec-field-label mb-1.5 block" for="team-name-input">NOMBRE</label>
+      <input id="team-name-input" type="text" maxlength="30" placeholder="Ej: Los Vikingos" class="tec-input" />
+    </div>
+    <div class="flex gap-2.5 justify-end px-5 pb-5">
+      <button class="tec-btn-ghost" data-close="modal-name">CANCELAR</button>
+      <button class="tec-btn-primary" id="btn-save-name">GUARDAR</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const COLORS = ['#00ff88','#f59e0b','#f87171','#a78bfa','#38bdf8','#e2ff5d','#ff6b6b','#c7a86b'];
+
+  const state = {
+    teamName:  localStorage.getItem('tec_teamName')  || 'SIN NOMBRE',
+    teamColor: localStorage.getItem('tec_teamColor') || '#00ff88',
+    teamEmoji: localStorage.getItem('tec_teamEmoji') || '🛡️',
+    teamLogo:  localStorage.getItem('tec_teamLogo')  || '',
+    squad:     JSON.parse(localStorage.getItem('tec_squad')    || '[]'),
+    invites:   JSON.parse(localStorage.getItem('tec_invites')  || '[]'),
+  };
+
+  function syncToTeams() {
+    const activeId = localStorage.getItem('tec_activeTeam');
+    if (!activeId) return;
+    const teams = JSON.parse(localStorage.getItem('tec_teams') || '[]');
+    const idx = teams.findIndex(t => t.id === activeId);
+    if (idx === -1) return;
+    teams[idx].name = state.teamName;
+    teams[idx].emoji = state.teamEmoji;
+    teams[idx].logo = state.teamLogo;
+    teams[idx].color = state.teamColor;
+    teams[idx].squad = state.squad;
+    teams[idx].invites = state.invites;
+    localStorage.setItem('tec_teams', JSON.stringify(teams));
+  }
+
+  function save(){
+    localStorage.setItem('tec_teamName',  state.teamName);
+    localStorage.setItem('tec_teamColor', state.teamColor);
+    localStorage.setItem('tec_teamEmoji', state.teamEmoji);
+    localStorage.setItem('tec_teamLogo',  state.teamLogo);
+    localStorage.setItem('tec_squad',     JSON.stringify(state.squad));
+    localStorage.setItem('tec_invites',   JSON.stringify(state.invites));
+    syncToTeams();
+  }
+
+  const PLATFORM_PLAYERS = [
+    {id:'pl1', name:'Peereira7',  pos:'DEL', emoji:'⚡'},
+    {id:'pl2', name:'Perxitaa',   pos:'MED', emoji:'🎯'},
+    {id:'pl3', name:'Abby',       pos:'DEF', emoji:'🛡️'},
+    {id:'pl4', name:'TheGrefg',   pos:'POR', emoji:'🧤'},
+    {id:'pl5', name:'Westcol',    pos:'DEL', emoji:'🔥'},
+    {id:'pl6', name:'Viruzz',     pos:'MED', emoji:'⚽'},
+    {id:'pl7', name:'Alana',      pos:'DEF', emoji:'💪'},
+    {id:'pl8', name:'Andoni',     pos:'MED', emoji:'🎪'},
+    {id:'pl9', name:'T.Mazza',    pos:'DEL', emoji:'💥'},
+    {id:'pl10',name:'Arigeli',    pos:'DEF', emoji:'🌟'},
+    {id:'pl11',name:'Rivaldios',  pos:'MED', emoji:'⚡'},
+    {id:'pl12',name:'Ibai',       pos:'POR', emoji:'🏆'},
+    {id:'pl13',name:'Spreen',     pos:'DEL', emoji:'🦅'},
+    {id:'pl14',name:'Coscu',      pos:'DEF', emoji:'🗡️'},
+  ];
+
+  const $ = id => document.getElementById(id);
+
+  function renderHero(){
+    $('team-name-display').textContent = state.teamName;
+
+    const logoEmoji = $('team-logo-emoji');
+    if (state.teamLogo) {
+      logoEmoji.innerHTML = `<img src="${state.teamLogo}" alt="${state.teamName}" style="width:100%;height:100%;object-fit:cover;border-radius:inherit" />`;
+    } else {
+      logoEmoji.textContent = state.teamEmoji;
+    }
+
+    const squadCount = state.squad.length;
+    $('stat-players').textContent = squadCount;
+    const pct = Math.min(squadCount / 15 * 100, 100);
+    const bar = document.getElementById('stat-players-bar');
+    if(bar) bar.style.width = pct + '%';
+
+    const glow = $('team-hero-glow');
+    if(glow) glow.style.background = `radial-gradient(ellipse at 25% 35%,${state.teamColor}15,transparent 65%)`;
+
+    const logoWrap = $('team-logo-wrap');
+    if(logoWrap){
+      logoWrap.style.borderColor = state.teamColor + '55';
+      logoWrap.style.boxShadow   = `0 0 30px ${state.teamColor}15, inset 0 0 20px ${state.teamColor}05`;
+    }
+
+    document.querySelectorAll('.tec-color-dot').forEach(b => {
+      b.classList.toggle('active', b.dataset.color === state.teamColor);
+    });
+  }
+
+  document.querySelectorAll('.tec-color-dot').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.teamColor = btn.dataset.color; save(); renderHero();
+    });
+  });
+
+  $('btn-edit-name').addEventListener('click', () => {
+    $('team-name-input').value = state.teamName;
+    $('modal-name').classList.remove('hidden');
+  });
+
+  $('btn-save-name').addEventListener('click', () => {
+    const v = $('team-name-input').value.trim();
+    if(v){ state.teamName = v; save(); renderHero(); }
+    $('modal-name').classList.add('hidden');
+  });
+
+  // ── Logo upload ──
+  const logoInput = document.createElement('input');
+  logoInput.type = 'file';
+  logoInput.accept = 'image/*';
+  logoInput.style.display = 'none';
+  document.body.appendChild(logoInput);
+
+  logoInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 500 * 1024) { alert('Máximo 500KB'); return; }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      state.teamLogo = ev.target.result;
+      save(); renderHero();
+    };
+    reader.readAsDataURL(file);
+  });
+
+  $('btn-change-logo').addEventListener('click', () => {
+    logoInput.click();
+  });
+
+  function renderSquad(){
+    const list = $('squad-list');
+    $('squad-count').textContent = `${state.squad.length} / 15`;
+    if(!state.squad.length){
+      list.innerHTML = '<p class="tec-empty">Aún no hay jugadores. Invítalos desde el buscador.</p>';
+      return;
+    }
+    list.innerHTML = state.squad.map(p => `
+      <div class="tec-squad-item">
+        <div class="tec-squad-avatar">${p.emoji}</div>
+        <div class="flex-1 min-w-0">
+          <p style="font-size:.65rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--cream);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.name}</p>
+          <p style="font-size:.45rem;letter-spacing:.12em;text-transform:uppercase;color:rgba(251,191,36,.5);margin-top:.1rem">${p.pos}</p>
+        </div>
+        <span style="font-family:var(--font-display);font-size:.4rem;font-weight:600;letter-spacing:.08em;color:rgba(232,220,200,.25);background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:6px;padding:.12rem .45rem">#${state.squad.indexOf(p)+1}</span>
+        <button class="tec-squad-remove" data-pid="${p.id}" title="Quitar">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>`).join('');
+
+    list.querySelectorAll('.tec-squad-remove').forEach(b => {
+      b.addEventListener('click', () => {
+        state.squad = state.squad.filter(p => p.id !== b.dataset.pid);
+        save(); renderSquad(); renderHero();
+      });
+    });
+  }
+
+  $('player-search').addEventListener('input', e => {
+    const q = e.target.value.trim().toLowerCase();
+    const res = $('search-results');
+    if(!q){ res.innerHTML = '<p class="tec-empty">Escribe para buscar jugadores disponibles.</p>'; return; }
+    const found = PLATFORM_PLAYERS.filter(p =>
+      p.name.toLowerCase().includes(q) && !state.squad.find(s => s.id === p.id)
+    );
+    if(!found.length){ res.innerHTML = '<p class="tec-empty">Sin resultados.</p>'; return; }
+    res.innerHTML = found.map(p => `
+      <div class="tec-search-result">
+        <div class="tec-search-avatar">${p.emoji}</div>
+        <div class="flex-1 min-w-0">
+          <p style="font-size:.65rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--cream)">${p.name}</p>
+          <p style="font-size:.45rem;letter-spacing:.12em;text-transform:uppercase;color:rgba(251,191,36,.5)">${p.pos}</p>
+        </div>
+        <button class="tec-invite-btn" data-pid="${p.id}">INVITAR</button>
+      </div>`).join('');
+
+    res.querySelectorAll('.tec-invite-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const player = PLATFORM_PLAYERS.find(p => p.id === btn.dataset.pid);
+        if(!player) return;
+        if(!state.invites.find(i => i.id === player.id)){
+          state.invites.unshift({...player, status:'pending', _sim:false});
+          save(); renderInvites();
+        }
+        btn.textContent = '✓ ENVIADA'; btn.disabled = true;
+      });
+    });
+  });
+
+  function renderInvites(){
+    const list = $('invites-list');
+    if(!state.invites.length){ list.innerHTML = '<p class="tec-empty">No hay invitaciones pendientes.</p>'; return; }
+    list.innerHTML = state.invites.map(p => `
+      <div class="tec-invite-item">
+        <div class="tec-search-avatar">${p.emoji}</div>
+        <div class="flex-1 min-w-0">
+          <p style="font-size:.62rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--cream)">${p.name}</p>
+          <p style="font-size:.45rem;letter-spacing:.08em;text-transform:uppercase;color:rgba(232,220,200,.25)">${p.pos}</p>
+        </div>
+        <span class="tec-invite-status ${p.status === 'accepted' ? 'tec-invite-status--accepted' : 'tec-invite-status--pending'}">
+          ${p.status === 'accepted' ? '✓ ACEPTADA' : 'PENDIENTE'}
+        </span>
+        ${p.status === 'accepted' ? `
+          <button class="tec-squad-remove" data-iid="${p.id}" title="Quitar">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>` : ''}
+      </div>`).join('');
+
+    state.invites.forEach((inv, i) => {
+      if(inv.status === 'pending' && !inv._sim){
+        inv._sim = true;
+        setTimeout(() => {
+          inv.status = 'accepted';
+          if(!state.squad.find(s => s.id === inv.id)) state.squad.push(inv);
+          save(); renderInvites(); renderSquad(); renderHero();
+        }, 2500 + i * 600);
+      }
+    });
+
+    list.querySelectorAll('.tec-squad-remove').forEach(b => {
+      b.addEventListener('click', () => {
+        state.invites = state.invites.filter(p => p.id !== b.dataset.iid);
+        state.squad   = state.squad.filter(p => p.id !== b.dataset.iid);
+        save(); renderInvites(); renderSquad(); renderHero();
+      });
+    });
+  }
+
+  document.querySelectorAll('[data-close]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      $('modal-name').classList.add('hidden');
+    });
+  });
+  document.querySelectorAll('.tec-overlay').forEach(ov => {
+    ov.addEventListener('click', e => { if(e.target === ov) ov.classList.add('hidden'); });
+  });
+
+  renderHero(); renderSquad(); renderInvites();
+})();
+</script>

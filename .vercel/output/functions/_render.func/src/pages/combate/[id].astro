@@ -4,6 +4,7 @@ import Layout from '@/layouts/Layout.astro'
 import { COMBATS } from '@/consts/combats'
 import { TEAMS } from '@/consts/teams'
 import { PLAYERS } from '@/consts/fighters'
+import Matchstats from '@/components/Matchstats.astro'
 
 const { id } = Astro.params
 
@@ -28,4 +29,18 @@ const team2Players = PLAYERS.filter(p => p.team === team2Id).map(p => ({ id: p.i
     edition="PRESENCIAL"
     platform="BARRANQUILLA · COLOMBIA"
   />
+
+<Matchstats
+  teamA={{ name: 'LOS VIKINGOS', color: '#00ff88', logo: '/images/logo-a.png' }}
+  teamB={{ name: 'LOS GUERREROS', color: '#f59e0b', logo: '/images/logo-b.png' }}
+  score={[2, 1]}
+  minute={67}
+  isLive={true}
+  events={[
+    { minute: 12, team: 'A', type: 'goal',   player: 'Peereira' },
+    { minute: 23, team: 'B', type: 'yellow', player: 'Westcol'  },
+    { minute: 52, team: 'B', type: 'red',    player: 'T.Mazza'  },
+    { minute: 61, team: 'A', type: 'sub',    player: 'Perxitaa', player2: 'Andoni' },
+  ]}
+/>
 </Layout>

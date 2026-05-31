@@ -1,7 +1,7 @@
-import { d as createAstro, c as createComponent, a as renderTemplate } from '../chunks/astro/server_CQLHzLBK.mjs';
-import 'kleur/colors';
+import { a2 as createAstro, a3 as createComponent, am as renderTemplate } from '../chunks/astro/server_C_1lLQnq.mjs';
+import 'piccolore';
 import 'clsx';
-import { P as PLAYERS } from '../chunks/fighters_Cyp_aquJ.mjs';
+import { P as PLAYERS } from '../chunks/fighters_DQHz57_0.mjs';
 export { renderers } from '../renderers.mjs';
 
 const $$Astro = createAstro("https://la-velada-clone.vercel.app/");

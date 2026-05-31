@@ -1,0 +1,157 @@
+---
+const TABS = [
+  { id: 'torneos',   icon: 'trophy-outline',    label: 'Torneos' },
+  { id: 'equipos',   icon: 'people-outline',     label: 'Equipos' },
+  { id: 'duelos',    icon: 'football-outline',   label: 'Duelos' },
+  { id: 'plantilla', icon: 'shield-outline',     label: 'Plantilla' },
+  { id: 'ajustes',   icon: 'settings-outline',   label: 'Ajustes' },
+];
+---
+
+<div class="navigation" id="bottomNav">
+  <ul>
+    {TABS.map((t, i) => (
+      <li class="list {i === 0 ? 'active' : ''}" data-tab={t.id}>
+        <a href="#">
+          <span class="icon"><ion-icon name={t.icon}></ion-icon></span>
+          <span class="text">{t.label}</span>
+        </a>
+      </li>
+    ))}
+    <div class="indicator" id="navIndicator"></div>
+  </ul>
+</div>
+
+<script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+<script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+
+<style>
+  @import url("https://fonts.googleapis.com/css?family=Poppins:100,200,300,400,500,600,700,800,900");
+
+  .navigation{
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 720px;
+    height: 70px;
+    background: linear-gradient(180deg, color-mix(in srgb, #050d08 90%, #fbbf24) 0%, #050d08 100%);
+    backdrop-filter: blur(16px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+    border-top: 1px solid rgba(199,168,107,.14);
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -8px 40px rgba(0,0,0,.5);
+  }
+
+  .navigation ul{
+    display: flex;
+    width: 100%;
+    justify-content: space-around;
+    padding: 0;
+    margin: 0;
+    position: relative;
+  }
+
+  .navigation ul li{
+    position: relative;
+    list-style: none;
+    width: 70px;
+    height: 70px;
+    z-index: 1;
+  }
+
+  .navigation ul li a{
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    width: 100%;
+    text-align: center;
+    font-weight: 500;
+    text-decoration: none;
+  }
+
+  .navigation ul li a .icon{
+    position: relative;
+    display: block;
+    line-height: 75px;
+    font-size: 1.5em;
+    text-align: center;
+    transition: 0.5s;
+    color: rgba(232,220,200,.3);
+  }
+
+  .navigation ul li.active a .icon{
+    transform: translateY(-32px);
+    color: #fbbf24;
+  }
+
+  .navigation ul li a .text{
+    position: absolute;
+    color: rgba(232,220,200,.5);
+    font-family: 'Orbitron', monospace;
+    font-weight: 600;
+    font-size: 0.38rem;
+    letter-spacing: 0.12em;
+    transition: 0.5s;
+    opacity: 0;
+    transform: translateY(20px);
+    text-transform: uppercase;
+  }
+
+  .navigation ul li.active a .text{
+    opacity: 1;
+    transform: translateY(10px);
+    color: #fbbf24;
+  }
+
+  .indicator{
+    position: absolute;
+    top: -35px;
+    width: 70px;
+    height: 70px;
+    background: rgba(251,191,36,.08);
+    border-radius: 50%;
+    border: none;
+    transition: 0.5s;
+    pointer-events: none;
+    box-shadow: 0 0 20px rgba(251,191,36,.05), inset 0 0 12px rgba(251,191,36,.04);
+  }
+
+  @media(max-width: 360px){
+    .navigation ul li{ width: 60px; height: 60px; }
+    .navigation ul li a .icon{ font-size: 1.2em; line-height: 65px; }
+    .indicator{ width: 60px; height: 60px; top: -30px; }
+  }
+</style>
+
+<script>
+(function(){
+  const indicator = document.getElementById('navIndicator');
+  const tabs = document.querySelectorAll('#bottomNav .list');
+
+  function updateIndicator(index) {
+    const li = tabs[index];
+    if (!li || !indicator) return;
+    const ul = li.parentElement;
+    const ulRect = ul.getBoundingClientRect();
+    const liRect = li.getBoundingClientRect();
+    const center = liRect.left + liRect.width / 2 - ulRect.left;
+    indicator.style.left = (center - indicator.offsetWidth / 2) + 'px';
+  }
+
+  const activeIndex = Array.from(tabs).findIndex(t => t.classList.contains('active'));
+  if (activeIndex >= 0) updateIndicator(activeIndex);
+
+  const observer = new MutationObserver(() => {
+    const idx = Array.from(tabs).findIndex(t => t.classList.contains('active'));
+    if (idx >= 0) updateIndicator(idx);
+  });
+  tabs.forEach(t => observer.observe(t, { attributes: true, attributeFilter: ['class'] }));
+})();
+</script>

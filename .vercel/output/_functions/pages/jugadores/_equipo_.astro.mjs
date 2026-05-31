@@ -1,8 +1,8 @@
-import { d as createAstro, c as createComponent, m as maybeRenderHead, b as addAttribute, a as renderTemplate, r as renderComponent } from '../../chunks/astro/server_CQLHzLBK.mjs';
-import 'kleur/colors';
-import { $ as $$Layout } from '../../chunks/Layout_uZwaYLoU.mjs';
-import { P as PLAYERS } from '../../chunks/fighters_Cyp_aquJ.mjs';
-import { $ as $$FighterSelector } from '../../chunks/FighterSelector_puQJxULw.mjs';
+import { a2 as createAstro, a3 as createComponent, ab as maybeRenderHead, $ as addAttribute, am as renderTemplate, ae as renderComponent } from '../../chunks/astro/server_C_1lLQnq.mjs';
+import 'piccolore';
+import { $ as $$Layout } from '../../chunks/Layout_DVjlXbPa.mjs';
+import { P as PLAYERS } from '../../chunks/fighters_DQHz57_0.mjs';
+import { $ as $$FighterSelector } from '../../chunks/FighterSelector_Cp9MzP-1.mjs';
 /* empty css                                       */
 import { T as TEAMS } from '../../chunks/teams_C073Wyrp.mjs';
 export { renderers } from '../../renderers.mjs';

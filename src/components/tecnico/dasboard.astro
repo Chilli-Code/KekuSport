@@ -1,0 +1,1871 @@
+---
+import EquipoManager from './EquipoManager.astro'
+import PartidoManager from './PartidoManager.astro'
+
+const TORNEOS = [
+  { id: 't1', name: 'Liga Barranquilla 2026', category: 'Libre', date: '15 JUN 2026', status: 'open', desc: 'Torneo principal de la temporada. Inscripciones abiertas para todas las categorías.', teams: 8, maxTeams: 16 },
+  { id: 't2', name: 'Copa Ciudadela', category: 'Sub-23', date: '22 JUN 2026', status: 'invited', desc: 'Torneo juvenil en la Ciudadela 20 de Julio.', teams: 12, maxTeams: 12 },
+  { id: 't3', name: 'Torneo Relámpago', category: 'Libre', date: '10 JUL 2026', status: 'closed', desc: 'Torneo exprés de fin de semana. Equipos limitados.', teams: 8, maxTeams: 8 },
+];
+
+---
+
+<div id="tec-app" class="tec-root">
+
+  <div class="tec-bg" aria-hidden="true">
+    <div class="tec-bg-grid"></div>
+    <div class="tec-bg-glow"></div>
+    <div class="tec-bg-stars"></div>
+    <div class="tec-bg-scan"></div>
+    <div class="tec-bg-vignette"></div>
+  </div>
+
+  <header class="tec-header">
+    <div class="tec-header-inner">
+      <span class="tec-live-dot"></span>
+      <span class="tec-nav-brand">PANEL <span class="tec-gold-text">TÉCNICO</span></span>
+      <span class="tec-nav-version">v1.0</span>
+    </div>
+    <div class="tec-header-divider"></div>
+  </header>
+
+  <main class="tec-main">
+
+    <!-- ══════ TORNEOS ══════ -->
+    <div id="tab-torneos" class="tec-section">
+      <p class="tec-section-label">TORNEOS DISPONIBLES</p>
+      <div class="flex flex-col gap-3">
+        {TORNEOS.map(t => (
+          <div class="tec-tourney-card">
+            <span class="hud-c hud-c--tl"></span><span class="hud-c hud-c--tr"></span>
+            <span class="hud-c hud-c--bl"></span><span class="hud-c hud-c--br"></span>
+            <div class="flex items-start justify-between mb-2">
+              <div>
+                <h3 class="tec-tourney-name">{t.name}</h3>
+                <p class="tec-tourney-cat">{t.category}</p>
+              </div>
+              <span class="tec-tourney-badge status-{t.status}">
+                {t.status === 'open' ? 'INSCRIPCIÓN ABIERTA' : t.status === 'invited' ? 'INVITADO' : 'CERRADO'}
+              </span>
+            </div>
+            <p class="tec-tourney-desc">{t.desc}</p>
+            <div class="flex items-center justify-between mt-3 pt-3 border-t border-white/[0.05]">
+              <span class="tec-tourney-meta">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                {t.date}
+              </span>
+              <span class="tec-tourney-meta">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                {t.teams}/{t.maxTeams} equipos
+              </span>
+              {t.status === 'open' ? (
+                <button class="tec-inscribir-btn" data-tourney={t.id}>INSCRIBIRSE</button>
+              ) : t.status === 'invited' ? (
+                <button class="tec-inscribir-btn" data-tourney={t.id}>ACEPTAR</button>
+              ) : null}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    <!-- ══════ EQUIPOS ══════ -->
+    <div id="tab-equipos" class="tec-section hidden">
+<div class="flex items-center justify-between mb-3">
+  <p class="tec-section-label !mb-0">MIS EQUIPOS</p>
+  <button class="tec-crear-equipo-btn" id="btn-crear-equipo">
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    CREAR
+  </button>
+</div>
+<div id="equipos-list" class="flex flex-col gap-3"></div>
+
+<!-- ══════ MODAL: CREAR EQUIPO ══════ -->
+<div id="modal-crear-equipo" class="tec-overlay tec-overlay--bottom hidden">
+  <div class="tec-modal tec-modal--sheet">
+    <div class="tec-modal-handle"></div>
+    <span class="hud-c hud-c--tl"></span><span class="hud-c hud-c--tr"></span>
+    <span class="hud-c hud-c--bl"></span><span class="hud-c hud-c--br"></span>
+    <div class="px-5 pt-5 pb-2">
+      <h3 class="tec-modal-title">CREAR EQUIPO</h3>
+      <p class="text-[.45rem] mt-0.5 tracking-widest uppercase font-[family-name:var(--font-display)]" style="color:rgba(251,191,36,.5)">Personaliza la identidad de tu equipo</p>
+    </div>
+    <div class="px-5 pb-3 flex flex-col gap-1">
+      <div class="tec-create-preview" id="create-preview">
+        <div class="tec-create-preview-logo" id="preview-logo">
+          <img id="preview-img" src="" alt="Logo" />
+          <span class="tec-create-preview-fallback" id="preview-fallback">?</span>
+        </div>
+        <div class="tec-create-preview-info">
+          <span class="tec-create-preview-name" id="preview-name">NOMBRE</span>
+          <span class="tec-create-preview-hint">Vista previa</span>
+        </div>
+      </div>
+      <div class="pt-3">
+        <label class="tec-field-label mb-1.5 block" for="new-team-name">NOMBRE DEL EQUIPO</label>
+        <input id="new-team-name" type="text" maxlength="30" placeholder="Ej: Los Vikingos" class="tec-input" autocomplete="off" />
+      </div>
+      <div class="pt-2">
+        <label class="tec-field-label mb-1.5 block">ESCUDO</label>
+        <div class="tec-upload-area" id="upload-area">
+          <input type="file" id="logo-upload" accept="image/*" class="hidden" />
+          <div class="tec-upload-placeholder" id="upload-placeholder">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            <span>TOCAR PARA SUBIR</span>
+          </div>
+          <div class="tec-upload-preview hidden" id="upload-preview">
+            <img id="upload-preview-img" src="" alt="Logo" />
+            <button class="tec-upload-remove" id="btn-remove-logo" type="button">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="pt-2">
+        <label class="tec-field-label mb-1.5 block">COLOR</label>
+        <div class="flex flex-wrap gap-2" id="new-team-color-picker">
+          <button class="tec-color-dot active" data-color="#00ff88" style="background:#00ff88"></button>
+          <button class="tec-color-dot" data-color="#f59e0b" style="background:#f59e0b"></button>
+          <button class="tec-color-dot" data-color="#f87171" style="background:#f87171"></button>
+          <button class="tec-color-dot" data-color="#a78bfa" style="background:#a78bfa"></button>
+          <button class="tec-color-dot" data-color="#38bdf8" style="background:#38bdf8"></button>
+          <button class="tec-color-dot" data-color="#e2ff5d" style="background:#e2ff5d"></button>
+          <button class="tec-color-dot" data-color="#ff6b6b" style="background:#ff6b6b"></button>
+          <button class="tec-color-dot" data-color="#c7a86b" style="background:#c7a86b"></button>
+        </div>
+      </div>
+    </div>
+    <div class="px-5 justify-between pb-5 pt-4 flex gap-2.5 border-t border-[rgba(199,168,107,.12)]">
+      <button class="tec-btn-ghost" data-close="modal-crear-equipo">CANCELAR</button>
+      <button class="tec-btn-primary" id="btn-save-new-team">CREAR EQUIPO</button>
+    </div>
+  </div>
+</div>
+    </div>
+
+    <!-- ══════ DUELOS ══════ -->
+    <div id="tab-duelos" class="tec-section hidden">
+      <PartidoManager />
+    </div>
+
+    <!-- ══════ PLANTILLA ══════ -->
+    <div id="tab-plantilla" class="tec-section hidden">
+      <EquipoManager />
+    </div>
+
+    <!-- ══════ AJUSTES ══════ -->
+    <div id="tab-ajustes" class="tec-section hidden">
+      <p class="tec-section-label">AJUSTES DEL TÉCNICO</p>
+      <div class="tec-card">
+        <span class="hud-c hud-c--tl"></span><span class="hud-c hud-c--tr"></span>
+        <span class="hud-c hud-c--bl"></span><span class="hud-c hud-c--br"></span>
+        <div class="flex flex-col gap-4">
+          <div>
+            <label class="tec-field-label mb-1.5 block" for="tec-name-input">NOMBRE DEL TÉCNICO</label>
+            <input id="tec-name-input" type="text" placeholder="Tu nombre" class="tec-input" />
+          </div>
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="tec-field-label mb-0.5">NOTIFICACIONES</p>
+              <p class="text-[.4rem] text-white/20 tracking-wider">Recibir alertas de partidos e invitaciones</p>
+            </div>
+            <label class="tec-toggle">
+              <input type="checkbox" id="tec-notif-toggle" checked />
+              <span class="tec-toggle-slider"></span>
+            </label>
+          </div>
+          <div class="border-t border-white/[0.06] pt-3 mt-1">
+            <p class="tec-field-label mb-1">INFORMACIÓN</p>
+            <p class="text-[.45rem] text-white/20 tracking-wide">Panel Técnico v1.0</p>
+            <p class="text-[.45rem] text-white/20 tracking-wide">La Velada del Año · Barranquilla</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+</div>
+
+<style is:global>
+  
+  #tec-app {
+    --gold:     var(--color-theme-gold, #fbbf24);
+    --cream:    var(--color-theme-cream, #fef3c7);
+    --midnight: var(--color-theme-midnight, #1e1b4b);
+    --green:    #00ff88;
+    --green-dim:#00cc6a;
+    --purple:   #a855f7;
+    --red:      #ef4444;
+    --orange:   #f97316;
+    --border:   rgba(199,168,107,.14);
+    --surface:  rgba(255,255,255,.03);
+    --font-display: 'Orbitron', monospace;
+    --font-body:    'Rajdhani', sans-serif;
+    --font-game:    'Cinzel', serif;
+  }
+
+  .tec-root {
+    position: relative;
+    min-height: 100svh;
+    font-family: var(--font-body);
+    background:
+      radial-gradient(ellipse at 50% -10%, #0b2a1a 0%, #050d08 55%, #03080e 100%);
+    overflow-x: hidden;
+    color: var(--cream);
+    padding: 5rem 1.5rem 6rem;
+    letter-spacing: .04em;
+  }
+
+  /* ═══ BACKGROUND ═══ */
+  .tec-bg {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse 90% 60% at 50% -5%, rgba(0,255,136,.07) 0%, transparent 70%),
+      radial-gradient(ellipse 50% 40% at 80% 80%, rgba(168,85,247,.04) 0%, transparent 60%);
+  }
+  .tec-bg-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,255,136,.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,255,136,.03) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, #000 30%, transparent 70%);
+    -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, #000 30%, transparent 70%);
+  }
+  .tec-bg-glow {
+    position: absolute;
+    top: -10%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60%;
+    height: 50%;
+    background: radial-gradient(ellipse, rgba(0,255,136,.14) 0%, transparent 70%);
+    filter: blur(70px);
+    animation: glowPulse 6s ease-in-out infinite alternate;
+  }
+  @keyframes glowPulse {
+  0%   { opacity: .35; transform: translateX(-50%) scale(1); }
+  100% { opacity: .85; transform: translateX(-50%) scale(1.12); }
+  }
+  .tec-bg-stars {
+    position: absolute;
+    inset: 0;
+    background-image:
+      radial-gradient(1.5px 1.5px at 7% 15%, #fff, transparent),
+      radial-gradient(1px   1px   at 25% 58%, #aaffcc, transparent),
+      radial-gradient(2px   2px   at 50% 10%, #a855f7, transparent),
+      radial-gradient(1px   1px   at 70% 75%, #fff, transparent),
+      radial-gradient(2px   2px   at 88% 35%, #00ff88, transparent),
+      radial-gradient(1px   1px   at 16% 85%, #c084fc, transparent),
+      radial-gradient(1.5px 1.5px at 60% 50%, #fff, transparent),
+      radial-gradient(1px   1px   at 42% 30%, #aaffcc, transparent);
+    background-size: 260px 260px;
+    opacity: .3;
+    animation: twinkle 6s ease-in-out infinite alternate;
+  }
+  @keyframes twinkle { 0%{opacity:.1} 100%{opacity:.4} }
+  .tec-bg-scan {
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,255,136,.008) 2px,
+      rgba(0,255,136,.008) 3px
+    );
+  }
+  .tec-bg-vignette {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,.6) 100%);
+  }
+
+  /* ═══ HEADER ═══ */
+  .tec-header {
+    background: rgba(6,11,18,.93);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+  }
+  .tec-header-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold) 20%, var(--green) 80%, transparent);
+    opacity: .3;
+  }
+  .tec-header-inner {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: .5rem .75rem;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+  }
+  .tec-live-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: var(--green);
+    box-shadow: 0 0 10px var(--green), 0 0 20px rgba(0,255,136,.3);
+    animation: blink 1.2s ease-in-out infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.3;transform:scale(.8)} }
+  .tec-nav-brand {
+    font-family: var(--font-display);
+    font-size: .55rem;
+    font-weight: 700;
+    letter-spacing: .18em;
+    color: rgba(232,220,200,.7);
+    white-space: nowrap;
+  }
+  .tec-gold-text {
+    background: linear-gradient(90deg, var(--gold), #f59e0b);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .tec-nav-version {
+    font-family: monospace;
+    font-size: .4rem;
+    color: rgba(251,191,36,.3);
+    border: 1px solid rgba(251,191,36,.12);
+    border-radius: 4px;
+    padding: .05rem .3rem;
+    letter-spacing: .05em;
+  }
+
+  /* ═══ MAIN ═══ */
+  .tec-main {
+    position: relative;
+    z-index: 1;
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 1rem .75rem 5rem;
+  }
+  .tec-section { display: block; }
+  .tec-section.hidden { display: none; }
+  .tec-scroll-content { padding-bottom: 4rem; }
+
+  /* ═══ TYPOGRAPHY ═══ */
+  .tec-section-label {
+    display: block;
+    font-family: var(--font-display);
+    font-size: .48rem;
+    font-weight: 600;
+    letter-spacing: .22em;
+    color: rgba(251,191,36,.5);
+    text-transform: uppercase;
+    margin-bottom: .5rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: .35rem;
+  }
+  .tec-label {
+    display: block;
+    font-size: .45rem;
+    font-weight: 600;
+    letter-spacing: .18em;
+    color: rgba(232,220,200,.3);
+    text-transform: uppercase;
+    font-family: var(--font-display);
+  }
+  .tec-empty {
+    font-size: .55rem;
+    letter-spacing: .04em;
+    color: rgba(232,220,200,.18);
+    padding: .5rem 0;
+  }
+
+  /* ═══ HUD CORNERS ═══ */
+  .hud-c {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border-style: solid;
+    border-color: rgba(199,168,107,.25);
+    pointer-events: none;
+    z-index: 2;
+    transition: all .3s ease;
+  }
+  .hud-c--tl { top: 6px; left: 6px; border-width: 1.5px 0 0 1.5px; }
+  .hud-c--tr { top: 6px; right: 6px; border-width: 1.5px 1.5px 0 0; }
+  .hud-c--bl { bottom: 6px; left: 6px; border-width: 0 0 1.5px 1.5px; }
+  .hud-c--br { bottom: 6px; right: 6px; border-width: 0 1.5px 1.5px 0; }
+
+  .tec-tourney-card:hover .hud-c,
+  .tec-equipo-card:hover .hud-c,
+  .tec-card:hover .hud-c,
+  .tec-hero-card:hover .hud-c {
+    border-color: rgba(0,255,136,.5);
+    width: 16px;
+    height: 16px;
+  }
+
+  /* ═══ TORNEOS ═══ */
+  .tec-tourney-card {
+    position: relative;
+    background: linear-gradient(160deg,
+      color-mix(in srgb, var(--midnight) 88%, var(--green)) 0%,
+      var(--midnight) 100%);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.1rem;
+    overflow: hidden;
+    transition: border-color .25s, box-shadow .25s;
+  }
+  .tec-tourney-card:hover {
+    border-color: rgba(199,168,107,.3);
+  }
+  .tec-tourney-name {
+    font-family: var(--font-display);
+    font-size: .65rem;
+    font-weight: 700;
+    letter-spacing: .06em;
+    color: var(--cream);
+    text-transform: uppercase;
+  }
+  .tec-tourney-cat {
+    font-size: .45rem;
+    letter-spacing: .12em;
+    color: rgba(232,220,200,.25);
+    text-transform: uppercase;
+    margin-top: .1rem;
+  }
+  .tec-tourney-desc {
+    font-size: .5rem;
+    letter-spacing: .04em;
+    color: rgba(232,220,200,.4);
+    line-height: 1.4;
+  }
+  .tec-tourney-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: .25rem;
+    font-family: var(--font-display);
+    font-size: .4rem;
+    letter-spacing: .08em;
+    color: rgba(232,220,200,.25);
+    text-transform: uppercase;
+  }
+  .tec-tourney-badge {
+    font-family: var(--font-display);
+    font-size: .38rem;
+    font-weight: 600;
+    letter-spacing: .1em;
+    border-radius: 99px;
+    padding: .18rem .5rem;
+    white-space: nowrap;
+    text-transform: uppercase;
+  }
+  .tec-tourney-badge.status-open {
+    color: #34d399;
+    background: rgba(6,78,59,.7);
+    border: 1px solid rgba(52,211,153,.25);
+  }
+  .tec-tourney-badge.status-invited {
+    color: #fbbf24;
+    background: rgba(120,53,15,.6);
+    border: 1px solid rgba(251,191,36,.25);
+  }
+  .tec-tourney-badge.status-closed {
+    color: rgba(232,220,200,.35);
+    background: rgba(255,255,255,.03);
+    border: 1px solid rgba(255,255,255,.06);
+  }
+  .tec-inscribir-btn {
+    font-family: var(--font-display);
+    font-size: .4rem;
+    font-weight: 600;
+    letter-spacing: .1em;
+    color: var(--midnight);
+    background: linear-gradient(135deg, var(--gold), #f59e0b);
+    border: none;
+    border-radius: 99px;
+    padding: .3rem .7rem;
+    cursor: pointer;
+    transition: filter .2s, transform .15s;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .tec-inscribir-btn:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+  }
+
+  /* ═══ TOGGLE ═══ */
+  .tec-toggle {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 22px;
+    flex-shrink: 0;
+  }
+  .tec-toggle input {
+    display: none;
+  }
+  .tec-toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background: var(--surface);
+    border-radius: 99px;
+    transition: .3s;
+    border: 1px solid var(--border);
+  }
+  .tec-toggle-slider::before {
+    content: '';
+    position: absolute;
+    height: 16px;
+    width: 16px;
+    left: 2px;
+    bottom: 2px;
+    background: rgba(232,220,200,.3);
+    border-radius: 50%;
+    transition: .3s;
+  }
+  .tec-toggle input:checked + .tec-toggle-slider {
+    background: rgba(251,191,36,.15);
+    border-color: rgba(251,191,36,.4);
+  }
+  .tec-toggle input:checked + .tec-toggle-slider::before {
+    transform: translateX(18px);
+    background: var(--gold);
+    box-shadow: 0 0 8px rgba(251,191,36,.3);
+  }
+
+  /* ═══ CARD ═══ */
+  .tec-card {
+    position: relative;
+    background: linear-gradient(160deg,
+      color-mix(in srgb, var(--midnight) 88%, var(--green)) 0%,
+      var(--midnight) 100%);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.1rem;
+    overflow: hidden;
+    box-shadow: 0 4px 24px rgba(0,0,0,.3);
+  }
+
+  /* ═══ SQUAD ═══ */
+  .tec-squad-item {
+    display: flex;
+    align-items: center;
+    gap: .65rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    padding: .6rem .8rem;
+    transition: border-color .2s, background .2s, transform .15s;
+    cursor: default;
+  }
+  .tec-squad-item:hover {
+    border-color: rgba(199,168,107,.25);
+    background: rgba(255,255,255,.05);
+    transform: translateX(3px);
+  }
+  .tec-squad-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    flex-shrink: 0;
+    background: rgba(199,168,107,.06);
+    border: 1px solid rgba(199,168,107,.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+  }
+
+  /* ═══ SEARCH ═══ */
+  .tec-search-result {
+    display: flex;
+    align-items: center;
+    gap: .65rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: .55rem .75rem;
+    transition: border-color .2s, background .2s;
+  }
+  .tec-search-result:hover {
+    border-color: rgba(199,168,107,.25);
+    background: rgba(255,255,255,.05);
+  }
+  .tec-search-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    flex-shrink: 0;
+    background: rgba(199,168,107,.06);
+    border: 1px solid rgba(199,168,107,.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .95rem;
+  }
+  .tec-invite-btn {
+    font-family: var(--font-display);
+    font-size: .42rem;
+    font-weight: 600;
+    letter-spacing: .1em;
+    color: var(--gold);
+    background: rgba(251,191,36,.06);
+    border: 1px solid rgba(251,191,36,.2);
+    border-radius: 99px;
+    padding: .22rem .7rem;
+    cursor: pointer;
+    transition: all .2s;
+    white-space: nowrap;
+    text-transform: uppercase;
+  }
+  .tec-invite-btn:hover {
+    background: rgba(251,191,36,.12);
+    border-color: rgba(251,191,36,.4);
+    box-shadow: 0 0 16px rgba(251,191,36,.08);
+  }
+  .tec-invite-btn:disabled { opacity: .35; cursor: not-allowed; box-shadow: none; }
+
+  .tec-invite-item {
+    display: flex;
+    align-items: center;
+    gap: .65rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: .55rem .75rem;
+  }
+  .tec-invite-status {
+    font-family: var(--font-display);
+    font-size: .4rem;
+    font-weight: 600;
+    letter-spacing: .1em;
+    border-radius: 99px;
+    padding: .15rem .55rem;
+    border: 1px solid;
+    margin-left: auto;
+    white-space: nowrap;
+    text-transform: uppercase;
+  }
+  .tec-invite-status--pending  { color: #fbbf24; background: rgba(120,53,15,.6); border-color: rgba(251,191,36,.25); }
+  .tec-invite-status--accepted { color: #34d399; background: rgba(6,78,59,.6);  border-color: rgba(52,211,153,.25); }
+
+  /* ═══ HERO CARD ═══ */
+  .tec-hero-card {
+    position: relative;
+    background: linear-gradient(160deg,
+      color-mix(in srgb, var(--midnight) 88%, var(--green)) 0%,
+      var(--midnight) 100%);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.5rem;
+    overflow: hidden;
+    box-shadow:
+      0 8px 40px rgba(0,0,0,.5),
+      inset 0 1px 0 rgba(199,168,107,.08);
+    transition: border-color .3s, box-shadow .3s;
+  }
+  .tec-hero-card:hover {
+    border-color: rgba(199,168,107,.3);
+    box-shadow:
+      0 8px 50px rgba(0,0,0,.5),
+      0 0 30px rgba(199,168,107,.06),
+      inset 0 1px 0 rgba(199,168,107,.1);
+  }
+  .tec-hero-glow {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(ellipse at 25% 30%, rgba(0,255,136,.06), transparent 65%);
+    transition: background .5s;
+  }
+  .tec-hero-badge {
+    position: absolute;
+    top: -20px;
+    right: -20px;
+    width: 100px;
+    height: 100px;
+    background: radial-gradient(circle at center, rgba(0,255,136,.04), transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+  }
+  .tec-logo-wrap {
+    position: relative;
+    flex-shrink: 0;
+    width: 80px;
+    height: 80px;
+    border-radius: 16px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1.5px solid rgba(251,191,36,.2);
+    background: rgba(251,191,36,.04);
+    box-shadow: 0 0 25px rgba(251,191,36,.06), inset 0 0 20px rgba(251,191,36,.02);
+    transition: border-color .3s, box-shadow .3s, transform .2s;
+    font-size: 2.2rem;
+    line-height: 1;
+  }
+  .tec-logo-wrap:hover { transform: scale(1.03); }
+  .tec-logo-wrap img { width:100%; height:100%; object-fit:cover; display:block; }
+  .tec-team-name {
+    font-family: var(--font-display);
+    font-size: clamp(1rem, 4vw, 1.4rem);
+    font-weight: 900;
+    letter-spacing: .08em;
+    color: var(--cream);
+    line-height: 1.1;
+    text-shadow: 0 0 20px rgba(251,191,36,.08);
+  }
+  .tec-icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    flex-shrink: 0;
+    background: rgba(251,191,36,.06);
+    border: 1px solid rgba(251,191,36,.15);
+    color: rgba(232,220,200,.4);
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .tec-icon-btn:hover {
+    background: rgba(251,191,36,.12);
+    color: var(--gold);
+    box-shadow: 0 0 12px rgba(251,191,36,.1);
+  }
+  .tec-color-dot {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: transform .15s, border-color .15s, box-shadow .15s;
+    position: relative;
+  }
+  .tec-color-dot:hover { transform: scale(1.25); }
+  .tec-color-dot.active {
+    border-color: #fff;
+    box-shadow: 0 0 14px currentColor, 0 0 30px currentColor;
+  }
+  .tec-color-dot.active::after {
+    content: '✓';
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .65rem;
+    font-weight: 900;
+    color: #000;
+  }
+
+  /* ═══ STATS ═══ */
+  .tec-stat-val {
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    font-weight: 900;
+    line-height: 1;
+    color: var(--green);
+    text-shadow: 0 0 20px rgba(0,255,136,.2);
+  }
+  .tec-stat-label {
+    font-family: var(--font-display);
+    font-size: .38rem;
+    font-weight: 600;
+    letter-spacing: .15em;
+    color: rgba(232,220,200,.25);
+    text-transform: uppercase;
+  }
+  .tec-stat-bar {
+    width: 100%;
+    height: 3px;
+    border-radius: 2px;
+    background: rgba(0,255,136,.08);
+    margin-top: .25rem;
+    overflow: hidden;
+  }
+  .tec-stat-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: linear-gradient(90deg, var(--green), #34d399);
+    transition: width .5s ease;
+    box-shadow: 0 0 8px rgba(0,255,136,.3);
+  }
+
+  /* ═══ CHIPS & BADGES ═══ */
+  .tec-chip {
+    font-family: var(--font-display);
+    font-size: .42rem;
+    font-weight: 600;
+    letter-spacing: .12em;
+    color: var(--gold);
+    background: rgba(251,191,36,.06);
+    border: 1px solid rgba(251,191,36,.18);
+    border-radius: 99px;
+    padding: .18rem .6rem;
+    white-space: nowrap;
+  }
+  .tec-badge-live {
+    font-family: var(--font-display);
+    font-size: .4rem;
+    font-weight: 600;
+    letter-spacing: .1em;
+    color: #34d399;
+    background: rgba(6,78,59,.7);
+    border: 1px solid rgba(52,211,153,.25);
+    border-radius: 99px;
+    padding: .2rem .6rem;
+  }
+  .tec-badge-upcoming {
+    font-family: var(--font-display);
+    font-size: .4rem;
+    font-weight: 600;
+    letter-spacing: .1em;
+    color: rgba(251,191,36,.6);
+    background: rgba(251,191,36,.06);
+    border: 1px solid rgba(251,191,36,.15);
+    border-radius: 99px;
+    padding: .2rem .6rem;
+  }
+
+  /* ═══ FIELD ═══ */
+  .tec-field-wrap {
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    box-shadow: 0 0 30px rgba(199,168,107,.04), 0 8px 40px rgba(0,0,0,.4);
+    position: relative;
+  }
+  .tec-field-wrap::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: 15px;
+    background: linear-gradient(135deg, rgba(251,191,36,.08), transparent 40%, rgba(0,255,136,.08) 80%);
+    z-index: -1;
+    opacity: .5;
+  }
+  .tec-field {
+    position: relative;
+    background: linear-gradient(180deg, #0a2a0a 0%, #0e3d0e 45%, #0a2a0a 100%);
+    width: 100%;
+    aspect-ratio: 7/10;
+    overflow: hidden;
+  }
+  .tec-field-line--mid {
+    position: absolute;
+    left: 5%;
+    right: 5%;
+    top: 50%;
+    height: 1px;
+    background: rgba(255,255,255,.08);
+  }
+  .tec-field-circle {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%,-50%);
+    width: 22%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,.08);
+  }
+  .tec-field-box {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 46%;
+    height: 14%;
+    border: 1px solid rgba(255,255,255,.08);
+  }
+  .tec-field-box--top { top: 0; border-top: none; }
+  .tec-field-box--bot { bottom: 0; border-bottom: none; }
+  .tec-field-goal {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 18%;
+    height: 4%;
+    border: 1px solid rgba(255,255,255,.08);
+    background: rgba(255,255,255,.02);
+  }
+  .tec-field-goal--top { top: 0; }
+  .tec-field-goal--bot { bottom: 0; }
+
+  .field-player {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .1rem;
+    transform: translate(-50%,-50%);
+    cursor: pointer;
+    transition: transform .2s, filter .2s;
+  }
+  .field-player:hover {
+    transform: translate(-50%,-50%) scale(1.18);
+    filter: brightness(1.2);
+    z-index: 10;
+  }
+  .field-player-dot {
+    width: clamp(30px, 5.5vw, 40px);
+    height: clamp(30px, 5.5vw, 40px);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .65rem;
+    font-weight: 900;
+    color: #000;
+    border: 2px solid rgba(255,255,255,.2);
+    box-shadow: 0 2px 12px rgba(0,0,0,.6), 0 0 0 1px rgba(0,0,0,.2);
+    transition: box-shadow .2s, border-color .2s;
+  }
+  .field-player-dot--empty {
+    background: rgba(255,255,255,.04);
+    color: rgba(255,255,255,.2);
+    border: 1.5px dashed rgba(255,255,255,.1);
+  }
+  .field-player:hover .field-player-dot {
+    box-shadow: 0 0 20px rgba(0,255,136,.35), 0 2px 12px rgba(0,0,0,.6);
+  }
+  .field-player-name {
+    font-family: var(--font-display);
+    font-size: .32rem;
+    font-weight: 600;
+    letter-spacing: .04em;
+    color: rgba(255,255,255,.8);
+    white-space: nowrap;
+    text-shadow: 0 0 8px rgba(0,0,0,.95), 0 0 3px rgba(0,0,0,.8);
+  }
+  .field-player-pos {
+    font-size: .28rem;
+    color: rgba(255,255,255,.35);
+    white-space: nowrap;
+    text-shadow: 0 0 6px rgba(0,0,0,.9);
+  }
+
+  /* ═══ FORMATION BTNS ═══ */
+  .tec-formation-btn {
+    font-family: var(--font-display);
+    font-size: .48rem;
+    font-weight: 600;
+    letter-spacing: .06em;
+    color: rgba(232,220,200,.35);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: .3rem .6rem;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .tec-formation-btn:hover {
+    border-color: rgba(199,168,107,.25);
+    color: rgba(232,220,200,.7);
+  }
+  .tec-formation-btn--active {
+    background: rgba(251,191,36,.08);
+    border-color: rgba(251,191,36,.32);
+    color: var(--gold);
+    box-shadow: 0 0 14px rgba(251,191,36,.08), inset 0 0 14px rgba(251,191,36,.04);
+  }
+
+  /* ═══ BENCH ═══ */
+  .tec-bench-player {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: .4rem .7rem;
+  }
+  .tec-bench-dot {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .65rem;
+    font-weight: 900;
+    color: #000;
+    box-shadow: 0 0 8px rgba(0,0,0,.3);
+  }
+
+  /* ═══ DUEL CARDS (inside PartidoManager) ═══ */
+  .tec-duel-header {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    margin-bottom: 1rem;
+  }
+  .tec-volver-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: .3rem;
+    font-family: var(--font-display);
+    font-size: .45rem;
+    font-weight: 600;
+    letter-spacing: .1em;
+    color: rgba(232,220,200,.4);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 99px;
+    padding: .35rem .7rem;
+    cursor: pointer;
+    transition: all .2s;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .tec-volver-btn:hover {
+    background: rgba(255,255,255,.06);
+    color: rgba(251,191,36,.7);
+    border-color: rgba(199,168,107,.3);
+  }
+  .tec-edit-lineup-btn {
+    font-family: var(--font-display);
+    font-size: .4rem;
+    font-weight: 600;
+    letter-spacing: .1em;
+    color: var(--gold);
+    background: rgba(251,191,36,.06);
+    border: 1px solid rgba(251,191,36,.2);
+    border-radius: 99px;
+    padding: .25rem .6rem;
+    cursor: pointer;
+    transition: all .2s;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .tec-edit-lineup-btn:hover {
+    background: rgba(251,191,36,.12);
+    border-color: rgba(251,191,36,.4);
+    box-shadow: 0 0 12px rgba(251,191,36,.08);
+  }
+
+  /* ═══ SUBS ═══ */
+  .tec-sub-item {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: .45rem .7rem;
+  }
+  .tec-sub-min {
+    font-family: var(--font-display);
+    font-size: .6rem;
+    font-weight: 700;
+    color: rgba(251,191,36,.6);
+    min-width: 28px;
+  }
+  .tec-add-sub-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .4rem;
+    width: 100%;
+    font-family: var(--font-display);
+    font-size: .45rem;
+    font-weight: 600;
+    letter-spacing: .12em;
+    color: rgba(251,191,36,.5);
+    background: rgba(251,191,36,.03);
+    border: 1px dashed rgba(251,191,36,.16);
+    border-radius: 9px;
+    padding: .45rem .8rem;
+    cursor: pointer;
+    transition: all .2s;
+    text-transform: uppercase;
+  }
+  .tec-add-sub-btn:hover {
+    border-color: rgba(251,191,36,.35);
+    color: var(--gold);
+    background: rgba(251,191,36,.06);
+    box-shadow: 0 0 16px rgba(251,191,36,.05);
+  }
+
+  /* ═══ INPUTS ═══ */
+  .tec-input {
+    width: 100%;
+    padding: .6rem .8rem;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--cream);
+    font-family: var(--font-body);
+    font-size: .65rem;
+    letter-spacing: .04em;
+    outline: none;
+    caret-color: var(--green);
+    transition: border-color .2s, box-shadow .2s, background .2s;
+  }
+  .tec-input::placeholder { color: rgba(232,220,200,.15); font-size: .55rem; }
+  .tec-input:focus {
+    border-color: rgba(251,191,36,.3);
+    background: rgba(255,255,255,.05);
+    box-shadow: 0 0 0 3px rgba(251,191,36,.05), 0 0 20px rgba(251,191,36,.03);
+  }
+  .tec-input option { background: #060b12; color: var(--cream); }
+  .tec-field-label {
+    font-family: var(--font-display);
+    font-size: .42rem;
+    font-weight: 600;
+    letter-spacing: .18em;
+    color: rgba(251,191,36,.45);
+    text-transform: uppercase;
+  }
+
+  /* ═══ MODALS ═══ */
+  .tec-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.82);
+    backdrop-filter: blur(12px);
+    isolation: isolate;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+  .tec-overlay.hidden { display: none; }
+  .tec-overlay--bottom {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .tec-overlay--bottom .tec-modal--sheet {
+    border-radius: 24px 24px 0 0;
+    max-width: 100%;
+    width: 100%;
+    bottom: 60px;
+    animation: sheetIn .25s cubic-bezier(.22,1,.36,1) both;
+  }
+  @keyframes sheetIn {
+    from { opacity: 0; transform: translateY(60px); }
+    to   { opacity: 1; transform: none; }
+  }
+  .tec-modal-handle {
+    width: 40px;
+    height: 4px;
+    border-radius: 99px;
+    background: rgba(255,255,255,.12);
+    margin: 12px auto 0;
+  }
+  .tec-modal {
+    position: relative;
+    background: linear-gradient(160deg,
+      color-mix(in srgb, var(--midnight) 88%, var(--green)) 0%,
+      var(--midnight) 100%);
+    border: 1px solid color-mix(in srgb, var(--gold) 22%, transparent);
+    border-radius: 16px;
+    width: 100%;
+    max-width: 360px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,.7), 0 0 40px rgba(199,168,107,.04);
+    animation: modalIn .25s cubic-bezier(.22,1,.36,1) both;
+  }
+  @keyframes modalIn {
+    from { opacity: 0; transform: scale(.92) translateY(15px); }
+    to   { opacity: 1; transform: none; }
+  }
+  .tec-modal-title {
+    font-family: var(--font-display);
+    font-size: .82rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+    color: var(--cream);
+    text-transform: uppercase;
+  }
+
+  /* ═══ BUTTONS ═══ */
+  .tec-btn-ghost {
+    font-family: var(--font-display);
+    font-size: .5rem;
+    font-weight: 600;
+    letter-spacing: .12em;
+    color: rgba(232,220,200,.35);
+    background: rgba(255,255,255,.03);
+    border: 1px solid rgba(255,255,255,.06);
+    border-radius: 99px;
+    padding: .5rem 1rem;
+    cursor: pointer;
+    transition: all .2s;
+    text-transform: uppercase;
+  }
+  .tec-btn-ghost:hover {
+    background: rgba(255,255,255,.06);
+    color: rgba(232,220,200,.7);
+  }
+  .tec-btn-primary {
+    font-family: var(--font-display);
+    font-size: .5rem;
+    font-weight: 700;
+    letter-spacing: .12em;
+    color: var(--midnight);
+    background: linear-gradient(135deg, var(--gold), #f59e0b);
+    border: none;
+    border-radius: 99px;
+    padding: .5rem 1.25rem;
+    cursor: pointer;
+    transition: filter .2s, transform .15s, box-shadow .2s;
+    box-shadow: 0 0 20px rgba(251,191,36,.15);
+    text-transform: uppercase;
+  }
+  .tec-btn-primary:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+    box-shadow: 0 0 30px rgba(251,191,36,.25);
+  }
+  .tec-btn-primary:active { transform: scale(.97); }
+
+  .tec-squad-remove, .tec-sub-del {
+    color: rgba(232,220,200,.15);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: .2rem;
+    border-radius: 6px;
+    transition: color .2s, background .2s;
+    flex-shrink: 0;
+  }
+  .tec-squad-remove:hover, .tec-sub-del:hover {
+    color: var(--red);
+    background: rgba(239,68,68,.08);
+  }
+
+  /* ═══ SCROLLBAR ═══ */
+  .tec-root::-webkit-scrollbar { width: 4px; }
+  .tec-root::-webkit-scrollbar-track { background: transparent; }
+  .tec-root::-webkit-scrollbar-thumb {
+    background: rgba(199,168,107,.15);
+    border-radius: 2px;
+  }
+  .tec-root::-webkit-scrollbar-thumb:hover { background: rgba(199,168,107,.3); }
+
+  /* ═══ CREAR EQUIPO BTN ═══ */
+  .tec-crear-equipo-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    font-family: var(--font-display);
+    font-size: .42rem;
+    font-weight: 600;
+    letter-spacing: .1em;
+    color: var(--gold);
+    background: rgba(251,191,36,.06);
+    border: 1px solid rgba(251,191,36,.2);
+    border-radius: 99px;
+    padding: .35rem .65rem;
+    cursor: pointer;
+    transition: all .2s;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .tec-crear-equipo-btn:hover {
+    background: rgba(251,191,36,.12);
+    border-color: rgba(251,191,36,.4);
+    box-shadow: 0 0 14px rgba(251,191,36,.08);
+  }
+  .tec-crear-equipo-btn svg { flex-shrink: 0; }
+
+  /* ═══ EQUIPO CARD ACTIVE ═══ */
+  .tec-equipo-card--active {
+    border-color: rgba(251,191,36,.3) !important;
+    box-shadow: 0 0 20px rgba(251,191,36,.06), inset 0 0 20px rgba(251,191,36,.02);
+  }
+  .tec-equipo-card--active .tec-equipo-check {
+    opacity: 1;
+  }
+  .tec-equipo-check {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    font-size: .55rem;
+    font-weight: 900;
+    color: var(--gold);
+    opacity: 0;
+    transition: opacity .2s;
+  }
+
+  /* ═══ UPLOAD AREA ═══ */
+  .tec-upload-area {
+    position: relative;
+    width: 100%;
+    cursor: pointer;
+  }
+  .tec-upload-area input[type="file"] { display: none; }
+  .tec-upload-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: .35rem;
+    padding: 1.2rem 1rem;
+    border-radius: 12px;
+    border: 1.5px dashed rgba(199,168,107,.2);
+    background: rgba(199,168,107,.03);
+    color: rgba(199,168,107,.4);
+    transition: all .2s;
+    font-family: var(--font-display);
+    font-size: .42rem;
+    font-weight: 600;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+  }
+  .tec-upload-placeholder:hover {
+    border-color: rgba(199,168,107,.35);
+    background: rgba(199,168,107,.06);
+    color: rgba(199,168,107,.6);
+  }
+  .tec-upload-preview {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: .65rem;
+    padding: .5rem .65rem;
+    border-radius: 12px;
+    border: 1px solid rgba(199,168,107,.18);
+    background: rgba(199,168,107,.04);
+  }
+  .tec-upload-preview img {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    object-fit: cover;
+    border: 1px solid rgba(199,168,107,.15);
+    flex-shrink: 0;
+  }
+  .tec-upload-preview::after {
+    content: 'TOCAR PARA CAMBIAR';
+    font-family: var(--font-display);
+    font-size: .38rem;
+    font-weight: 600;
+    letter-spacing: .1em;
+    color: rgba(199,168,107,.3);
+    text-transform: uppercase;
+  }
+  .tec-upload-remove {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: rgba(239,68,68,.15);
+    border: 1px solid rgba(239,68,68,.3);
+    color: #ef4444;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all .2s;
+    padding: 0;
+  }
+  .tec-upload-remove:hover {
+    background: rgba(239,68,68,.3);
+    box-shadow: 0 0 12px rgba(239,68,68,.15);
+  }
+
+  /* ═══ CREATE PREVIEW ═══ */
+  .tec-create-preview {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    background: linear-gradient(160deg,
+      color-mix(in srgb, var(--midnight) 88%, var(--green)) 0%,
+      var(--midnight) 100%);
+    border: 1px solid rgba(199,168,107,.14);
+    border-radius: 12px;
+    padding: .7rem .85rem;
+    transition: border-color .2s, background .2s;
+  }
+  .tec-create-preview-logo {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    background: rgba(199,168,107,.06);
+    border: 1.5px solid rgba(199,168,107,.15);
+    transition: border-color .2s, background .2s, box-shadow .2s;
+    overflow: hidden;
+  }
+  .tec-create-preview-logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .tec-create-preview-fallback {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    font-weight: 700;
+    color: rgba(199,168,107,.3);
+  }
+  .tec-create-preview-info {
+    display: flex;
+    flex-direction: column;
+    gap: .05rem;
+    min-width: 0;
+  }
+  .tec-create-preview-name {
+    font-family: var(--font-display);
+    font-size: .65rem;
+    font-weight: 700;
+    letter-spacing: .1em;
+    color: var(--cream);
+    text-transform: uppercase;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .tec-create-preview-hint {
+    font-family: var(--font-display);
+    font-size: .4rem;
+    letter-spacing: .12em;
+    color: rgba(251,191,36,.4);
+    text-transform: uppercase;
+  }
+
+  /* ═══ EQUIPO CARD ═══ */
+  .tec-equipo-card {
+    position: relative;
+    background: linear-gradient(160deg,
+      color-mix(in srgb, var(--midnight) 88%, var(--green)) 0%,
+      var(--midnight) 100%);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.1rem;
+    overflow: hidden;
+    transition: border-color .25s, box-shadow .25s;
+    cursor: pointer;
+  }
+  .tec-equipo-card:hover {
+    border-color: rgba(199,168,107,.3);
+  }
+  .tec-equipo-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .tec-equipo-name {
+    font-family: var(--font-display);
+    font-size: .65rem;
+    font-weight: 700;
+    letter-spacing: .06em;
+    color: var(--cream);
+    text-transform: uppercase;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .tec-equipo-tourney {
+    font-size: .45rem;
+    letter-spacing: .1em;
+    color: rgba(232,220,200,.25);
+    text-transform: uppercase;
+    margin-top: .05rem;
+  }
+  .tec-equipo-count {
+    display: block;
+    font-family: var(--font-display);
+    font-size: .9rem;
+    font-weight: 700;
+    color: var(--cream);
+    line-height: 1;
+  }
+  .tec-equipo-count-label {
+    font-family: var(--font-display);
+    font-size: .38rem;
+    letter-spacing: .15em;
+    color: rgba(232,220,200,.2);
+    text-transform: uppercase;
+  }
+  .tec-equipo-delete {
+    position: absolute;
+    bottom: 8px;
+    right: 10px;
+    background: rgba(239,68,68,.08);
+    border: 1px solid rgba(239,68,68,.15);
+    color: rgba(239,68,68,.5);
+    border-radius: 6px;
+    padding: .2rem .25rem;
+    cursor: pointer;
+    transition: all .2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .tec-equipo-delete:hover {
+    background: rgba(239,68,68,.2);
+    color: #ef4444;
+    box-shadow: 0 0 10px rgba(239,68,68,.1);
+  }
+</style>
+
+<script>
+(function(){
+  // ── Tab switching ──
+  const tabs = document.querySelectorAll('#bottomNav .list');
+  const sections = {
+    torneos:   document.getElementById('tab-torneos'),
+    equipos:   document.getElementById('tab-equipos'),
+    duelos:    document.getElementById('tab-duelos'),
+    plantilla: document.getElementById('tab-plantilla'),
+    ajustes:   document.getElementById('tab-ajustes'),
+  };
+
+  function switchTab(tabId) {
+    tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === tabId));
+    Object.keys(sections).forEach(key => {
+      if (sections[key]) sections[key].classList.toggle('hidden', key !== tabId);
+    });
+    if (tabId === 'equipos') { setTimeout(renderTeams, 50); }
+  }
+
+  tabs.forEach(tab => {
+    tab.addEventListener('click', (e) => {
+      e.preventDefault();
+      switchTab(tab.dataset.tab);
+    });
+  });
+
+  // ── Notifications toggle ──
+  const notifToggle = document.getElementById('tec-notif-toggle');
+  if (notifToggle) {
+    notifToggle.checked = localStorage.getItem('tec_notifications') !== 'false';
+    notifToggle.addEventListener('change', () => {
+      localStorage.setItem('tec_notifications', notifToggle.checked);
+    });
+  }
+
+  // ── Coach name ──
+  const tecNameInput = document.getElementById('tec-name-input');
+  if (tecNameInput) {
+    tecNameInput.value = localStorage.getItem('tec_coachName') || '';
+    tecNameInput.addEventListener('input', () => {
+      localStorage.setItem('tec_coachName', tecNameInput.value);
+    });
+  }
+
+  // ── Tournament buttons ──
+  document.querySelectorAll('.tec-inscribir-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      btn.textContent = '✓ INSCRITO';
+      btn.style.opacity = '.5';
+      btn.disabled = true;
+    });
+  });
+
+  // ── Equipos: Team Management ──
+  const CREATION_COLORS = ['#00ff88','#f59e0b','#f87171','#a78bfa','#38bdf8','#e2ff5d','#ff6b6b','#c7a86b'];
+
+  const _id = id => document.getElementById(id);
+
+  function getTeams() {
+    return JSON.parse(localStorage.getItem('tec_teams') || '[]');
+  }
+
+  function saveTeams(teams) {
+    localStorage.setItem('tec_teams', JSON.stringify(teams));
+  }
+
+  function getActiveTeamId() {
+    return localStorage.getItem('tec_activeTeam') || '';
+  }
+
+  function setActiveTeamId(id) {
+    localStorage.setItem('tec_activeTeam', id);
+  }
+
+  function generateId() {
+    return 'team_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+  }
+
+  function renderTeams() {
+    const list = document.getElementById('equipos-list');
+    if (!list) return;
+    const teams = getTeams();
+    const activeId = getActiveTeamId();
+    const squad = JSON.parse(localStorage.getItem('tec_squad') || '[]');
+    const squadCount = squad.length;
+
+    if (!teams.length) {
+      list.innerHTML = '<p class="tec-empty">Aún no tienes equipos. Crea uno para empezar.</p>';
+      return;
+    }
+
+    list.innerHTML = teams.map(t => {
+      const isActive = t.id === activeId;
+      return `
+        <div class="tec-equipo-card ${isActive ? 'tec-equipo-card--active' : ''}" data-team-id="${t.id}">
+          <span class="hud-c hud-c--tl"></span><span class="hud-c hud-c--tr"></span>
+          <span class="hud-c hud-c--bl"></span><span class="hud-c hud-c--br"></span>
+          <span class="tec-equipo-check">${isActive ? '✓' : ''}</span>
+          <div class="flex items-center gap-3">
+            <div class="tec-equipo-avatar" style="background:${t.color}20;border-color:${t.color}55">
+              ${t.logo ? `<img src="${t.logo}" alt="${t.name}" style="width:100%;height:100%;object-fit:cover;border-radius:10px" />` : `<span style="font-size:.9rem">${t.emoji || '🛡️'}</span>`}
+            </div>
+            <div class="flex-1 min-w-0">
+              <h3 class="tec-equipo-name">${t.name}</h3>
+              <p class="tec-equipo-tourney">${isActive ? 'EQUIPO ACTIVO' : 'TOCAR PARA SELECCIONAR'}</p>
+            </div>
+            <div class="text-right">
+              <span class="tec-equipo-count">${isActive ? squadCount : '-'}</span>
+              <span class="tec-equipo-count-label">JUG</span>
+            </div>
+          </div>
+          <button class="tec-equipo-delete" data-team-id="${t.id}" title="Eliminar equipo">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          </button>
+        </div>`;
+    }).join('');
+
+    list.querySelectorAll('.tec-equipo-card').forEach(card => {
+      card.addEventListener('click', (e) => {
+        if (e.target.closest('.tec-equipo-delete')) return;
+        selectTeam(card.dataset.teamId);
+      });
+    });
+
+    list.querySelectorAll('.tec-equipo-delete').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const teamId = btn.dataset.teamId;
+        if (confirm('¿Eliminar este equipo? Se perderá la plantilla asociada.')) {
+          deleteTeam(teamId);
+        }
+      });
+    });
+  }
+
+  function selectTeam(teamId) {
+    const teams = getTeams();
+    const team = teams.find(t => t.id === teamId);
+    if (!team) return;
+
+    const currentSquad = JSON.parse(localStorage.getItem('tec_squad') || '[]');
+    const currentInvites = JSON.parse(localStorage.getItem('tec_invites') || '[]');
+    const activeId = getActiveTeamId();
+    if (activeId) {
+      const currentTeam = teams.find(t => t.id === activeId);
+      if (currentTeam) {
+        currentTeam.squad = currentSquad;
+        currentTeam.invites = currentInvites;
+      }
+    }
+
+    setActiveTeamId(teamId);
+
+    localStorage.setItem('tec_teamName', team.name);
+    localStorage.setItem('tec_teamColor', team.color);
+    localStorage.setItem('tec_teamEmoji', team.emoji || '🛡️');
+    localStorage.setItem('tec_teamLogo', team.logo || '');
+
+    const savedSquad = team.squad || [];
+    const savedInvites = team.invites || [];
+    localStorage.setItem('tec_squad', JSON.stringify(savedSquad));
+    localStorage.setItem('tec_invites', JSON.stringify(savedInvites));
+
+    saveTeams(teams);
+    location.reload();
+  }
+
+  function deleteTeam(teamId) {
+    let teams = getTeams();
+    const wasActive = getActiveTeamId() === teamId;
+    teams = teams.filter(t => t.id !== teamId);
+    saveTeams(teams);
+
+    if (wasActive) {
+      localStorage.removeItem('tec_activeTeam');
+      localStorage.setItem('tec_teamName', 'SIN NOMBRE');
+      localStorage.setItem('tec_teamColor', '#00ff88');
+      localStorage.setItem('tec_teamEmoji', '🛡️');
+      localStorage.setItem('tec_teamLogo', '');
+      localStorage.setItem('tec_squad', '[]');
+      localStorage.setItem('tec_invites', '[]');
+
+      if (teams.length > 0) {
+        selectTeam(teams[0].id);
+        return;
+      }
+      location.reload();
+    } else {
+      renderTeams();
+    }
+  }
+
+  // ── Create team modal ──
+  let newTeamLogo = '';
+  let newTeamColor = '#00ff88';
+
+  function updatePreview() {
+    const name = _id('new-team-name').value.trim().toUpperCase() || 'NOMBRE';
+    _id('preview-name').textContent = name;
+    const previewEl = _id('create-preview');
+    const logoWrap = _id('preview-logo');
+    const previewImg = _id('preview-img');
+    const fallback = _id('preview-fallback');
+
+    if (newTeamLogo) {
+      previewImg.src = newTeamLogo;
+      previewImg.classList.remove('hidden');
+      fallback.classList.add('hidden');
+    } else {
+      previewImg.classList.add('hidden');
+      fallback.classList.remove('hidden');
+    }
+
+    if (previewEl) previewEl.style.borderColor = newTeamColor + '44';
+    if (logoWrap) {
+      logoWrap.style.borderColor = newTeamColor + '55';
+      logoWrap.style.boxShadow = `0 0 18px ${newTeamColor}18`;
+    }
+  }
+
+  function handleLogoFile(file) {
+    if (!file) return;
+    const maxSize = 500 * 1024;
+    if (file.size > maxSize) {
+      alert('La imagen es demasiado grande. Máximo 500KB.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      newTeamLogo = e.target.result;
+      _id('upload-placeholder').classList.add('hidden');
+      _id('upload-preview-img').src = newTeamLogo;
+      _id('upload-preview').classList.remove('hidden');
+      updatePreview();
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function resetUpload() {
+    newTeamLogo = '';
+    _id('upload-placeholder').classList.remove('hidden');
+    _id('upload-preview').classList.add('hidden');
+    _id('upload-preview-img').src = '';
+    _id('logo-upload').value = '';
+    updatePreview();
+  }
+
+  function openCreateModal() {
+    newTeamLogo = '';
+    newTeamColor = '#00ff88';
+    _id('new-team-name').value = '';
+    _id('new-team-name').focus();
+    resetUpload();
+
+    document.querySelectorAll('#new-team-color-picker .tec-color-dot').forEach(b => {
+      b.classList.toggle('active', b.dataset.color === newTeamColor);
+    });
+
+    updatePreview();
+    _id('modal-crear-equipo').classList.remove('hidden');
+  }
+
+  // Upload
+  _id('upload-area').addEventListener('click', (e) => {
+    if (e.target.closest('.tec-upload-remove')) return;
+    _id('logo-upload').click();
+  });
+  _id('logo-upload').addEventListener('change', (e) => {
+    handleLogoFile(e.target.files[0]);
+  });
+  _id('btn-remove-logo').addEventListener('click', (e) => {
+    e.stopPropagation();
+    resetUpload();
+  });
+
+  // Color picker
+  document.querySelectorAll('#new-team-color-picker .tec-color-dot').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#new-team-color-picker .tec-color-dot').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      newTeamColor = btn.dataset.color;
+      updatePreview();
+    });
+  });
+
+  // Name input live preview
+  _id('new-team-name').addEventListener('input', updatePreview);
+
+  // Create button
+  _id('btn-crear-equipo').addEventListener('click', openCreateModal);
+
+  // Save new team
+  _id('btn-save-new-team').addEventListener('click', () => {
+    const name = _id('new-team-name').value.trim();
+    if (!name) return;
+
+    const teams = getTeams();
+    const newId = generateId();
+    const newTeam = {
+      id: newId,
+      name: name,
+      emoji: '🛡️',
+      color: newTeamColor,
+      logo: newTeamLogo,
+      squad: [],
+      invites: [],
+    };
+    teams.push(newTeam);
+    saveTeams(teams);
+    selectTeam(newId);
+    _id('modal-crear-equipo').classList.add('hidden');
+  });
+
+  // Modal close
+  document.querySelectorAll('[data-close]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (btn.dataset.close === 'modal-crear-equipo') {
+        _id('modal-crear-equipo').classList.add('hidden');
+      }
+    });
+  });
+  document.querySelectorAll('.tec-overlay').forEach(ov => {
+    ov.addEventListener('click', e => { if (e.target === ov) ov.classList.add('hidden'); });
+  });
+
+  // ── Init: migrate legacy data if needed ──
+  const existingTeams = getTeams();
+  if (!existingTeams.length) {
+    const legacyName = localStorage.getItem('tec_teamName');
+    if (legacyName && legacyName !== 'SIN NOMBRE') {
+      const legacyTeam = {
+        id: generateId(),
+        name: legacyName,
+        emoji: localStorage.getItem('tec_teamEmoji') || '🛡️',
+        color: localStorage.getItem('tec_teamColor') || '#00ff88',
+        logo: localStorage.getItem('tec_teamLogo') || '',
+        squad: JSON.parse(localStorage.getItem('tec_squad') || '[]'),
+        invites: JSON.parse(localStorage.getItem('tec_invites') || '[]'),
+      };
+      saveTeams([legacyTeam]);
+      setActiveTeamId(legacyTeam.id);
+    }
+  }
+
+  renderTeams();
+})();
+</script>
