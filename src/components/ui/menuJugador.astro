@@ -9,7 +9,7 @@ const TABS = [
 ];
 ---
 
-<div class="navigation" id="bottomNav">
+<div class="nav" id="bottomNav">
   <ul>
     {TABS.map((t, i) => (
       <li class="list {i === 0 ? 'active' : ''}" data-tab={t.id}>
@@ -27,9 +27,7 @@ const TABS = [
 <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
 
 <style>
-  @import url("https://fonts.googleapis.com/css?family=Poppins:100,200,300,400,500,600,700,800,900");
-
-  .navigation{
+  .nav{
     position: fixed;
     bottom: 0;
     left: 50%;
@@ -37,18 +35,18 @@ const TABS = [
     width: 100%;
     max-width: 720px;
     height: 70px;
-    background: linear-gradient(180deg, color-mix(in srgb, #050d08 90%, #fbbf24) 0%, #050d08 100%);
+    background: linear-gradient(160deg, color-mix(in srgb, #0a0e1a 88%, #00ff88) 0%, #0a0e1a 100%);
     backdrop-filter: blur(16px);
     display: flex;
     justify-content: center;
     align-items: center;
     z-index: 100;
-    border-top: 1px solid rgba(199,168,107,.14);
+    border-top: 1px solid rgba(0,255,136,.12);
     border-radius: 16px 16px 0 0;
     box-shadow: 0 -8px 40px rgba(0,0,0,.5);
   }
 
-  .navigation ul{
+  .nav ul{
     display: flex;
     width: 100%;
     justify-content: space-around;
@@ -57,7 +55,7 @@ const TABS = [
     position: relative;
   }
 
-  .navigation ul li{
+  .nav ul li{
     position: relative;
     list-style: none;
     width: 70px;
@@ -65,7 +63,7 @@ const TABS = [
     z-index: 1;
   }
 
-  .navigation ul li a{
+  .nav ul li a{
     position: relative;
     display: flex;
     justify-content: center;
@@ -77,7 +75,7 @@ const TABS = [
     text-decoration: none;
   }
 
-  .navigation ul li a .icon{
+  .nav ul li a .icon{
     position: relative;
     display: block;
     line-height: 75px;
@@ -87,12 +85,12 @@ const TABS = [
     color: rgba(232,220,200,.3);
   }
 
-  .navigation ul li.active a .icon{
+  .nav ul li.active a .icon{
     transform: translateY(-32px);
-    color: #fbbf24;
+    color: #00ff88;
   }
 
-  .navigation ul li a .text{
+  .nav ul li a .text{
     position: absolute;
     color: rgba(232,220,200,.5);
     font-family: 'Orbitron', monospace;
@@ -105,10 +103,10 @@ const TABS = [
     text-transform: uppercase;
   }
 
-  .navigation ul li.active a .text{
+  .nav ul li.active a .text{
     opacity: 1;
     transform: translateY(10px);
-    color: #fbbf24;
+    color: #00ff88;
   }
 
   .indicator{
@@ -116,17 +114,17 @@ const TABS = [
     top: -35px;
     width: 70px;
     height: 70px;
-    background: rgba(251,191,36,.08);
+    background: rgba(0,255,136,.08);
     border-radius: 50%;
     border: none;
     transition: 0.5s;
     pointer-events: none;
-    box-shadow: 0 0 20px rgba(251,191,36,.05), inset 0 0 12px rgba(251,191,36,.04);
+    box-shadow: 0 0 20px rgba(0,255,136,.05), inset 0 0 12px rgba(0,255,136,.04);
   }
 
   @media(max-width: 360px){
-    .navigation ul li{ width: 60px; height: 60px; }
-    .navigation ul li a .icon{ font-size: 1.2em; line-height: 65px; }
+    .nav ul li{ width: 60px; height: 60px; }
+    .nav ul li a .icon{ font-size: 1.2em; line-height: 65px; }
     .indicator{ width: 60px; height: 60px; top: -30px; }
   }
 </style>

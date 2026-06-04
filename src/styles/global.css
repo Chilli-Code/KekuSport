@@ -437,3 +437,160 @@ html {
     transform: translateY(-1px);
     outline: none;
   }
+
+
+  /* CARD DE JUGADORES */
+
+  .squad-cards-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: .65rem;
+  }
+
+  .squad-pcard {
+    position: relative;
+    display: block;
+    aspect-ratio: 3 / 4;
+    text-decoration: none;
+    border-radius: 12px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.3s cubic-bezier(0.2,0.9,0.4,1.1);
+  }
+  .squad-pcard:hover { transform: translateY(-4px) scale(1.02); }
+
+  .squad-pcard::before {
+    content: '';
+    position: absolute; inset: 0;
+    border-radius: 12px;
+    border: 1px solid color-mix(in srgb, var(--color-theme-gold) 25%, transparent);
+    transition: border-color 0.3s, box-shadow 0.3s;
+    z-index: 8;
+    pointer-events: none;
+  }
+  .squad-pcard:hover::before {
+    border-color: #00ff88;
+    box-shadow: 0 0 0 1px #00ff88, inset 0 0 20px rgba(0,255,136,0.08), 0 0 30px rgba(0,255,136,0.25);
+  }
+
+  .squad-pcard-corner {
+    position: absolute;
+    width: 14px; height: 14px;
+    border-color: color-mix(in srgb, var(--color-theme-gold) 50%, transparent);
+    border-style: solid;
+    transition: width 0.3s, height 0.3s, border-color 0.3s, box-shadow 0.3s;
+    z-index: 9;
+    pointer-events: none;
+  }
+  .squad-pcard-corner--tl { top: 8px; left: 8px;  border-width: 1.5px 0 0 1.5px; }
+  .squad-pcard-corner--tr { top: 8px; right: 8px;  border-width: 1.5px 1.5px 0 0; }
+  .squad-pcard-corner--bl { bottom: 8px; left: 8px;  border-width: 0 0 1.5px 1.5px; }
+  .squad-pcard-corner--br { bottom: 8px; right: 8px;  border-width: 0 1.5px 1.5px 0; }
+  .squad-pcard:hover .squad-pcard-corner {
+    width: 20px; height: 20px;
+    border-color: #00ff88;
+    box-shadow: 0 0 10px #00ff88;
+  }
+
+  .squad-pcard-img-wrap {
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, #061a0e 0%, #030d07 100%);
+  }
+  .squad-pcard-img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    object-position: top center;
+    filter: saturate(0.88) brightness(0.92);
+    transition: transform 0.45s ease, filter 0.45s ease;
+    display: block;
+  }
+  .squad-pcard:hover .squad-pcard-img {
+    transform: scale(1.07);
+    filter: saturate(1.05) brightness(1.0);
+  }
+
+  .squad-pcard-overlay {
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, transparent 30%, rgba(0,10,5,0.55) 65%, rgba(0,8,4,0.97) 100%);
+    pointer-events: none;
+  }
+
+  .squad-pcard-lightning {
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 3px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+    z-index: 3;
+  }
+  .squad-pcard-lightning--l {
+    left: 0;
+    background: linear-gradient(180deg, transparent, rgba(0,255,136,0.6), transparent);
+  }
+  .squad-pcard-lightning--r {
+    right: 0;
+    background: linear-gradient(180deg, transparent, rgba(124,58,237,0.6), transparent);
+  }
+  .squad-pcard:hover .squad-pcard-lightning { opacity: 1; }
+
+  .squad-pcard-glow {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 50% 20%, rgba(0,255,136,0.18) 0%, transparent 65%);
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    pointer-events: none;
+    z-index: 4;
+  }
+  .squad-pcard:hover .squad-pcard-glow { opacity: 1; }
+
+  .squad-pcard-info {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    padding: 0.75rem 0.75rem 1rem;
+    text-align: center;
+    z-index: 10;
+  }
+
+  .squad-pcard-divider {
+    width: 1.75rem;
+    height: 1px;
+    background: rgba(0,255,136,0.5);
+    margin: 0 auto 0.35rem;
+    box-shadow: 0 0 6px rgba(0,255,136,0.4);
+    transition: width 0.3s, background 0.3s;
+  }
+  .squad-pcard:hover .squad-pcard-divider {
+    width: 3rem;
+    background: #00ff88;
+    box-shadow: 0 0 10px #00ff88;
+  }
+
+  .squad-pcard-name {
+    display: block;
+    font-family: var(--font-cinzel, 'Cinzel'), serif;
+    font-size: .65rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--color-theme-cream);
+    text-transform: uppercase;
+    text-shadow: 0 0 12px rgba(0,0,0,0.9), 0 0 8px rgba(0,255,136,0.3);
+    transition: color 0.3s;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .squad-pcard:hover .squad-pcard-name { color: #fff; }
+
+  .squad-pcard-pos {
+    display: block;
+    font-family: var(--font-cinzel, 'Cinzel'), serif;
+    font-size: .45rem;
+    letter-spacing: 0.1em;
+    color: color-mix(in srgb, var(--color-theme-cream) 55%, transparent);
+    text-transform: uppercase;
+    margin-top: .1rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }

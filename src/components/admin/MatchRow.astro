@@ -1,0 +1,38 @@
+---
+export interface Props {
+  match: { id: string; home_score: number | null; away_score: number | null; scheduled_date: string | null; status: string }
+  home: { name: string } | undefined
+  away: { name: string } | undefined
+  statusClass: string
+  showTime?: boolean
+}
+const { match: m, home, away, statusClass, showTime } = Astro.props
+---
+
+<div class="ms-match" data-match-id={m.id}>
+  <div class="ms-match-teams">
+    <span class="ms-team">{home?.name || '—'}</span>
+    <span class="ms-vs">vs</span>
+    <span class="ms-team">{away?.name || '—'}</span>
+  </div>
+  <div class="ms-match-mid">
+    {m.home_score != null && m.away_score != null ? (
+      <span class="ms-score">{m.home_score} — {m.away_score}</span>
+    ) : (
+      <span class="ms-date">
+        {m.scheduled_date
+          ? new Date(m.scheduled_date).toLocaleString('es-CO', {
+              day: '2-digit',
+              month: 'short',
+              ...(showTime ? { hour: '2-digit', minute: '2-digit' } : {}),
+            })
+          : 'Sin fecha'}
+      </span>
+    )}
+  </div>
+  <div class="ms-match-right">
+    <span class={statusClass}>{m.status}</span>
+    <button class="ms-icon-btn" data-edit={m.id} title="Editar">✏️</button>
+    <button class="ms-icon-btn" data-delete={m.id} title="Eliminar">🗑️</button>
+  </div>
+</div>

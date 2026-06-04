@@ -1,0 +1,615 @@
+---
+export interface Props {
+  tournamentId: string
+  maxTeams: number
+}
+
+const { tournamentId, maxTeams } = Astro.props
+---
+
+<div class="tm-teams" id="team-manager" data-tournament-id={tournamentId} data-max-teams={maxTeams}>
+  <!-- Header -->
+  <div class="tm-teams-header">
+    <div class="tm-teams-header-left">
+      <h3 class="tm-teams-title">Equipos participantes</h3>
+      <p class="tm-teams-sub" id="team-count">Cargando...</p>
+    </div>
+    <div class="tm-teams-header-right">
+      <div class="tm-teams-search-wrap">
+        <input class="tm-teams-search" id="team-search" type="text" placeholder="Buscar equipo..." autocomplete="off" />
+      </div>
+      <button class="tm-teams-add-btn" id="btn-add-team">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Añadir equipo
+      </button>
+    </div>
+  </div>
+
+  <!-- Progress bar -->
+  <div class="tm-teams-progress-wrap">
+    <div class="tm-teams-progress-track">
+      <div class="tm-teams-progress-fill" id="team-progress-fill" style="width:0%"></div>
+    </div>
+    <span class="tm-teams-progress-label" id="team-progress-label">0%</span>
+  </div>
+
+  <!-- Grid -->
+  <div id="team-list" class="tm-teams-grid"></div>
+
+  <!-- Pending requests -->
+  <div id="pending-requests-section" class="hidden mt-4 pt-4 border-t border-white/10">
+    <h3 class="tm-teams-title mb-3">Solicitudes de inscripción</h3>
+    <div id="pending-requests-list" class="flex flex-col gap-2"></div>
+    <div id="pending-requests-empty" class="text-[.48rem] text-[var(--text-3)] py-2">No hay solicitudes pendientes</div>
+  </div>
+
+  <!-- Empty -->
+  <div class="tm-teams-empty" id="team-empty">
+    <div class="tm-teams-empty-icon">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+      </svg>
+    </div>
+    <p class="tm-teams-empty-text">No hay equipos registrados todavía</p>
+    <p class="tm-teams-empty-hint">Usa el botón "Añadir equipo" para agregar participantes al torneo</p>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="team-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title">Añadir equipo</h3>
+      <button class="modal-close" id="modal-close">&times;</button>
+    </div>
+    <form id="team-form">
+      <input type="hidden" name="tournamentId" value={tournamentId} />
+      <input type="hidden" id="selected-team-id" name="selectedTeamId" value="" />
+      <div class="modal-field">
+        <label class="modal-label" for="team-name">Nombre del equipo</label>
+        <div class="autocomplete-wrap">
+          <input class="modal-input" id="team-name" name="name" required placeholder="Ej: Los Rayos" autocomplete="off" />
+          <ul class="autocomplete-list" id="autocomplete-list"></ul>
+        </div>
+        <p class="modal-hint" id="modal-hint"></p>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="tm-btn-cancel" id="modal-cancel">Cancelar</button>
+        <button type="submit" class="tm-btn-primary" id="modal-submit-btn">Guardar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  const root = document.getElementById('team-manager')!
+  const tournamentId = root.dataset.tournamentId!
+  const maxTeams = Number(root.dataset.maxTeams)
+
+  const teamList = document.getElementById('team-list')!
+  const teamEmpty = document.getElementById('team-empty')!
+  const teamCount = document.getElementById('team-count')!
+  const progressFill = document.getElementById('team-progress-fill')!
+  const progressLabel = document.getElementById('team-progress-label')!
+  const modal = document.getElementById('team-modal')!
+  const form = document.getElementById('team-form') as HTMLFormElement
+  const btnAdd = document.getElementById('btn-add-team')!
+
+  let allTeamsCache: any[] = []
+
+  async function loadTeams() {
+    const res = await fetch('/api/teams', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'list', tournamentId }),
+    })
+    const data = await res.json()
+    if (!data.success) return
+    allTeamsCache = data.teams || []
+    renderTeams(allTeamsCache)
+  }
+
+  function getInitials(name: string): string {
+    return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+  }
+
+  function getColorForName(name: string): string {
+    const colors = ['#00ff88', '#60a5fa', '#f59e0b', '#f87171', '#a78bfa', '#34d399', '#f472b6', '#38bdf8']
+    let hash = 0
+    for (let i = 0; i < name.length; i++) { hash = name.charCodeAt(i) + ((hash << 5) - hash) }
+    return colors[Math.abs(hash) % colors.length]
+  }
+
+  function renderTeams(teams: any[]) {
+    const pct = maxTeams > 0 ? Math.round((teams.length / maxTeams) * 100) : 0
+    teamCount.textContent = `${teams.length} de ${maxTeams} equipos registrados`
+    progressFill.style.width = `${pct}%`
+    progressLabel.textContent = `${pct}%`
+
+    if (teams.length === 0) {
+      teamList.innerHTML = ''
+      teamEmpty.style.display = 'flex'
+      return
+    }
+
+    teamEmpty.style.display = 'none'
+    teamList.innerHTML = teams.map((t, i) => {
+      const color = t.color || getColorForName(t.name)
+      const initials = getInitials(t.name)
+      return `
+        <div class="group relative flex items-center gap-2.5 p-3 rounded-xl border border-white/10 bg-gradient-to-br from-white/[0.025] to-white/[0.005] hover:border-white/20 hover:bg-white/[0.04] hover:-translate-y-0.5 hover:shadow-lg overflow-hidden transition-all duration-200" data-id="${t.id}" style="--team-color: ${color}">
+          <span class="hud-c hud-c--tl" style="border-color:${color}"></span>
+          <span class="hud-c hud-c--tr" style="border-color:${color}"></span>
+          <span class="hud-c hud-c--bl" style="border-color:${color}"></span>
+          <span class="hud-c hud-c--br" style="border-color:${color}"></span>
+          <div class="w-[38px] h-[38px] rounded-xl flex items-center justify-center shrink-0 border-2 transition-all duration-200 group-hover:scale-105" style="background:${color}18; border-color:${color}44; box-shadow:0 0 12px ${color}08; group-hover:box-shadow:0 0 20px ${color}18">
+            <span class="text-[.65rem] font-black font-[family-name:var(--font-cinzel,'Cinzel')]" style="color:${color}">${initials}</span>
+          </div>
+          <div class="flex-1 min-w-0">
+            <span class="block text-[.55rem] font-bold text-[var(--text)] truncate transition-colors group-hover:text-[rgba(232,226,216,.9)]">${escapeHtml(t.name)}</span>
+            <span class="block text-[.4rem] text-[var(--text-3)] mt-0.5 font-[family-name:var(--font-cinzel,'Cinzel')] tracking-wider uppercase">Equipo #${i + 1}</span>
+          </div>
+          <button class="tm-teams-card-del opacity-0 group-hover:opacity-100 p-1.5 rounded-lg bg-white/[0.02] border border-transparent hover:border-red-400/20 hover:bg-red-500/10 hover:text-red-400 text-[var(--text-3)] transition-all shrink-0 flex items-center justify-center" data-id="${t.id}" title="Eliminar">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+              <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+            </svg>
+          </button>
+        </div>
+      `
+    }).join('')
+
+    document.querySelectorAll<HTMLButtonElement>('.tm-teams-card-del').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('¿Quitar este equipo del torneo?')) return
+        const res = await fetch('/api/teams', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'removeFromTournament', id: btn.dataset.id, tournamentId }),
+        })
+        const data = await res.json()
+        if (data.success) loadTeams()
+      })
+    })
+  }
+
+  function escapeHtml(str: string) {
+    const div = document.createElement('div')
+    div.textContent = str
+    return div.innerHTML
+  }
+
+  const selectedTeamIdInput = document.getElementById('selected-team-id') as HTMLInputElement
+  const modalHint = document.getElementById('modal-hint')!
+  const submitBtn = document.getElementById('modal-submit-btn') as HTMLButtonElement
+
+  function resetModalState() {
+    selectedTeamIdInput.value = ''
+    modalHint.textContent = ''
+    modalHint.className = 'modal-hint'
+    submitBtn.textContent = 'Guardar'
+  }
+
+  btnAdd.addEventListener('click', () => {
+    autocompleteList.classList.remove('is-visible')
+    resetModalState()
+    if (maxTeams && allTeamsCache.length >= maxTeams) {
+      alert('Límite de equipos alcanzado')
+      return
+    }
+    modal.classList.add('modal--open')
+  })
+
+  document.getElementById('modal-close')!.addEventListener('click', () => {
+    modal.classList.remove('modal--open')
+    autocompleteList.classList.remove('is-visible')
+    resetModalState()
+  })
+  document.getElementById('modal-cancel')!.addEventListener('click', () => {
+    modal.classList.remove('modal--open')
+    autocompleteList.classList.remove('is-visible')
+    resetModalState()
+  })
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      modal.classList.remove('modal--open')
+      autocompleteList.classList.remove('is-visible')
+      resetModalState()
+    }
+  })
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault()
+    const fd = new FormData(form)
+    const name = fd.get('name') as string
+    if (!name.trim()) return
+
+    submitBtn.disabled = true
+    submitBtn.textContent = 'Enviando...'
+
+    const selectedId = selectedTeamIdInput.value
+
+    if (selectedId) {
+      const res = await fetch('/api/invitations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'create', tournamentId, teamId: selectedId }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        form.reset()
+        modal.classList.remove('modal--open')
+        resetModalState()
+        alert('Invitación enviada al técnico del equipo')
+        loadTeams()
+      } else {
+        submitBtn.disabled = false
+        submitBtn.textContent = 'Enviar invitación'
+        alert(data.error || 'Error al enviar invitación')
+      }
+    } else {
+      const res = await fetch('/api/teams', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'create', tournamentId, name: name.trim() }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        form.reset()
+        modal.classList.remove('modal--open')
+        resetModalState()
+        loadTeams()
+      } else {
+        submitBtn.disabled = false
+        submitBtn.textContent = 'Guardar'
+        alert('Error al crear equipo')
+      }
+    }
+  })
+
+  loadTeams()
+  loadPendingRequests()
+
+  async function loadPendingRequests() {
+    const section = document.getElementById('pending-requests-section')!
+    const list = document.getElementById('pending-requests-list')!
+    const empty = document.getElementById('pending-requests-empty')!
+    try {
+      const res = await fetch('/api/invitations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'listByTournament', tournamentId }),
+      })
+      const data = await res.json()
+      if (!data.success) return
+      const pending = (data.invitations || []).filter((inv: any) => inv.status === 'pending')
+      if (!pending.length) {
+        section.classList.add('hidden')
+        return
+      }
+      section.classList.remove('hidden')
+      empty.classList.add('hidden')
+      list.innerHTML = pending.map((inv: any) => `
+        <div class="flex items-center gap-2.5 p-2.5 rounded-xl border border-white/10 bg-white/[0.02]" data-id="${inv.id}">
+          <div class="w-[34px] h-[34px] rounded-xl flex items-center justify-center shrink-0 border-2" style="background:${inv.team_color || '#00ff88'}18; border-color:${inv.team_color || '#00ff88'}44">
+            <span class="text-[.55rem] font-black font-[family-name:var(--font-cinzel,'Cinzel')]" style="color:${inv.team_color || '#00ff88'}">${(inv.team_name || '?').slice(0, 2).toUpperCase()}</span>
+          </div>
+          <div class="flex-1 min-w-0">
+            <span class="block text-[.5rem] font-bold text-[var(--text)] truncate">${escapeHtml(inv.team_name)}</span>
+            <span class="block text-[.38rem] text-[var(--text-3)] mt-0.5 uppercase tracking-wider">Solicita inscripción</span>
+          </div>
+          <div class="flex gap-1.5 shrink-0">
+            <button class="px-2.5 py-1.5 rounded-lg text-[.4rem] font-bold uppercase tracking-wider font-[family-name:var(--font-cinzel,'Cinzel')] border border-green-400/30 bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-all" data-inv-accept="${inv.id}">ACEPTAR</button>
+            <button class="px-2.5 py-1.5 rounded-lg text-[.4rem] font-bold uppercase tracking-wider font-[family-name:var(--font-cinzel,'Cinzel')] border border-white/10 bg-white/[0.02] text-[var(--text-3)] hover:border-red-400/20 hover:bg-red-500/10 hover:text-red-400 transition-all" data-inv-reject="${inv.id}">RECHAZAR</button>
+          </div>
+        </div>
+      `).join('')
+
+      list.querySelectorAll<HTMLButtonElement>('[data-inv-accept]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          await fetch('/api/invitations', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'accept', id: btn.dataset.invAccept }),
+          })
+          loadPendingRequests()
+          loadTeams()
+        })
+      })
+      list.querySelectorAll<HTMLButtonElement>('[data-inv-reject]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          await fetch('/api/invitations', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'reject', id: btn.dataset.invReject }),
+          })
+          loadPendingRequests()
+        })
+      })
+    } catch {}
+  }
+
+  // ── Search filter ──
+  const searchInput = document.getElementById('team-search') as HTMLInputElement
+  searchInput.addEventListener('input', () => {
+    const q = searchInput.value.trim().toLowerCase()
+    if (!q) {
+      renderTeams(allTeamsCache)
+      return
+    }
+    const filtered = allTeamsCache.filter(t => t.name.toLowerCase().includes(q))
+    renderTeams(filtered)
+  })
+
+  // ── Autocomplete (busca en todos los equipos del sistema) ──
+  let searchCache: any[] = []
+  const teamNameInput = document.getElementById('team-name') as HTMLInputElement
+  const autocompleteList = document.getElementById('autocomplete-list')!
+
+  function highlightMatch(text: string, query: string): string {
+    const idx = text.toLowerCase().indexOf(query.toLowerCase())
+    if (idx === -1) return escapeHtml(text)
+    const before = escapeHtml(text.slice(0, idx))
+    const match = escapeHtml(text.slice(idx, idx + query.length))
+    const after = escapeHtml(text.slice(idx + query.length))
+    return `${before}<mark>${match}</mark>${after}`
+  }
+
+  async function renderAutocomplete(query: string) {
+    if (!query) {
+      autocompleteList.classList.remove('is-visible')
+      return
+    }
+    const q = query.toLowerCase()
+    if (!searchCache.length) {
+      const res = await fetch('/api/teams', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'search', q }),
+      })
+      const data = await res.json()
+      if (!data.success) return
+      searchCache = data.teams || []
+    }
+    const matches = searchCache.filter(t => t.name.toLowerCase().includes(q)).slice(0, 8)
+    if (!matches.length) {
+      autocompleteList.classList.remove('is-visible')
+      return
+    }
+    autocompleteList.innerHTML = matches.map(t =>
+      `<li class="autocomplete-item" data-id="${t.id}">${highlightMatch(t.name, q)}</li>`
+    ).join('')
+    autocompleteList.classList.add('is-visible')
+  }
+
+  let searchTimer: number
+  teamNameInput.addEventListener('input', () => {
+    clearTimeout(searchTimer)
+    searchCache = []
+    selectedTeamIdInput.value = ''
+    modalHint.textContent = ''
+    modalHint.className = 'modal-hint'
+    submitBtn.textContent = 'Guardar'
+    searchTimer = window.setTimeout(() => renderAutocomplete(teamNameInput.value.trim()), 150)
+  })
+
+  function selectTeamFromAutocomplete(id: string) {
+    const team = searchCache.find(t => t.id === id) || allTeamsCache.find(t => t.id === id)
+    if (!team) return
+    teamNameInput.value = team.name
+    selectedTeamIdInput.value = team.id
+    modalHint.textContent = 'Este equipo ya existe. Se enviará invitación al técnico.'
+    modalHint.className = 'modal-hint is-invite'
+    submitBtn.textContent = 'Enviar invitación'
+    autocompleteList.classList.remove('is-visible')
+  }
+
+  autocompleteList.addEventListener('mousedown', (e: MouseEvent) => {
+    const li = (e.target as HTMLElement).closest('.autocomplete-item') as HTMLElement
+    if (!li) return
+    e.preventDefault()
+    selectTeamFromAutocomplete(li.dataset.id!)
+  })
+
+  teamNameInput.addEventListener('blur', () => {
+    setTimeout(() => autocompleteList.classList.remove('is-visible'), 150)
+  })
+
+  teamNameInput.addEventListener('keydown', (e: KeyboardEvent) => {
+    const items = autocompleteList.querySelectorAll<HTMLElement>('.autocomplete-item')
+    if (!items.length) return
+    const selected = autocompleteList.querySelector('.is-selected') as HTMLElement | null
+    let idx = selected ? Array.from(items).indexOf(selected) : -1
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      idx = Math.min(idx + 1, items.length - 1)
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      idx = Math.max(idx - 1, 0)
+    } else if (e.key === 'Enter' && selected) {
+      e.preventDefault()
+      selectTeamFromAutocomplete(selected.dataset.id!)
+      autocompleteList.classList.remove('is-visible')
+      return
+    } else return
+    items.forEach(el => el.classList.remove('is-selected'))
+    items[idx].classList.add('is-selected')
+    items[idx].scrollIntoView({ block: 'nearest' })
+  })
+</script>
+
+<style>
+  /* ── Container ── */
+  .tm-teams {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.25rem;
+  }
+
+  /* ── Header ── */
+  .tm-teams-header {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    gap: .75rem; margin-bottom: .85rem;
+  }
+  .tm-teams-header-right {
+    display: flex; align-items: center; gap: .5rem; flex-shrink: 0;
+  }
+  .tm-teams-search-wrap { position: relative; }
+  .tm-teams-search {
+    padding: .45rem .7rem; border-radius: 8px;
+    border: 1px solid var(--border); background: rgba(255,255,255,.04);
+    color: var(--text); font-size: .48rem; outline: none; width: 180px;
+    font-family: inherit; transition: border-color .2s;
+  }
+  .tm-teams-search:focus { border-color: var(--green); }
+  .tm-teams-search::placeholder { color: var(--text-3); }
+  .tm-teams-title {
+    font-family: var(--font-cinzel,'Cinzel'),serif;
+    font-size: .6rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+    color: rgba(232,226,216,.7); margin-bottom: .2rem;
+  }
+  .tm-teams-sub { font-size: .48rem; color: var(--text-3); }
+  .tm-teams-add-btn {
+    display: inline-flex; align-items: center; gap: .35rem;
+    padding: .45rem .75rem; border-radius: 8px;
+    border: 1px solid rgba(0,255,136,.3);
+    background: rgba(0,255,136,.08); color: var(--green);
+    font-family: var(--font-cinzel,'Cinzel'),serif;
+    font-size: .44rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+    cursor: pointer; transition: background .2s; white-space: nowrap;
+  }
+  .tm-teams-add-btn:hover { background: rgba(0,255,136,.15); }
+  .tm-teams-add-btn svg { flex-shrink: 0; }
+
+  /* ── Progress ── */
+  .tm-teams-progress-wrap {
+    display: flex; align-items: center; gap: .6rem;
+    margin-bottom: 1rem;
+  }
+  .tm-teams-progress-track {
+    flex: 1; height: 6px;
+    background: rgba(255,255,255,.06);
+    border-radius: 99px; overflow: hidden;
+  }
+  .tm-teams-progress-fill {
+    height: 100%; border-radius: 99px;
+    background: linear-gradient(90deg, var(--green), #34d399);
+    transition: width .4s ease;
+  }
+  .tm-teams-progress-label {
+    font-size: .44rem; font-weight: 700; color: var(--text-3);
+    min-width: 30px; text-align: right;
+  }
+
+  /* ── HUD corners (local) ── */
+  .hud-c {
+    position: absolute;
+    width: 8px; height: 8px;
+    border-style: solid;
+    border-color: rgba(255,255,255,.15);
+    pointer-events: none;
+    z-index: 1;
+    transition: all .25s;
+  }
+
+  /* ── Grid ── */
+  .tm-teams-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: .6rem;
+  }
+
+  /* ── Card hover HUD corners ── */
+  .group .hud-c { opacity: 0; transition: opacity .25s, width .25s, height .25s; }
+  .group:hover .hud-c { opacity: .4; width: 10px; height: 10px; }
+  .group .hud-c--tl { top: 5px; left: 5px; border-width: 1.5px 0 0 1.5px; }
+  .group .hud-c--tr { top: 5px; right: 5px; border-width: 1.5px 1.5px 0 0; }
+  .group .hud-c--bl { bottom: 5px; left: 5px; border-width: 0 0 1.5px 1.5px; }
+  .group .hud-c--br { bottom: 5px; right: 5px; border-width: 0 1.5px 1.5px 0; }
+
+  /* ── Empty ── */
+  .tm-teams-empty {
+    display: flex; flex-direction: column; align-items: center;
+    padding: 2.5rem 1rem; text-align: center;
+  }
+  .tm-teams-empty-icon {
+    color: var(--text-3); opacity: .3; margin-bottom: .65rem;
+  }
+  .tm-teams-empty-text {
+    font-family: var(--font-cinzel,'Cinzel'),serif;
+    font-size: .52rem; font-weight: 700; color: var(--text-2);
+    margin-bottom: .25rem;
+  }
+  .tm-teams-empty-hint {
+    font-size: .46rem; color: var(--text-3); max-width: 260px;
+  }
+
+  /* ── Modal ── */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.6);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1000; opacity: 0; pointer-events: none; transition: opacity .25s;
+    backdrop-filter: blur(4px);
+  }
+  .modal-overlay.modal--open { opacity: 1; pointer-events: auto; }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 1.5rem; width: 90%; max-width: 420px;
+  }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+  .modal-title {
+    font-family: var(--font-cinzel,'Cinzel'),serif;
+    font-size: .65rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+    color: rgba(232,226,216,.8);
+  }
+  .modal-close { background: none; border: none; color: var(--text-3); font-size: 1.3rem; cursor: pointer; }
+  .modal-field { margin-bottom: 1rem; }
+  .modal-label { display: block; font-size: .5rem; color: var(--text-2); margin-bottom: .35rem; font-weight: 600; }
+  .modal-input {
+    width: 100%; padding: .55rem .7rem; border-radius: 8px;
+    border: 1px solid var(--border); background: rgba(255,255,255,.04);
+    color: var(--text); font-size: .55rem; outline: none;
+  }
+  .modal-input:focus { border-color: var(--green); }
+  .autocomplete-wrap { position: relative; }
+  .autocomplete-list {
+    position: absolute; top: 100%; left: 0; right: 0; z-index: 10;
+    margin: 2px 0 0; padding: 0; list-style: none;
+    background: #1a1a1a; border: 1px solid var(--border);
+    border-radius: 8px; max-height: 180px; overflow-y: auto;
+    display: none;
+  }
+  .autocomplete-list.is-visible { display: block; }
+  .autocomplete-item {
+    padding: .45rem .7rem; cursor: pointer; font-size: .5rem;
+    color: var(--text); transition: background .15s;
+  }
+  .autocomplete-item:hover,
+  .autocomplete-item.is-selected { background: rgba(255,255,255,.06); }
+  .autocomplete-item mark { background: rgba(0,255,136,.2); color: var(--green); padding: 0 2px; border-radius: 2px; }
+  .modal-hint { font-size: .4rem; color: var(--text-3); margin-top: .3rem; min-height: 1em; }
+  .modal-hint.is-invite { color: #fbbf24; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: 1.2rem; }
+  .tm-btn-cancel {
+    padding: .45rem .85rem; border-radius: 8px; border: 1px solid var(--border);
+    background: none; color: var(--text-2); font-size: .5rem; cursor: pointer;
+    font-family: var(--font-cinzel,'Cinzel'),serif;
+    font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  }
+  .tm-btn-primary {
+    padding: .45rem .85rem; border-radius: 8px;
+    border: 1px solid rgba(0,255,136,.3);
+    background: rgba(0,255,136,.08); color: var(--green);
+    font-size: .5rem; cursor: pointer;
+    font-family: var(--font-cinzel,'Cinzel'),serif;
+    font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  }
+  .tm-btn-primary:hover { background: rgba(0,255,136,.15); }
+
+  @media (max-width: 640px) {
+    .tm-teams-header { flex-direction: column; }
+    .tm-teams-header-right { width: 100%; }
+    .tm-teams-search { width: 100%; }
+    .tm-teams-add-btn { white-space: nowrap; }
+  }
+</style>

@@ -1,0 +1,511 @@
+---
+import AdminLayout from "../../../../components/admin/AdminLayout.astro";
+import MatchScheduler from "../../../../components/admin/MatchScheduler.astro";
+import TeamManager from "../../../../components/admin/TeamManager.astro";
+import Layout from "@/layouts/Layout.astro";
+import { getTournamentById, getCategoriesByTournament, getMatchesByTournament, getTeamsByTournament } from "../../../../../server/db";
+
+const { id } = Astro.params
+const user = Astro.locals.user
+
+const tournament = id ? getTournamentById(id) : undefined
+
+if (!tournament) {
+  return Astro.redirect('/admin/dashboard/torneos')
+}
+
+const categories = getCategoriesByTournament(tournament.id)
+const rules: string[] = JSON.parse(tournament.rules || '[]')
+const awards: string[] = JSON.parse(tournament.awards || '[]')
+const prizes = JSON.parse(tournament.prizes || '{}')
+
+// ── Tournament stats ──
+const allMatches = getMatchesByTournament(tournament.id)
+const allTeams = getTeamsByTournament(tournament.id)
+
+const finishedMatches = allMatches.filter(m => m.status === 'finished')
+const liveMatches = allMatches.filter(m => m.status === 'live')
+const scheduledMatches = allMatches.filter(m => m.status === 'scheduled')
+
+interface TeamStats {
+  id: string; name: string; pj: number; pg: number; pe: number; pp: number;
+  gf: number; gc: number; dg: number; pts: number
+}
+const teamStatsMap = new Map<string, TeamStats>()
+for (const t of allTeams) {
+  teamStatsMap.set(t.id, { id: t.id, name: t.name, pj: 0, pg: 0, pe: 0, pp: 0, gf: 0, gc: 0, dg: 0, pts: 0 })
+}
+for (const m of finishedMatches) {
+  if (m.home_team_id && teamStatsMap.has(m.home_team_id)) {
+    const h = teamStatsMap.get(m.home_team_id)!
+    const a = teamStatsMap.get(m.away_team_id!)
+    h.pj++; if (a) a.pj++
+    h.gf += m.home_score ?? 0; h.gc += m.away_score ?? 0
+    if (a) { a.gf += m.away_score ?? 0; a.gc += m.home_score ?? 0 }
+    if (m.home_score != null && m.away_score != null) {
+      if (m.home_score > m.away_score) { h.pg++; if (a) a.pp++ }
+      else if (m.home_score < m.away_score) { h.pp++; if (a) a.pg++ }
+      else { h.pe++; if (a) a.pe++ }
+    }
+  }
+}
+for (const s of teamStatsMap.values()) {
+  s.dg = s.gf - s.gc
+  s.pts = s.pg * 3 + s.pe
+}
+
+const standings = Array.from(teamStatsMap.values()).sort((a, b) => b.pts - a.pts || b.dg - a.dg || b.gf - a.gf)
+const topScoring = Array.from(teamStatsMap.values()).filter(t => t.gf > 0).sort((a, b) => b.gf - a.gf)
+const bestDefense = Array.from(teamStatsMap.values()).filter(t => t.pj > 0).sort((a, b) => a.gc - b.gc)
+
+let biggestWin: { home: string; away: string; score: string; diff: number } | null = null
+let highestScoring: { home: string; away: string; score: string; total: number } | null = null
+for (const m of finishedMatches) {
+  if (m.home_score == null || m.away_score == null) continue
+  const diff = Math.abs(m.home_score - m.away_score)
+  const total = m.home_score + m.away_score
+  const homeName = allTeams.find(t => t.id === m.home_team_id)?.name || '—'
+  const awayName = allTeams.find(t => t.id === m.away_team_id)?.name || '—'
+  const score = `${m.home_score} — ${m.away_score}`
+  if (!biggestWin || diff > biggestWin.diff) biggestWin = { home: homeName, away: awayName, score, diff }
+  if (!highestScoring || total > highestScoring.total) highestScoring = { home: homeName, away: awayName, score, total }
+}
+---
+<Layout hideFooter={true}>
+<AdminLayout activePage="torneos">
+  <div class="tm-content">
+    <!-- Header -->
+    <div class="tm-header">
+      <div>
+        <div class="tm-breadcrumb">
+          <a href="/admin/dashboard/torneos" class="tm-bc-link">← Torneos</a>
+          <span class="tm-bc-sep">/</span>
+          <span class="tm-bc-current">{tournament.name}</span>
+        </div>
+        <h1 class="tm-title">{tournament.name}</h1>
+      </div>
+      <span class={`tm-badge tm-badge--${tournament.status}`}>{tournament.status}</span>
+    </div>
+
+    <!-- Info strip -->
+    <div class="tm-strip">
+      <div class="tm-strip-item"><span>📅</span> {new Date(tournament.start_date + 'T00:00').toLocaleDateString('es-CO')}{tournament.end_date ? ` — ${new Date(tournament.end_date + 'T00:00').toLocaleDateString('es-CO')}` : ''}</div>
+      <div class="tm-strip-item"><span>📍</span> {tournament.venue}{tournament.city ? `, ${tournament.city}` : ''}</div>
+      <div class="tm-strip-item"><span>👥</span> {tournament.num_teams} equipos · {tournament.players_per_team} jugadores</div>
+      <div class="tm-strip-item"><span>⚙️</span> {tournament.format}</div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tm-tabs" id="tm-tabs">
+      {['info', 'equipos', 'categorias', 'sorteo'].map(t => (
+        <button class={`tm-tab ${t === 'info' ? 'tm-tab--active' : ''}`} data-tab={t}>
+          {t === 'info' && '📋'} {t === 'equipos' && '👥'} {t === 'categorias' && '📂'} {t === 'sorteo' && '🎲'}
+          {t === 'info' ? 'Info' : t === 'equipos' ? 'Equipos' : t === 'categorias' ? 'Categorías' : 'Sorteo'}
+        </button>
+      ))}
+    </div>
+
+    <!-- ── TAB: Info ── -->
+    <div class="tm-tab-content" data-tab-content="info">
+      <div class="tm-grid2">
+        <div class="tm-card">
+          <h3 class="tm-card-title">Descripción</h3>
+          <p class="tm-desc">{tournament.description || 'Sin descripción'}</p>
+        </div>
+        <div class="tm-card">
+          <h3 class="tm-card-title">Reglas</h3>
+          {rules.length === 0 ? <p class="tm-desc tm-desc--dim">Sin reglas adicionales</p> : (
+            <div class="tm-tags">
+              {rules.map(r => <span class="tm-tag">{r}</span>)}
+            </div>
+          )}
+        </div>
+        <div class="tm-card">
+          <h3 class="tm-card-title">Inscripción</h3>
+          <div class="tm-info-rows">
+            <div class="tm-info-row"><span>Abierta</span><span>{tournament.open_registration ? '✅ Sí' : '❌ No'}</span></div>
+            {tournament.reg_deadline && <div class="tm-info-row"><span>Límite</span><span>{new Date(tournament.reg_deadline + 'T00:00').toLocaleDateString('es-CO')}</span></div>}
+            {tournament.registration_fee != null && <div class="tm-info-row"><span>Costo</span><span>${Number(tournament.registration_fee).toLocaleString()}</span></div>}
+            {tournament.min_age != null && <div class="tm-info-row"><span>Edad</span><span>{tournament.min_age}{tournament.max_age ? ` — ${tournament.max_age}` : '+'} años</span></div>}
+          </div>
+        </div>
+        <div class="tm-card">
+          <h3 class="tm-card-title">Premios</h3>
+          {prizes.prize1 || prizes.prize1desc ? (
+            <div class="tm-info-rows">
+              <div class="tm-info-row"><span>🥇 1°</span><span>{prizes.prize1 ? `$${Number(prizes.prize1).toLocaleString()}` : ''} {prizes.prize1desc || ''}</span></div>
+              {prizes.prize2 != null && <div class="tm-info-row"><span>🥈 2°</span><span>{prizes.prize2 ? `$${Number(prizes.prize2).toLocaleString()}` : ''} {prizes.prize2desc || ''}</span></div>}
+              {prizes.prize3 != null && <div class="tm-info-row"><span>🥉 3°</span><span>{prizes.prize3 ? `$${Number(prizes.prize3).toLocaleString()}` : ''} {prizes.prize3desc || ''}</span></div>}
+            </div>
+          ) : <p class="tm-desc tm-desc--dim">Sin premios definidos</p>}
+          {awards.length > 0 && (
+            <div class="tm-tags mt-2">
+              {awards.map(a => <span class="tm-tag">{a}</span>)}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <!-- ── Stats section ── -->
+      <div class="tm-stats">
+        <h3 class="tm-card-title">📊 Resumen del torneo</h3>
+
+        <!-- Progress row -->
+        <div class="tm-stats-progress">
+          <div class="tm-stat-badge">
+            <span class="tm-stat-badge-num">{allMatches.length}</span>
+            <span class="tm-stat-badge-label">Total partidos</span>
+          </div>
+          <div class="tm-stat-badge">
+            <span class="tm-stat-badge-num tm-stat-badge-num--green">{finishedMatches.length}</span>
+            <span class="tm-stat-badge-label">Finalizados</span>
+          </div>
+          <div class="tm-stat-badge">
+            <span class="tm-stat-badge-num tm-stat-badge-num--blue">{liveMatches.length}</span>
+            <span class="tm-stat-badge-label">En vivo</span>
+          </div>
+          <div class="tm-stat-badge">
+            <span class="tm-stat-badge-num">{scheduledMatches.length}</span>
+            <span class="tm-stat-badge-label">Programados</span>
+          </div>
+          <div class="tm-stat-badge">
+            <span class="tm-stat-badge-num">{allTeams.length}</span>
+            <span class="tm-stat-badge-label">Equipos</span>
+          </div>
+        </div>
+
+        <!-- Highlights -->
+        <div class="tm-stats-highlights">
+          {biggestWin && (
+            <div class="tm-stat-highlight">
+              <span class="tm-stat-hl-icon">💥</span>
+              <div>
+                <span class="tm-stat-hl-label">Mayor goleada</span>
+                <span class="tm-stat-hl-value">{biggestWin.home} {biggestWin.score} {biggestWin.away}</span>
+              </div>
+            </div>
+          )}
+          {highestScoring && (
+            <div class="tm-stat-highlight">
+              <span class="tm-stat-hl-icon">⚽</span>
+              <div>
+                <span class="tm-stat-hl-label">Más goles en un partido</span>
+                <span class="tm-stat-hl-value">{highestScoring.home} {highestScoring.score} {highestScoring.away} ({highestScoring.total} goles)</span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <!-- Standings table -->
+        {standings.length > 0 && (
+          <div class="tm-stats-table-wrap">
+            <h4 class="tm-stats-subtitle">🏆 Tabla de posiciones</h4>
+            <table class="tm-stats-table">
+              <thead>
+                <tr><th>#</th><th>Equipo</th><th>PJ</th><th>PG</th><th>PE</th><th>PP</th><th>GF</th><th>GC</th><th>DG</th><th>PTS</th></tr>
+              </thead>
+              <tbody>
+                {standings.map((s, i) => (
+                  <tr class={i < 3 ? 'tm-stats-top' : ''}>
+                    <td class="tm-stats-pos">{i + 1}</td>
+                    <td class="tm-stats-name">{s.name}</td>
+                    <td>{s.pj}</td><td>{s.pg}</td><td>{s.pe}</td><td>{s.pp}</td>
+                    <td>{s.gf}</td><td>{s.gc}</td>
+                    <td class={s.dg > 0 ? 'tm-stats-g' : s.dg < 0 ? 'tm-stats-r' : ''}>{s.dg > 0 ? '+' : ''}{s.dg}</td>
+                    <td class="tm-stats-pts">{s.pts}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        <!-- Top scoring -->
+        {topScoring.length > 0 && (
+          <div class="tm-stats-table-wrap">
+            <h4 class="tm-stats-subtitle">⚽ Equipos más goleadores</h4>
+            <div class="tm-stats-bar-list">
+              {topScoring.slice(0, 5).map((t, i) => {
+                const maxGf = Math.max(...topScoring.slice(0, 5).map(x => x.gf))
+                const pct = maxGf > 0 ? (t.gf / maxGf) * 100 : 0
+                return (
+                  <div class="tm-stats-bar-row">
+                    <span class="tm-stats-bar-pos">{i + 1}</span>
+                    <span class="tm-stats-bar-name">{t.name}</span>
+                    <div class="tm-stats-bar-track">
+                      <div class="tm-stats-bar-fill" style={`width: ${pct}%`}></div>
+                    </div>
+                    <span class="tm-stats-bar-val">{t.gf} gol{t.gf !== 1 ? 'es' : ''}</span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        <!-- Best defense -->
+        {bestDefense.length > 0 && (
+          <div class="tm-stats-table-wrap">
+            <h4 class="tm-stats-subtitle">🛡️ Mejores defensas</h4>
+            <div class="tm-stats-bar-list">
+              {bestDefense.slice(0, 5).map((t, i) => {
+                const maxGc = Math.max(...bestDefense.slice(0, 5).map(x => x.gc), 1)
+                const pct = (t.gc / maxGc) * 100
+                return (
+                  <div class="tm-stats-bar-row">
+                    <span class="tm-stats-bar-pos">{i + 1}</span>
+                    <span class="tm-stats-bar-name">{t.name}</span>
+                    <div class="tm-stats-bar-track">
+                      <div class="tm-stats-bar-fill tm-stats-bar-fill--blue" style={`width: ${pct}%`}></div>
+                    </div>
+                    <span class="tm-stats-bar-val">{t.gc} gol{t.gc !== 1 ? 'es' : ''}</span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {allMatches.length === 0 && (
+          <div class="tm-empty-sm">
+            <span>📊</span>
+            <p>No hay partidos registrados. Las estadísticas aparecerán cuando comiences a generar y jugar partidos.</p>
+          </div>
+        )}
+      </div>
+    </div>
+
+    <!-- ── TAB: Equipos ── -->
+    <div class="tm-tab-content tm-tab-content--hidden" data-tab-content="equipos">
+      <TeamManager tournamentId={tournament.id} maxTeams={tournament.num_teams} />
+    </div>
+
+    <!-- ── TAB: Categorías ── -->
+    <div class="tm-tab-content tm-tab-content--hidden" data-tab-content="categorias">
+      {categories.length === 0 ? (
+        <div class="tm-empty-sm">
+          <span>📂</span>
+          <p>Este torneo no tiene categorías</p>
+        </div>
+      ) : (
+        <div class="tm-cat-grid">
+          {categories.map(c => (
+            <div class="tm-cat-card">
+              <h4 class="tm-cat-name">{c.name}</h4>
+              <div class="tm-cat-meta">
+                {c.min_age != null && <span>Edad: {c.min_age}{c.max_age ? ` — ${c.max_age}` : '+'}</span>}
+                {c.gender && <span>Género: {c.gender}</span>}
+                {c.max_teams != null && <span>Cupo: {c.max_teams} equipos</span>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+
+    <!-- ── TAB: Sorteo ── -->
+    <div class="tm-tab-content tm-tab-content--hidden" data-tab-content="sorteo">
+      <MatchScheduler tournamentId={tournament.id} tournamentFormat={tournament.format} tournamentVenue={tournament.venue} />
+    </div>
+  </div>
+</AdminLayout>
+</Layout>
+
+<script>
+  // ── Tabs ──
+  document.querySelectorAll<HTMLButtonElement>('.tm-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tm-tab').forEach(b => b.classList.remove('tm-tab--active'))
+      document.querySelectorAll('.tm-tab-content').forEach(c => c.classList.add('tm-tab-content--hidden'))
+      btn.classList.add('tm-tab--active')
+      const tab = btn.dataset.tab
+      document.querySelector(`[data-tab-content="${tab}"]`)?.classList.remove('tm-tab-content--hidden')
+    })
+  })
+
+
+</script>
+
+<style>
+  .tm-content { padding: 0; }
+
+  .tm-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: .75rem; }
+  .tm-breadcrumb { display: flex; align-items: center; gap: .4rem; font-size: .48rem; margin-bottom: .3rem; }
+  .tm-bc-link { color: var(--green); text-decoration: none; }
+  .tm-bc-link:hover { text-decoration: underline; }
+  .tm-bc-sep { color: var(--text-3); }
+  .tm-bc-current { color: var(--text-2); }
+  .tm-title {
+    font-family: var(--font-cinzel,'Cinzel'),serif;
+    font-size: clamp(1.3rem,3vw,1.8rem); font-weight: 900;
+    letter-spacing: .05em; text-transform: uppercase;
+    color: var(--text); line-height: 1;
+  }
+  .tm-badge {
+    font-size: .48rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+    padding: 4px 12px; border-radius: 99px; white-space: nowrap;
+  }
+  .tm-badge--active { background: rgba(0,255,136,.1); color: var(--green); border: 1px solid rgba(0,255,136,.25); }
+  .tm-badge--draft { background: rgba(255,255,255,.05); color: var(--text-2); border: 1px solid var(--border); }
+  .tm-badge--completed { background: rgba(59,130,246,.1); color: #60a5fa; border: 1px solid rgba(59,130,246,.25); }
+
+  .tm-strip {
+    display: flex; flex-wrap: wrap; gap: .5rem 1.2rem;
+    padding: .65rem 0; margin-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .tm-strip-item { font-size: .5rem; color: var(--text-2); display: flex; align-items: center; gap: .3rem; }
+  .tm-strip-item span { font-size: .7rem; }
+
+  .tm-tabs { display: flex; gap: .25rem; border-bottom: 1px solid var(--border); margin-bottom: 1rem; }
+  .tm-tab {
+    padding: .55rem .9rem; border: none; background: none;
+    font-family: var(--font-cinzel,'Cinzel'),serif;
+    font-size: .5rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--text-3); cursor: pointer;
+    border-bottom: 2px solid transparent; transition: color .2s, border-color .2s;
+    display: flex; align-items: center; gap: .35rem;
+  }
+  .tm-tab:hover { color: var(--text-2); }
+  .tm-tab--active { color: var(--green); border-bottom-color: var(--green); }
+
+  .tm-tab-content { display: block; }
+  .tm-tab-content--hidden { display: none; }
+
+  .tm-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+  .tm-card {
+    border-radius: 14px; border: 1px solid var(--border);
+    background: var(--surface); padding: 1.1rem;
+    margin-bottom: 1rem;
+  }
+  .tm-card-title {
+    font-family: var(--font-cinzel,'Cinzel'),serif;
+    font-size: .6rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+    color: rgba(232,226,216,.7); margin-bottom: .65rem;
+  }
+  .tm-desc { font-size: .55rem; color: var(--text-2); line-height: 1.7; }
+  .tm-desc--dim { color: var(--text-3); }
+
+  .tm-tags { display: flex; flex-wrap: wrap; gap: .35rem; }
+  .tm-tag {
+    font-size: .44rem; padding: 2px 8px; border-radius: 99px;
+    border: 1px solid var(--border); color: var(--text-2);
+  }
+
+  .tm-info-rows { display: flex; flex-direction: column; gap: .35rem; }
+  .tm-info-row {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: .5rem; color: var(--text-2);
+    padding: .25rem 0; border-bottom: 1px solid rgba(255,255,255,.04);
+  }
+  .tm-info-row:last-child { border-bottom: none; }
+  .tm-info-row span:first-child { color: var(--text-3); }
+
+  .tm-flex-between { display: flex; justify-content: space-between; align-items: center; }
+  .tm-btn-sm {
+    padding: .4rem .75rem; border-radius: 8px;
+    border: 1px solid rgba(0,255,136,.3);
+    background: rgba(0,255,136,.08); color: var(--green);
+    font-family: var(--font-cinzel,'Cinzel'),serif;
+    font-size: .44rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+    cursor: pointer; transition: background .2s;
+  }
+  .tm-btn-sm:hover { background: rgba(0,255,136,.15); }
+
+  .tm-empty-sm {
+    border-radius: 12px; border: 1px dashed var(--border);
+    padding: 1.5rem; text-align: center; margin-top: .75rem;
+    display: flex; flex-direction: column; align-items: center; gap: .3rem;
+  }
+  .tm-empty-sm span { font-size: 1.5rem; }
+  .tm-empty-sm p { font-size: .5rem; color: var(--text-3); }
+
+  .tm-cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: .75rem; }
+  .tm-cat-card {
+    border-radius: 12px; border: 1px solid var(--border);
+    background: var(--surface); padding: .9rem;
+  }
+  .tm-cat-name {
+    font-family: var(--font-cinzel,'Cinzel'),serif;
+    font-size: .58rem; font-weight: 800; letter-spacing: .05em;
+    color: rgba(232,226,216,.8); margin-bottom: .4rem;
+  }
+  .tm-cat-meta { display: flex; flex-direction: column; gap: .15rem; }
+  .tm-cat-meta span { font-size: .46rem; color: var(--text-3); }
+
+  .mt-1 { margin-top: .5rem; }
+  .mt-2 { margin-top: .75rem; }
+
+  /* ── Stats ── */
+  .tm-stats { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
+  .tm-stats-subtitle {
+    font-family: var(--font-cinzel,'Cinzel'),serif;
+    font-size: .52rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+    color: rgba(232,226,216,.6); margin-bottom: .65rem;
+  }
+  .tm-stats-progress { display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+  .tm-stat-badge {
+    display: flex; flex-direction: column; align-items: center; gap: .15rem;
+    padding: .6rem .9rem; border-radius: 10px;
+    background: rgba(255,255,255,.02); border: 1px solid var(--border); min-width: 90px;
+  }
+  .tm-stat-badge-num {
+    font-family: var(--font-cinzel,'Cinzel'),serif;
+    font-size: 1.1rem; font-weight: 900; color: var(--text-2); line-height: 1;
+  }
+  .tm-stat-badge-num--green { color: var(--green); }
+  .tm-stat-badge-num--blue { color: #60a5fa; }
+  .tm-stat-badge-label { font-size: .4rem; color: var(--text-3); text-transform: uppercase; letter-spacing: .08em; }
+
+  .tm-stats-highlights {
+    display: flex; gap: .75rem; flex-wrap: wrap; margin-bottom: 1.25rem;
+  }
+  .tm-stat-highlight {
+    display: flex; align-items: center; gap: .5rem;
+    padding: .55rem .75rem; border-radius: 10px;
+    background: rgba(255,255,255,.02); border: 1px solid var(--border); flex: 1; min-width: 180px;
+  }
+  .tm-stat-hl-icon { font-size: 1.2rem; }
+  .tm-stat-hl-label { display: block; font-size: .4rem; color: var(--text-3); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 2px; }
+  .tm-stat-hl-value { display: block; font-size: .52rem; font-weight: 700; color: var(--text); }
+
+  .tm-stats-table-wrap { margin-bottom: 1.25rem; overflow-x: auto; }
+  .tm-stats-table { width: 100%; border-collapse: collapse; font-size: .5rem; }
+  .tm-stats-table th {
+    text-align: left; padding: .4rem .5rem;
+    font-family: var(--font-cinzel,'Cinzel'),serif;
+    font-size: .42rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--text-3); border-bottom: 1px solid var(--border);
+  }
+  .tm-stats-table td { padding: .4rem .5rem; border-bottom: 1px solid rgba(255,255,255,.04); color: var(--text-2); }
+  .tm-stats-table tbody tr:hover { background: rgba(255,255,255,.02); }
+  .tm-stats-top td { border-bottom-color: rgba(0,255,136,.1); }
+  .tm-stats-pos { font-weight: 800; color: var(--text-3); width: 28px; }
+  .tm-stats-name { font-weight: 700; color: var(--text); }
+  .tm-stats-pts { font-weight: 900; color: var(--green); font-size: .58rem; }
+  .tm-stats-g { color: var(--green); font-weight: 700; }
+  .tm-stats-r { color: #f87171; font-weight: 700; }
+
+  .tm-stats-bar-list { display: flex; flex-direction: column; gap: .35rem; }
+  .tm-stats-bar-row {
+    display: flex; align-items: center; gap: .5rem;
+    padding: .35rem .5rem; border-radius: 8px;
+    background: rgba(255,255,255,.015);
+  }
+  .tm-stats-bar-pos { font-size: .42rem; font-weight: 800; color: var(--text-3); width: 18px; text-align: center; }
+  .tm-stats-bar-name { font-size: .5rem; font-weight: 600; color: var(--text); min-width: 110px; }
+  .tm-stats-bar-track { flex: 1; height: 18px; background: rgba(255,255,255,.04); border-radius: 99px; overflow: hidden; }
+  .tm-stats-bar-fill {
+    height: 100%; border-radius: 99px;
+    background: linear-gradient(90deg, var(--green), #34d399);
+    transition: width .5s; min-width: 4px;
+  }
+  .tm-stats-bar-fill--blue { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+  .tm-stats-bar-val { font-size: .46rem; font-weight: 700; color: var(--text-2); min-width: 50px; text-align: right; }
+
+  @media (max-width: 768px) {
+    .tm-grid2 { grid-template-columns: 1fr; }
+    .tm-header { flex-direction: column; }
+  }
+</style>

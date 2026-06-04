@@ -298,7 +298,7 @@ import Layout from "../../layouts/Layout.astro";
     eyeClosed.classList.toggle('hidden', !show)
   })
 
-  // Submit simulado
+  // Submit real al backend
   const form       = document.getElementById('login-form') as HTMLFormElement
   const btnSubmit  = document.getElementById('btn-submit') as HTMLButtonElement
   const btnText    = document.getElementById('btn-submit-text')!
@@ -312,27 +312,30 @@ import Layout from "../../layouts/Layout.astro";
     btnLoader.classList.remove('hidden')
     btnSubmit.disabled = true
 
-    // Simula llamada al backend
-    await new Promise(r => setTimeout(r, 1800))
+    const email    = (document.getElementById('email') as HTMLInputElement).value
+    const password = (document.getElementById('password') as HTMLInputElement).value
 
-    // Demo: si email contiene "error", muestra error
-    const email = (document.getElementById('email') as HTMLInputElement).value
-    if (email.includes('error')) {
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Error al iniciar sesión')
+      }
+
+      window.location.href = data.redirect || '/'
+    } catch (err: any) {
+      errMsg.textContent = err.message || 'Credenciales inválidas. Intenta de nuevo.'
       errMsg.classList.remove('hidden')
       btnText.classList.remove('hidden')
       btnLoader.classList.add('hidden')
       btnSubmit.disabled = false
-      return
     }
-
-    // Redirige según rol
-    const redirects: Record<string, string> = {
-      administrativo: '/dashboard/admin',
-      arbitro:        '/dashboard/arbitro',
-      tecnico:        '/dashboard/tecnico',
-      jugador:        '/dashboard/jugador',
-    }
-    window.location.href = redirects[selectedRole ?? 'jugador'] ?? '/dashboard'
   })
 </script>
 

@@ -1,0 +1,171 @@
+---
+import AdminLayout from "../../../components/admin/AdminLayout.astro";
+import { getTournamentsByUser } from "../../../../server/db";
+import Layout from "@/layouts/Layout.astro";
+
+const user = Astro.locals.user
+const tournaments = user ? getTournamentsByUser(user.id) : []
+const total = tournaments.length
+const active = tournaments.filter(t => t.status === 'active').length
+const drafts = tournaments.filter(t => t.status === 'draft').length
+---
+<Layout hideFooter={true}>
+<AdminLayout activePage="dashboard">
+  <div class="d-content">
+    <div class="d-page-header">
+      <h1 class="d-title">Dashboard</h1>
+      <p class="d-sub">Resumen de torneos y actividades</p>
+    </div>
+
+    <div class="d-stats">
+      <div class="d-stat-card">
+        <span class="d-stat-icon">🏆</span>
+        <div>
+          <span class="d-stat-num">{total}</span>
+          <span class="d-stat-label">Total Torneos</span>
+        </div>
+      </div>
+      <div class="d-stat-card d-stat-card--green">
+        <span class="d-stat-icon">✅</span>
+        <div>
+          <span class="d-stat-num">{active}</span>
+          <span class="d-stat-label">Activos</span>
+        </div>
+      </div>
+      <div class="d-stat-card d-stat-card--dim">
+        <span class="d-stat-icon">📝</span>
+        <div>
+          <span class="d-stat-num">{drafts}</span>
+          <span class="d-stat-label">Borradores</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="d-section">
+      <div class="d-section-header">
+        <h2 class="d-section-title">Últimos Torneos</h2>
+        <a href="/admin/dashboard/torneos" class="d-link">Ver todos →</a>
+      </div>
+
+      {tournaments.length === 0 ? (
+        <div class="d-empty">
+          <span class="d-empty-icon">🏆</span>
+          <p class="d-empty-text">Aún no has creado ningún torneo</p>
+          <a href="/admin/dashboard/crear-torneo" class="d-btn">Crear Torneo</a>
+        </div>
+      ) : (
+        <div class="d-table-wrap">
+          <table class="d-table">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Formato</th>
+                <th>Inicio</th>
+                <th>Estado</th>
+                <th>Equipos</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tournaments.slice(0, 5).map(t => (
+                <tr class="d-tr" onclick={`window.location='/admin/dashboard/torneos/${t.id}'`}>
+                  <td class="d-td-name">{t.name}</td>
+                  <td>{t.format}</td>
+                  <td>{new Date(t.start_date + 'T00:00').toLocaleDateString('es-CO')}</td>
+                  <td><span class={`d-badge d-badge--${t.status}`}>{t.status}</span></td>
+                  <td>{t.num_teams}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  </div>
+</AdminLayout>
+
+<style>
+  .d-content { padding: 0; }
+  .d-page-header { margin-bottom: 1.5rem; }
+  .d-title {
+    font-family: var(--font-cinzel,'Cinzel'),serif;
+    font-size: clamp(1.5rem,4vw,2.2rem); font-weight: 900;
+    letter-spacing: .05em; text-transform: uppercase;
+    color: var(--text); line-height: 1;
+  }
+  .d-sub { font-size: .52rem; color: var(--text-3); margin-top: .3rem; }
+
+  .d-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 1rem; margin-bottom: 2rem; }
+  .d-stat-card {
+    border-radius: 14px; border: 1px solid var(--border);
+    background: var(--surface); padding: 1.1rem;
+    display: flex; align-items: center; gap: .85rem;
+  }
+  .d-stat-icon { font-size: 1.5rem; }
+  .d-stat-num {
+    font-family: var(--font-cinzel,'Cinzel'),serif;
+    font-size: 1.4rem; font-weight: 900; color: var(--text); display: block; line-height: 1;
+  }
+  .d-stat-label { font-size: .48rem; color: var(--text-3); text-transform: uppercase; letter-spacing: .1em; }
+  .d-stat-card--green { border-color: rgba(0,255,136,.2); }
+  .d-stat-card--dim .d-stat-num { color: var(--text-2); }
+
+  .d-section { margin-top: .5rem; }
+  .d-section-header {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;
+  }
+  .d-section-title {
+    font-family: var(--font-cinzel,'Cinzel'),serif;
+    font-size: .7rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
+    color: rgba(232,226,216,.7);
+  }
+  .d-link { font-size: .5rem; color: var(--green); text-decoration: none; font-weight: 700; letter-spacing: .05em; }
+  .d-link:hover { text-decoration: underline; }
+
+  .d-empty {
+    border-radius: 14px; border: 1px dashed var(--border);
+    padding: 2.5rem; text-align: center;
+    display: flex; flex-direction: column; align-items: center; gap: .5rem;
+  }
+  .d-empty-icon { font-size: 2.5rem; }
+  .d-empty-text { font-size: .55rem; color: var(--text-3); }
+  .d-btn {
+    display: inline-flex; padding: .55rem 1.2rem; border-radius: 10px;
+    background: rgba(0,255,136,.1); border: 1px solid rgba(0,255,136,.3);
+    color: var(--green); font-size: .55rem; font-weight: 700;
+    letter-spacing: .1em; text-transform: uppercase; text-decoration: none;
+    margin-top: .5rem; transition: background .2s;
+  }
+  .d-btn:hover { background: rgba(0,255,136,.18); }
+
+  .d-table-wrap {
+    border-radius: 14px; border: 1px solid var(--border); overflow: hidden;
+    background: var(--surface);
+  }
+  .d-table { width: 100%; border-collapse: collapse; }
+  .d-table th {
+    font-size: .44rem; font-weight: 700; letter-spacing: .15em; text-transform: uppercase;
+    color: var(--text-3); text-align: left; padding: .7rem .85rem;
+    background: rgba(255,255,255,.02); border-bottom: 1px solid var(--border);
+  }
+  .d-table td {
+    font-size: .58rem; color: var(--text-2); padding: .65rem .85rem;
+    border-bottom: 1px solid rgba(255,255,255,.04);
+  }
+  .d-table tr:last-child td { border-bottom: none; }
+  .d-tr { cursor: pointer; transition: background .15s; }
+  .d-tr:hover { background: rgba(255,255,255,.03); }
+  .d-td-name { font-weight: 700; color: var(--text); }
+
+  .d-badge {
+    font-size: .44rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+    padding: 2px 8px; border-radius: 99px;
+  }
+  .d-badge--active { background: rgba(0,255,136,.1); color: var(--green); border: 1px solid rgba(0,255,136,.25); }
+  .d-badge--draft { background: rgba(255,255,255,.05); color: var(--text-2); border: 1px solid var(--border); }
+  .d-badge--completed { background: rgba(59,130,246,.1); color: #60a5fa; border: 1px solid rgba(59,130,246,.25); }
+
+  @media (max-width: 768px) {
+    .d-stats { grid-template-columns: 1fr; }
+    .d-table-wrap { overflow-x: auto; }
+  }
+</style>

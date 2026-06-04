@@ -1,0 +1,536 @@
+---
+import AdminLayout from "../../../components/admin/AdminLayout.astro";
+import Layout from "@/layouts/Layout.astro";
+import { getAllTournaments, getAllMatchesWithTournament, getTeamsByTournament } from "../../../../server/db";
+
+const user = Astro.locals.user
+const tournaments = getAllTournaments()
+const allMatches = getAllMatchesWithTournament()
+
+// Group matches by date
+const dateGroups = new Map<string, typeof allMatches>()
+for (const m of allMatches) {
+  const key = m.scheduled_date ? m.scheduled_date.slice(0, 10) : '__unscheduled__'
+  if (!dateGroups.has(key)) dateGroups.set(key, [])
+  dateGroups.get(key)!.push(m)
+}
+const sortedDates = Array.from(dateGroups.keys()).sort((a, b) => {
+  if (a === '__unscheduled__') return 1
+  if (b === '__unscheduled__') return -1
+  return a.localeCompare(b)
+})
+
+// Pre-load teams per tournament for edit modals
+const teamsByTournament: Record<string, { id: string; name: string }[]> = {}
+for (const t of tournaments) {
+  teamsByTournament[t.id] = getTeamsByTournament(t.id)
+}
+---
+
+<Layout hideFooter={true}>
+<AdminLayout activePage="calendar">
+  <div class="cal">
+    <!-- Header -->
+    <div class="cal-header">
+      <div>
+        <h1 class="cal-title">📅 Calendario de partidos</h1>
+        <p class="cal-sub">{allMatches.length} partido{allMatches.length !== 1 ? 's' : ''} en {tournaments.length} torneo{tournaments.length !== 1 ? 's' : ''}</p>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="cal-filters">
+      <select id="cal-filter-tournament" class="cal-input cal-input--sm">
+        <option value="">Todos los torneos</option>
+        {tournaments.map(t => <option value={t.id}>{t.name}</option>)}
+      </select>
+      <select id="cal-filter-status" class="cal-input cal-input--sm">
+        <option value="">Todos los estados</option>
+        <option value="scheduled">Programado</option>
+        <option value="live">En vivo</option>
+        <option value="finished">Finalizado</option>
+        <option value="cancelled">Cancelado</option>
+      </select>
+      <button class="cal-btn cal-btn--ghost cal-btn--sm" id="cal-clear-filters">Limpiar filtros</button>
+    </div>
+
+    <!-- No matches -->
+    {allMatches.length === 0 ? (
+      <div class="cal-empty">
+        <span class="cal-empty-icon">📅</span>
+        <p class="cal-empty-text">No hay partidos en ningún torneo. Crea un torneo y genera un fixture primero.</p>
+        <a href="/admin/dashboard/crear-torneo" class="cal-btn cal-btn--green">Crear torneo</a>
+      </div>
+    ) : (
+      <>
+      <!-- Calendar view -->
+      <div class="cal-legend">
+        <span class="cal-legend-item"><span class="cal-dot cal-dot--scheduled"></span> Programado</span>
+        <span class="cal-legend-item"><span class="cal-dot cal-dot--live"></span> En vivo</span>
+        <span class="cal-legend-item"><span class="cal-dot cal-dot--finished"></span> Finalizado</span>
+        <span class="cal-legend-item"><span class="cal-dot cal-dot--cancelled"></span> Cancelado</span>
+      </div>
+
+      <div class="cal-days" id="cal-days">
+        {sortedDates.map(dateKey => {
+          const dayMatches = dateGroups.get(dateKey)!
+          const isUnscheduled = dateKey === '__unscheduled__'
+          const dateObj = isUnscheduled ? null : new Date(dateKey + 'T12:00')
+          return (
+            <div class="cal-day" data-date={dateKey}>
+              <div class="cal-day-header">
+                {isUnscheduled ? (
+                  <span class="cal-day-title">Sin fecha asignada</span>
+                ) : (
+                  <>
+                    <span class="cal-day-weekday">{dateObj!.toLocaleDateString('es-CO', { weekday: 'long' })}</span>
+                    <span class="cal-day-date">{dateObj!.toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                  </>
+                )}
+                <span class="cal-day-count">{dayMatches.length} partido{dayMatches.length !== 1 ? 's' : ''}</span>
+              </div>
+              <div class="cal-day-matches">
+                {dayMatches.map(m => {
+                  const homeTeam = teamsByTournament[m.tournament_id]?.find(t => t.id === m.home_team_id)
+                  const awayTeam = teamsByTournament[m.tournament_id]?.find(t => t.id === m.away_team_id)
+                  return (
+                    <div class="cal-match" data-match-id={m.id}>
+                      <div class="cal-match-left">
+                        <span class="cal-match-tournament">{m.tournament_name}</span>
+                        <div class="cal-match-teams">
+                          <span class="cal-match-team">{homeTeam?.name || '—'}</span>
+                          <span class="cal-match-vs">vs</span>
+                          <span class="cal-match-team">{awayTeam?.name || '—'}</span>
+                        </div>
+                      </div>
+                      <div class="cal-match-mid">
+                        {m.home_score != null && m.away_score != null ? (
+                          <span class="cal-match-score">{m.home_score} — {m.away_score}</span>
+                        ) : (
+                          <span class="cal-match-time">
+                            {!isUnscheduled && m.scheduled_date
+                              ? new Date(m.scheduled_date).toLocaleString('es-CO', { hour: '2-digit', minute: '2-digit' })
+                              : '—'}
+                          </span>
+                        )}
+                      </div>
+                      <div class="cal-match-right">
+                        <span class={`cal-status cal-status--${m.status}`}>{m.status}</span>
+                        <button class="cal-icon-btn cal-edit-btn" data-edit={m.id} data-tournament={m.tournament_id} title="Editar">✏️</button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+      </>
+    )}
+  </div>
+</AdminLayout>
+</Layout>
+
+<script type="application/json" id="cal-teams-json"><%- JSON.stringify(teamsByTournament) %></script>
+
+<!-- ══ EDIT MODAL ══ -->
+<div class="cal-modal-overlay" id="cal-edit-overlay">
+  <div class="cal-modal">
+    <div class="cal-modal-header">
+      <h3 class="cal-modal-title">Editar Partido</h3>
+      <button class="cal-modal-close" id="cal-edit-close">✕</button>
+    </div>
+    <div class="cal-modal-body">
+      <input type="hidden" id="cal-edit-id" />
+      <input type="hidden" id="cal-edit-tournament" />
+      <div class="cal-grid2">
+        <div class="cal-field">
+          <label class="cal-label">Equipo local</label>
+          <select id="cal-edit-home" class="cal-input"></select>
+        </div>
+        <div class="cal-field">
+          <label class="cal-label">Equipo visitante</label>
+          <select id="cal-edit-away" class="cal-input"></select>
+        </div>
+      </div>
+      <div class="cal-field">
+        <label class="cal-label">Estado</label>
+        <select id="cal-edit-status" class="cal-input">
+          <option value="scheduled">Programado</option>
+          <option value="live">En vivo</option>
+          <option value="finished">Finalizado</option>
+          <option value="cancelled">Cancelado</option>
+        </select>
+      </div>
+      <div class="cal-grid2">
+        <div class="cal-field">
+          <label class="cal-label">Marcador local</label>
+          <input type="number" id="cal-edit-home-score" min="0" class="cal-input" />
+        </div>
+        <div class="cal-field">
+          <label class="cal-label">Marcador visitante</label>
+          <input type="number" id="cal-edit-away-score" min="0" class="cal-input" />
+        </div>
+      </div>
+      <div class="cal-grid2">
+        <div class="cal-field">
+          <label class="cal-label">Fecha</label>
+          <input type="date" id="cal-edit-date" class="cal-input" />
+        </div>
+        <div class="cal-field">
+          <label class="cal-label">Hora</label>
+          <input type="time" id="cal-edit-time" class="cal-input" />
+        </div>
+      </div>
+    </div>
+    <div class="cal-modal-footer">
+      <button class="cal-btn cal-btn--ghost" id="cal-edit-cancel">Cancelar</button>
+      <button class="cal-btn cal-btn--green" id="cal-edit-confirm">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Filters ──
+const filterTournament = document.getElementById('cal-filter-tournament') as HTMLSelectElement
+const filterStatus = document.getElementById('cal-filter-status') as HTMLSelectElement
+const clearBtn = document.getElementById('cal-clear-filters') as HTMLButtonElement
+
+function applyFilters() {
+  const tourney = filterTournament.value
+  const status = filterStatus.value
+  document.querySelectorAll<HTMLElement>('.cal-day').forEach(day => {
+    let visible = true
+    day.querySelectorAll<HTMLElement>('.cal-match').forEach(match => {
+      const matchTournament = match.querySelector('.cal-match-tournament')?.textContent || ''
+      const tournamentId = document.querySelector<HTMLOptionElement>(`#cal-filter-tournament option[value="${tourney}"]`)?.textContent || ''
+      const matchStatus = match.querySelector('.cal-status')?.textContent || ''
+      let show = true
+      if (tourney && match.dataset.tournament !== tourney) show = false
+      if (status && matchStatus !== status) show = false
+      match.style.display = show ? '' : 'none'
+    })
+    const visibleMatches = day.querySelectorAll<HTMLElement>('.cal-match[style*="display: none"]')
+    const totalMatches = day.querySelectorAll<HTMLElement>('.cal-match').length
+    if (visibleMatches.length === totalMatches) {
+      day.style.display = 'none'
+    } else {
+      day.style.display = ''
+    }
+  })
+}
+
+filterTournament.addEventListener('change', applyFilters)
+filterStatus.addEventListener('change', applyFilters)
+clearBtn.addEventListener('click', () => {
+  filterTournament.value = ''
+  filterStatus.value = ''
+  applyFilters()
+})
+
+// ── Teams cache ──
+const teamsJsonEl = document.getElementById('cal-teams-json')
+const teamsCache: Record<string, { id: string; name: string }[]> = teamsJsonEl ? JSON.parse(teamsJsonEl.textContent || '{}') : {}
+
+async function loadTeamsForTournament(tournamentId: string): Promise<{ id: string; name: string }[]> {
+  if (teamsCache[tournamentId]) return teamsCache[tournamentId]
+  const res = await fetch('/api/teams/index', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'list', tournamentId }),
+  })
+  const data = await res.json()
+  if (data.success) {
+    teamsCache[tournamentId] = data.teams
+    return data.teams
+  }
+  return []
+}
+
+function populateTeamSelect(sel: HTMLSelectElement, teams: { id: string; name: string }[], selectedId?: string) {
+  sel.innerHTML = '<option value="">—</option>' + teams.map(t =>
+    `<option value="${t.id}" ${t.id === selectedId ? 'selected' : ''}>${t.name}</option>`
+  ).join('')
+}
+
+// ── Edit Modal ──
+const editOverlay = document.getElementById('cal-edit-overlay')!
+const editId = document.getElementById('cal-edit-id') as HTMLInputElement
+const editTournament = document.getElementById('cal-edit-tournament') as HTMLInputElement
+const editHome = document.getElementById('cal-edit-home') as HTMLSelectElement
+const editAway = document.getElementById('cal-edit-away') as HTMLSelectElement
+const editStatus = document.getElementById('cal-edit-status') as HTMLSelectElement
+const editHomeScore = document.getElementById('cal-edit-home-score') as HTMLInputElement
+const editAwayScore = document.getElementById('cal-edit-away-score') as HTMLInputElement
+const editDate = document.getElementById('cal-edit-date') as HTMLInputElement
+const editTime = document.getElementById('cal-edit-time') as HTMLInputElement
+
+document.getElementById('cal-edit-close')?.addEventListener('click', () => editOverlay.classList.remove('cal-modal-overlay--open'))
+document.getElementById('cal-edit-cancel')?.addEventListener('click', () => editOverlay.classList.remove('cal-modal-overlay--open'))
+editOverlay.addEventListener('click', e => { if (e.target === editOverlay) editOverlay.classList.remove('cal-modal-overlay--open') })
+
+document.querySelectorAll<HTMLButtonElement>('.cal-edit-btn').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const matchId = btn.dataset.edit!
+    const tournamentId = btn.dataset.tournament!
+    const row = btn.closest('.cal-match') as HTMLElement
+    const teams = row.querySelectorAll('.cal-match-team')
+    const scoreEl = row.querySelector('.cal-match-score')
+    const statusEl = row.querySelector('.cal-status')
+    const tournamentName = row.querySelector('.cal-match-tournament')?.textContent || ''
+
+    editId.value = matchId
+    editTournament.value = tournamentId
+
+    // Load teams for this tournament
+    const teamList = await loadTeamsForTournament(tournamentId)
+    const homeName = teams[0]?.textContent || ''
+    const awayName = teams[1]?.textContent || ''
+    const homeId = teamList.find(t => t.name === homeName)?.id || ''
+    const awayId = teamList.find(t => t.name === awayName)?.id || ''
+    populateTeamSelect(editHome, teamList, homeId)
+    populateTeamSelect(editAway, teamList, awayId)
+
+    if (scoreEl) {
+      const scores = scoreEl.textContent?.split('—').map(s => s.trim()) || []
+      editHomeScore.value = scores[0] || ''
+      editAwayScore.value = scores[1] || ''
+    } else {
+      editHomeScore.value = ''
+      editAwayScore.value = ''
+    }
+
+    editStatus.value = statusEl?.textContent?.trim() || 'scheduled'
+
+    // Parse date/time from the match row
+    const timeEl = row.querySelector('.cal-match-time')
+    const dateDay = row.closest('.cal-day')?.dataset.date || ''
+    if (dateDay && dateDay !== '__unscheduled__') {
+      editDate.value = dateDay
+      const timeMatch = timeEl?.textContent?.trim()
+      editTime.value = timeMatch && timeMatch !== '—' ? timeMatch : '20:00'
+    } else {
+      editDate.value = ''
+      editTime.value = '20:00'
+    }
+
+    editOverlay.classList.add('cal-modal-overlay--open')
+  })
+})
+
+document.getElementById('cal-edit-confirm')?.addEventListener('click', async () => {
+  const id = editId.value
+  const homeTeamId = editHome.value
+  const awayTeamId = editAway.value
+  const status = editStatus.value
+  const homeScore = editHomeScore.value
+  const awayScore = editAwayScore.value
+  const date = editDate.value
+  const time = editTime.value
+
+  const btn = document.getElementById('cal-edit-confirm') as HTMLButtonElement
+  btn.disabled = true
+  btn.textContent = 'Guardando...'
+
+  try {
+    const updates: Record<string, unknown> = { action: 'update', id }
+    if (homeTeamId) updates.homeTeamId = homeTeamId
+    if (awayTeamId) updates.awayTeamId = awayTeamId
+    updates.status = status
+    if (homeScore !== '') updates.homeScore = Number(homeScore)
+    if (awayScore !== '') updates.awayScore = Number(awayScore)
+    if (date) updates.scheduledDate = `${date}T${time || '20:00'}:00`
+
+    const res = await fetch('/api/matches/index', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    })
+    if (!res.ok) throw new Error('Error al actualizar')
+    editOverlay.classList.remove('cal-modal-overlay--open')
+    window.location.reload()
+  } catch {
+    alert('Error al guardar')
+    btn.disabled = false
+    btn.textContent = 'Guardar'
+  }
+})
+</script>
+
+<style>
+  .cal { padding: 0; }
+  .cal-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; }
+  .cal-title {
+    font-family: var(--font-cinzel,'Cinzel'),serif;
+    font-size: clamp(1.1rem,2.5vw,1.5rem); font-weight: 900;
+    letter-spacing: .05em; text-transform: uppercase;
+    color: var(--text); line-height: 1; margin-bottom: .25rem;
+  }
+  .cal-sub { font-size: .5rem; color: var(--text-3); }
+
+  .cal-filters {
+    display: flex; gap: .5rem; align-items: center;
+    margin-bottom: 1rem; flex-wrap: wrap;
+  }
+  .cal-input {
+    padding: .45rem .65rem; border-radius: 8px;
+    border: 1px solid var(--border); background: rgba(255,255,255,.03);
+    color: var(--text); font-size: .5rem; outline: none;
+    font-family: var(--font-cinzel,'Cinzel'),serif;
+  }
+  .cal-input--sm { width: auto; min-width: 160px; }
+  .cal-input:focus { border-color: rgba(0,255,136,.38); }
+  .cal-input option { background: var(--midnight); }
+
+  .cal-btn {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .45rem .85rem; border-radius: 8px;
+    font-family: var(--font-cinzel,'Cinzel'),serif;
+    font-size: .46rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+    cursor: pointer; border: 1px solid transparent; transition: all .2s; text-decoration: none;
+  }
+  .cal-btn--sm { padding: .4rem .65rem; font-size: .42rem; }
+  .cal-btn--green {
+    background: rgba(0,255,136,.1); color: var(--green);
+    border-color: rgba(0,255,136,.3);
+  }
+  .cal-btn--green:hover { background: rgba(0,255,136,.18); }
+  .cal-btn--ghost {
+    background: transparent; color: var(--text-2);
+    border-color: var(--border);
+  }
+  .cal-btn--ghost:hover { border-color: var(--border-2); color: var(--text); }
+
+  .cal-empty {
+    border-radius: 14px; border: 1px dashed var(--border);
+    padding: 2.5rem; text-align: center;
+    display: flex; flex-direction: column; align-items: center; gap: .5rem;
+  }
+  .cal-empty-icon { font-size: 2.5rem; }
+  .cal-empty-text { font-size: .52rem; color: var(--text-3); max-width: 320px; }
+
+  .cal-legend {
+    display: flex; gap: .75rem; margin-bottom: 1rem;
+    padding: .5rem .75rem;
+    border-radius: 8px; background: var(--surface); border: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  .cal-legend-item { display: flex; align-items: center; gap: .3rem; font-size: .44rem; color: var(--text-3); }
+  .cal-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .cal-dot--scheduled { background: var(--text-3); }
+  .cal-dot--live { background: var(--green); }
+  .cal-dot--finished { background: #60a5fa; }
+  .cal-dot--cancelled { background: #f87171; }
+
+  .cal-days { display: flex; flex-direction: column; gap: .85rem; }
+  .cal-day {
+    border-radius: 12px; border: 1px solid var(--border);
+    background: var(--surface); overflow: hidden;
+  }
+  .cal-day-header {
+    display: flex; align-items: center; gap: .5rem;
+    padding: .55rem .85rem;
+    background: rgba(255,255,255,.02);
+    border-bottom: 1px solid var(--border);
+  }
+  .cal-day-weekday {
+    font-family: var(--font-cinzel,'Cinzel'),serif;
+    font-size: .52rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
+    color: rgba(232,226,216,.65); text-transform: capitalize;
+  }
+  .cal-day-date { font-size: .48rem; color: var(--text-3); }
+  .cal-day-count {
+    margin-left: auto; font-size: .44rem; color: var(--text-3);
+  }
+
+  .cal-day-matches { display: flex; flex-direction: column; }
+  .cal-match {
+    display: flex; align-items: center; gap: .75rem;
+    padding: .55rem .85rem;
+    border-bottom: 1px solid rgba(255,255,255,.04);
+    transition: background .15s;
+  }
+  .cal-match:last-child { border-bottom: none; }
+  .cal-match:hover { background: rgba(255,255,255,.02); }
+  .cal-match-left { display: flex; flex-direction: column; gap: .1rem; min-width: 200px; }
+  .cal-match-tournament {
+    font-size: .38rem; color: var(--green); font-weight: 600;
+    letter-spacing: .05em; text-transform: uppercase;
+    opacity: .7;
+  }
+  .cal-match-teams { display: flex; align-items: center; gap: .35rem; }
+  .cal-match-team { font-size: .55rem; font-weight: 600; color: var(--text); }
+  .cal-match-vs { font-size: .4rem; color: var(--text-3); font-weight: 700; }
+  .cal-match-mid { flex: 1; text-align: center; }
+  .cal-match-score { font-size: .6rem; font-weight: 800; color: var(--green); letter-spacing: .05em; }
+  .cal-match-time { font-size: .48rem; color: var(--text-3); }
+  .cal-match-right { display: flex; align-items: center; gap: .35rem; }
+  .cal-status {
+    font-size: .4rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+    padding: 2px 6px; border-radius: 99px;
+  }
+  .cal-status--scheduled { background: rgba(255,255,255,.05); color: var(--text-2); border: 1px solid var(--border); }
+  .cal-status--live { background: rgba(0,255,136,.1); color: var(--green); border: 1px solid rgba(0,255,136,.25); }
+  .cal-status--finished { background: rgba(59,130,246,.1); color: #60a5fa; border: 1px solid rgba(59,130,246,.25); }
+  .cal-status--cancelled { background: rgba(255,80,80,.1); color: #f87171; border: 1px solid rgba(255,80,80,.25); }
+
+  .cal-icon-btn {
+    background: none; border: none; cursor: pointer;
+    font-size: .65rem; padding: 2px; opacity: .4;
+    transition: opacity .15s;
+  }
+  .cal-icon-btn:hover { opacity: 1; }
+
+  /* ── Modal ── */
+  .cal-modal-overlay {
+    display: none;
+    position: fixed; inset: 0; z-index: 100;
+    background: rgba(0,0,0,.6); backdrop-filter: blur(4px);
+    align-items: center; justify-content: center;
+  }
+  .cal-modal-overlay--open { display: flex; }
+  .cal-modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    width: 90%; max-width: 480px;
+    max-height: 85vh; overflow-y: auto;
+  }
+  .cal-modal-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 1rem 1.2rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .cal-modal-title {
+    font-family: var(--font-cinzel,'Cinzel'),serif;
+    font-size: .6rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+    color: rgba(232,226,216,.8);
+  }
+  .cal-modal-close {
+    background: none; border: none; color: var(--text-3);
+    cursor: pointer; font-size: .85rem;
+  }
+  .cal-modal-close:hover { color: var(--text); }
+  .cal-modal-body { padding: 1.2rem; display: flex; flex-direction: column; gap: .85rem; }
+  .cal-modal-footer {
+    display: flex; justify-content: flex-end; gap: .5rem;
+    padding: 1rem 1.2rem;
+    border-top: 1px solid var(--border);
+  }
+  .cal-field { display: flex; flex-direction: column; }
+  .cal-label {
+    font-size: .48rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+    color: rgba(232,226,216,.4); margin-bottom: 5px;
+  }
+  .cal-modal-body .cal-input { width: 100%; }
+  .cal-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+
+  @media (max-width: 640px) {
+    .cal-filters { flex-direction: column; align-items: stretch; }
+    .cal-input--sm { width: 100%; }
+    .cal-match { flex-wrap: wrap; }
+    .cal-match-left { min-width: 0; }
+    .cal-grid2 { grid-template-columns: 1fr; }
+  }
+</style>

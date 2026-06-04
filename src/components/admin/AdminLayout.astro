@@ -1,0 +1,319 @@
+---
+export interface Props {
+  activePage?: string
+  hideFooter?: boolean
+}
+
+const { activePage = '' } = Astro.props
+
+const base = '/admin/dashboard'
+
+const navItems = [
+  { icon: '📊', label: 'Dashboard',     href: `${base}`, id: 'dashboard' },
+  { icon: '🏆', label: 'Torneos',        href: `${base}/torneos`, id: 'torneos' },
+  { icon: '➕', label: 'Crear Torneo',   href: `${base}/crear-torneo`, id: 'crear' },
+  { icon: '👥', label: 'Equipos',        href: `${base}/equipos` },
+  { icon: '⚽', label: 'Jugadores',      href: `${base}/jugadores` },
+  { icon: '📅', label: 'Calendario',     href: `${base}/calendar`, id: 'calendar' },
+  { icon: '📋', label: 'Reportes',       href: `${base}/reportes` },
+]
+
+const mobileNavItems = [
+  { icon: '📊', label: 'Dashboard', href: `${base}`, id: 'dashboard' },
+  { icon: '🏆', label: 'Torneos',   href: `${base}/torneos`, id: 'torneos' },
+  { icon: '➕', label: 'Crear',     href: `${base}/crear-torneo`, id: 'crear' },
+  { icon: '👥', label: 'Equipos',   href: `${base}/equipos` },
+  { icon: '📅', label: 'Agenda',    href: `${base}/calendar` },
+]
+---
+
+<div class="ct-root">
+  <aside class="ct-sidebar" id="ct-sidebar">
+    <div class="ct-sidebar-inner">
+      <div class="ct-logo">
+        <div class="ct-logo-icon">🏆</div>
+        <div class="ct-logo-text">
+          <span class="ct-logo-title">COPA <em>CHONTADURO</em></span>
+          <span class="ct-logo-sub">Panel Administrador</span>
+        </div>
+      </div>
+
+      <nav class="ct-nav">
+        {navItems.map(item => (
+          <a href={item.href} class={`ct-nav-link ${item.id === activePage ? 'ct-nav-link--active' : ''}`}>
+            <span class="ct-nav-icon">{item.icon}</span>
+            <span class="ct-nav-label">{item.label}</span>
+            {item.id === activePage && <span class="ct-nav-pip"></span>}
+          </a>
+        ))}
+      </nav>
+
+      <div class="ct-user">
+        <div class="ct-user-avatar">A</div>
+        <div class="ct-user-info">
+          <span class="ct-user-name">Administrador</span>
+          <span class="ct-user-email">admin@copa.com</span>
+        </div>
+        <a href="/login" class="ct-user-logout" title="Cerrar sesión">↩</a>
+      </div>
+    </div>
+  </aside>
+
+  <div class="ct-main">
+    <header class="ct-topbar">
+      <button class="ct-menu-btn" id="ct-menu-btn" aria-label="Menú">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <span class="ct-topbar-title">🏆 <em>COPA CHONTADURO</em></span>
+      <div class="ct-topbar-right">
+        <div class="ct-user-avatar ct-user-avatar--sm">A</div>
+      </div>
+    </header>
+
+    <div class="ct-content">
+      <slot />
+    </div>
+
+    <nav class="ct-mobile-nav">
+      {mobileNavItems.map(item => (
+        <a href={item.href} class={`ct-mobile-nav-item ${item.id === activePage ? 'ct-mobile-nav-item--active' : ''}`}>
+          <span class="ct-mobile-nav-icon">{item.icon}</span>
+          <span class="ct-mobile-nav-label">{item.label}</span>
+        </a>
+      ))}
+    </nav>
+  </div>
+
+  <div class="ct-overlay" id="ct-overlay"></div>
+</div>
+
+<script>
+  const sidebar = document.getElementById('ct-sidebar')!
+  const overlay = document.getElementById('ct-overlay')!
+  const menuBtn = document.getElementById('ct-menu-btn')!
+
+  menuBtn.addEventListener('click', () => {
+    sidebar.classList.toggle('ct-sidebar--open')
+    overlay.classList.toggle('ct-overlay--visible')
+  })
+  overlay.addEventListener('click', () => {
+    sidebar.classList.remove('ct-sidebar--open')
+    overlay.classList.remove('ct-overlay--visible')
+  })
+</script>
+
+<style>
+  :root {
+    --bg:         #080c12;
+    --surface:    #0f1520;
+    --surface-2:  #141d2b;
+    --border:     rgba(255,255,255,.07);
+    --border-2:   rgba(255,255,255,.12);
+    --text:       #e8e2d8;
+    --text-2:     rgba(232,226,216,.5);
+    --text-3:     rgba(232,226,216,.25);
+    --green:      #00ff88;
+    --green-dim:  rgba(0,255,136,.12);
+    --green-glow: rgba(0,255,136,.35);
+    --gold:       #c7a86b;
+    --midnight:   #0a0e1a;
+    --sidebar-w:  240px;
+  }
+
+  .ct-root {
+    display: flex;
+    min-height: 100svh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: sans-serif;
+    position: relative;
+    padding: 5rem 1.5rem 0rem 0rem;
+  }
+
+  .ct-sidebar {
+    width: var(--sidebar-w);
+    flex-shrink: 0;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    height: 100svh;
+    overflow-y: auto;
+    z-index: 50;
+    transition: transform .3s cubic-bezier(.22,1,.36,1);
+  }
+
+  .ct-sidebar-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding: 1.5rem 1rem;
+    min-height: 100%;
+  }
+
+  .ct-logo {
+    display: flex;
+    align-items: center;
+    gap: .65rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .ct-logo-icon {
+    width: 32px; height: 32px;
+    border-radius: 9px;
+    background: var(--green-dim);
+    border: 1px solid rgba(0,255,136,.25);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem;
+  }
+  .ct-logo-title {
+    font-family: var(--font-cinzel,'Cinzel'),serif;
+    font-size: .6rem; font-weight: 900;
+    letter-spacing: .2em; text-transform: uppercase;
+    color: rgba(232,226,216,.85);
+    display: block; line-height: 1.3;
+  }
+  .ct-logo-title em {
+    background: linear-gradient(to right,#00ff88,#34d399);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text; font-style: normal;
+  }
+  .ct-logo-sub {
+    font-size: .42rem; letter-spacing: .2em; text-transform: uppercase;
+    color: var(--text-3); display: block;
+  }
+
+  .ct-nav { display: flex; flex-direction: column; gap: .25rem; flex: 1; }
+  .ct-nav-link {
+    display: flex; align-items: center; gap: .6rem;
+    padding: .52rem .7rem; border-radius: 9px;
+    font-size: .58rem; font-weight: 700;
+    letter-spacing: .1em; text-transform: uppercase;
+    color: var(--text-2);
+    text-decoration: none;
+    transition: background .18s, color .18s;
+    position: relative;
+  }
+  .ct-nav-link:hover { background: rgba(255,255,255,.04); color: var(--text); }
+  .ct-nav-link--active {
+    background: rgba(0,255,136,.1);
+    color: var(--green);
+    border: 1px solid rgba(0,255,136,.18);
+  }
+  .ct-nav-icon { font-size: .9rem; line-height: 1; }
+  .ct-nav-pip {
+    position: absolute; right: .65rem;
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green-glow);
+  }
+
+  .ct-user {
+    display: flex; align-items: center; gap: .6rem;
+    padding-top: .85rem;
+    border-top: 1px solid var(--border);
+  }
+  .ct-user-avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: linear-gradient(135deg,#00ff88,#34d399);
+    color: var(--midnight);
+    font-size: .75rem; font-weight: 900;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .ct-user-avatar--sm { width: 28px; height: 28px; font-size: .65rem; }
+  .ct-user-info { flex: 1; min-width: 0; }
+  .ct-user-name {
+    display: block; font-family: var(--font-cinzel,'Cinzel'),serif;
+    font-size: .52rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+    color: rgba(232,226,216,.7); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .ct-user-email {
+    display: block; font-size: .44rem; color: var(--text-3);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .ct-user-logout {
+    font-size: .9rem; color: var(--text-3);
+    text-decoration: none;
+    transition: color .15s;
+  }
+  .ct-user-logout:hover { color: var(--text); }
+
+  .ct-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .ct-topbar {
+    display: none;
+    align-items: center;
+    gap: .75rem;
+    padding: .85rem 1rem;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 40;
+  }
+  .ct-menu-btn {
+    background: none; border: none; cursor: pointer;
+    color: var(--text-2); padding: .25rem; line-height: 1;
+  }
+  .ct-topbar-title {
+    font-family: var(--font-cinzel,'Cinzel'),serif;
+    font-size: .62rem; font-weight: 900; letter-spacing: .2em; text-transform: uppercase;
+    color: var(--text); flex: 1; text-align: center;
+  }
+  .ct-topbar-title em {
+    background: linear-gradient(to right,#00ff88,#34d399);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text; font-style: normal;
+  }
+  .ct-topbar-right { display: flex; align-items: center; }
+
+  .ct-content { padding: 1.75rem 1.5rem; flex: 1; max-width: 1200px; }
+
+  .ct-mobile-nav { display: none; }
+  .ct-overlay { display: none; }
+  .ct-overlay--visible {
+    display: block;
+    position: fixed; inset: 0; z-index: 45;
+    background: rgba(0,0,0,.6);
+    backdrop-filter: blur(4px);
+  }
+
+  @media (max-width: 768px) {
+    .ct-sidebar {
+      position: fixed;
+      left: 0; top: 0; bottom: 0;
+      transform: translateX(-100%);
+      z-index: 60;
+      height: 100svh;
+    }
+    .ct-sidebar--open { transform: translateX(0); }
+    .ct-topbar { display: flex; }
+    .ct-content { padding: 1rem .9rem; }
+    .ct-mobile-nav {
+      display: flex;
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 40;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+    }
+    .ct-mobile-nav-item {
+      flex: 1; display: flex; flex-direction: column; align-items: center; gap: .2rem;
+      padding: .6rem .25rem;
+      text-decoration: none;
+      border-top: 2px solid transparent;
+      transition: border-color .2s;
+    }
+    .ct-mobile-nav-item--active { border-top-color: var(--green); }
+    .ct-mobile-nav-icon { font-size: 1.1rem; line-height: 1; }
+    .ct-mobile-nav-label {
+      font-size: .42rem; font-weight: 700;
+      letter-spacing: .08em; text-transform: uppercase;
+      color: var(--text-3);
+    }
+    .ct-mobile-nav-item--active .ct-mobile-nav-label { color: var(--green); }
+    .ct-overlay--visible { display: block; }
+  }
+</style>
