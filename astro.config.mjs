@@ -16,6 +16,6 @@ export default defineConfig({
   build: {
     inlineStylesheets: "always",
   },
-  site: "https://la-velada-clone.vercel.app/",
+  site: "https://keku-sport.vercel.app/",
   adapter: vercel(),
 });
