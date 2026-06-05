@@ -3,45 +3,46 @@ import { PLAYERS } from '@/consts/fighters'
 import { fixedTitle } from '@/consts/pageTitles'
 import Layout from '@/layouts/Layout.astro'
 import BoxerProfileCard from '@/components/BoxerProfileCard.astro'
-
-const { id } = Astro.params
-
-// Try DB first, fallback to consts
 import { getPlayerById, getPlayerSocials } from '../../../server/db'
 
-const dbPlayer = await getPlayerById(id || '')
-const socials = dbPlayer ? await getPlayerSocials(dbPlayer.id) : []
+const { id } = Astro.params
 
 let player: any = null
 let isDbPlayer = false
 
-if (dbPlayer) {
-  isDbPlayer = true
-  player = {
-    id: dbPlayer.id,
-    name: dbPlayer.name,
-    realName: dbPlayer.real_name || '',
-    age: dbPlayer.age || 0,
-    country: dbPlayer.country || 'co',
-    city: dbPlayer.city || '',
-    neighborhood: dbPlayer.neighborhood || '',
-    preferredFoot: dbPlayer.preferred_foot || '',
-    team: '',
-    position: dbPlayer.position,
-    number: dbPlayer.number || 0,
-    bio: dbPlayer.bio || '',
-    imageBig: dbPlayer.image_big || '/images/fighters/big/jugador_mistery.webp',
-    imageCard: dbPlayer.image_card || '/images/fighters/cards/jugador_mistery_card.png',
-    socials: socials.map(s => ({
-      id: s.platform.toLowerCase(),
-      name: s.platform,
-      url: s.url || '#',
-      label: `Visitar perfil en ${s.platform}`,
-      followers: s.followers || undefined,
-      image: null,
-    })),
+try {
+  const dbPlayer = await getPlayerById(id || '')
+  if (dbPlayer) {
+    isDbPlayer = true
+    const socials = dbPlayer ? await getPlayerSocials(dbPlayer.id) : []
+    player = {
+      id: dbPlayer.id,
+      name: dbPlayer.name,
+      realName: dbPlayer.real_name || '',
+      age: dbPlayer.age || 0,
+      country: dbPlayer.country || 'co',
+      city: dbPlayer.city || '',
+      neighborhood: dbPlayer.neighborhood || '',
+      preferredFoot: dbPlayer.preferred_foot || '',
+      team: '',
+      position: dbPlayer.position,
+      number: dbPlayer.number || 0,
+      bio: dbPlayer.bio || '',
+      imageBig: dbPlayer.image_big || '/images/fighters/big/jugador_mistery.webp',
+      imageCard: dbPlayer.image_card || '/images/fighters/cards/jugador_mistery_card.png',
+      socials: socials.map(s => ({
+        id: s.platform.toLowerCase(),
+        name: s.platform,
+        url: s.url || '#',
+        label: `Visitar perfil en ${s.platform}`,
+        followers: s.followers || undefined,
+        image: null,
+      })),
+    }
   }
-} else {
+} catch {}
+
+if (!player) {
   const found = PLAYERS.find((p: any) => p.id === id)
   if (!found) return Astro.redirect('/404')
   player = found
