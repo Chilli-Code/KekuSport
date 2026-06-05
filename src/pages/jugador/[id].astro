@@ -1,24 +1,11 @@
 ---
 const { id } = Astro.params
-
-const PLAYERS = [
-  { id: 'alex', name: 'Alex', position: 'Delantero', city: 'Barranquilla', bio: 'Bio de Alex', neighborhood: 'El Prado' },
-]
-
-const found = PLAYERS.find((p: any) => p.id === id)
-if (!found) return Astro.redirect('/404')
-
-const player = found
-const imgSrc = `/images/fighters/big/jugador_mistery.webp`
 ---
 
 <html>
-  <head><title>{player.name}</title></head>
+  <head><title>Test</title></head>
   <body style="background:#050d08;color:#fef3c7;font-family:sans-serif;padding:2rem">
-    <h1>{player.name}</h1>
-    <p>{player.position} · {player.city}</p>
-    <img src={imgSrc} alt={player.name} style="max-width:300px" />
-    <p>{player.bio}</p>
-    <a href="/" style="color:#fbbf24">&larr; Volver</a>
+    <h1>ID: {id || 'no id'}</h1>
+    <p>Params: {JSON.stringify(Astro.params)}</p>
   </body>
 </html>
