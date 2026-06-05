@@ -8,20 +8,20 @@ import { getTournamentById, getCategoriesByTournament, getMatchesByTournament, g
 const { id } = Astro.params
 const user = Astro.locals.user
 
-const tournament = id ? getTournamentById(id) : undefined
+const tournament = id ? await getTournamentById(id) : undefined
 
 if (!tournament) {
   return Astro.redirect('/admin/dashboard/torneos')
 }
 
-const categories = getCategoriesByTournament(tournament.id)
+const categories = await getCategoriesByTournament(tournament.id)
 const rules: string[] = JSON.parse(tournament.rules || '[]')
 const awards: string[] = JSON.parse(tournament.awards || '[]')
 const prizes = JSON.parse(tournament.prizes || '{}')
 
 // ── Tournament stats ──
-const allMatches = getMatchesByTournament(tournament.id)
-const allTeams = getTeamsByTournament(tournament.id)
+const allMatches = await getMatchesByTournament(tournament.id)
+const allTeams = await getTeamsByTournament(tournament.id)
 
 const finishedMatches = allMatches.filter(m => m.status === 'finished')
 const liveMatches = allMatches.filter(m => m.status === 'live')

@@ -9,8 +9,8 @@ const { id } = Astro.params
 // Try DB first, fallback to consts
 import { getPlayerById, getPlayerSocials } from '../../../server/db'
 
-const dbPlayer = getPlayerById(id || '')
-const socials = dbPlayer ? getPlayerSocials(dbPlayer.id) : []
+const dbPlayer = await getPlayerById(id || '')
+const socials = dbPlayer ? await getPlayerSocials(dbPlayer.id) : []
 
 let player: any = null
 let isDbPlayer = false

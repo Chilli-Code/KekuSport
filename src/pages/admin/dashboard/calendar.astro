@@ -4,8 +4,8 @@ import Layout from "@/layouts/Layout.astro";
 import { getAllTournaments, getAllMatchesWithTournament, getTeamsByTournament } from "../../../../server/db";
 
 const user = Astro.locals.user
-const tournaments = getAllTournaments()
-const allMatches = getAllMatchesWithTournament()
+const tournaments = await getAllTournaments()
+const allMatches = await getAllMatchesWithTournament()
 
 // Group matches by date
 const dateGroups = new Map<string, typeof allMatches>()
@@ -23,7 +23,7 @@ const sortedDates = Array.from(dateGroups.keys()).sort((a, b) => {
 // Pre-load teams per tournament for edit modals
 const teamsByTournament: Record<string, { id: string; name: string }[]> = {}
 for (const t of tournaments) {
-  teamsByTournament[t.id] = getTeamsByTournament(t.id)
+  teamsByTournament[t.id] = await getTeamsByTournament(t.id)
 }
 ---
 

@@ -21,8 +21,8 @@ const FIFA_POSITIONS = [
 ---
 
 <Layout hideFooter={true}>
-  <main id="player-dashboard" style="min-height:100svh;background:#050d08;padding:2rem 1rem">
-    <div style="max-width:720px;margin:0 auto">
+  <main id="player-dashboard" style="min-height:100svh;background:#050d08;padding:6rem 1.5rem 5rem">
+    <div style="max-width:720px;margin:0 auto;">
 
       <!-- Loading state -->
       <div id="player-loading" style="display:flex;align-items:center;justify-content:center;padding:4rem 0;color:rgba(232,220,200,.4);font-family:'Rajdhani',sans-serif;font-size:.85rem;letter-spacing:.1em;text-transform:uppercase;gap:.5rem">
@@ -118,6 +118,10 @@ const FIFA_POSITIONS = [
   @keyframes spin { to { transform: rotate(360deg) } }
   input:focus, select:focus, textarea:focus { border-color: var(--color-theme-gold) !important; }
   #btn-save:hover { filter: brightness(1.1); transform: translateY(-1px); }
+
+  main{
+    padding: 6rem 1.5rem 5rem !important;
+  }
 </style>
 
 <script>

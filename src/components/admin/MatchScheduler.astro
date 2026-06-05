@@ -9,8 +9,8 @@ export interface Props {
 }
 
 const { tournamentId, tournamentFormat, tournamentVenue } = Astro.props
-const teams = getTeamsByTournament(tournamentId)
-const matches = getMatchesByTournament(tournamentId)
+const teams = await getTeamsByTournament(tournamentId)
+const matches = await getMatchesByTournament(tournamentId)
 const totalRounds = matches.length > 0 ? Math.max(...matches.map(m => m.round)) : 0
 
 // Group matches by date for calendar view

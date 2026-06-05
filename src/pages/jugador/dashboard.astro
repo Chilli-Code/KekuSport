@@ -8,14 +8,14 @@ if (!user || user.role !== 'jugador') {
   return Astro.redirect('/login')
 }
 
-const player = getPlayerByUser(user.id)
-const acceptedTeam = player ? getPlayerAcceptedTeam(player.id) : undefined
+const player = await getPlayerByUser(user.id)
+const acceptedTeam = player ? await getPlayerAcceptedTeam(player.id) : undefined
 const hasTeam = !!acceptedTeam
 ---
 
 <Layout hideFooter={true}>
-  <main style="min-height:100svh;background:#050d08;padding:2rem 1rem 6rem">
-    <div style="max-width:720px;margin:0 auto">
+  <main style="background:#050d08;padding:6rem 1.5rem 5rem; ">
+    <div style="max-width:720px;margin:0 auto; padding:6rem 1.5rem 5rem; ">
 
       <!-- Header -->
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem">
@@ -25,7 +25,10 @@ const hasTeam = !!acceptedTeam
           </h1>
           <p style="font-size:.5rem;letter-spacing:.1em;color:rgba(232,220,200,.3);text-transform:uppercase;margin-top:.15rem">Bienvenido, {player?.name || user.name}</p>
         </div>
-        {player && <a href="/jugador" style="padding:.35rem .7rem;border-radius:6px;font-family:'Cinzel',serif;font-size:.42rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;text-decoration:none;border:1px solid var(--color-theme-gold);color:var(--color-theme-gold);background:transparent;transition:all .2s">EDITAR PERFIL</a>}
+        <div style="display:flex;gap:.4rem;align-items:center">
+          {player && <a href="/jugador" style="padding:.35rem .7rem;border-radius:6px;font-family:'Cinzel',serif;font-size:.42rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;text-decoration:none;border:1px solid var(--color-theme-gold);color:var(--color-theme-gold);background:transparent;transition:all .2s">EDITAR PERFIL</a>}
+          <button id="btn-logout" style="padding:.35rem .7rem;border-radius:6px;font-family:'Cinzel',serif;font-size:.42rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;border:1px solid #f87171;color:#f87171;background:transparent;transition:all .2s">CERRAR SESIÓN</button>
+        </div>
       </div>
 
       {!player ? (
@@ -193,9 +196,19 @@ const hasTeam = !!acceptedTeam
   }
 
   loadMyRequests()
+
+  // ── Logout ──
+  $('btn-logout').addEventListener('click', async () => {
+    await fetch('/api/auth/logout', { method: 'POST' })
+    window.location.href = '/login'
+  })
 </script>
 
 <style>
   input:focus { border-color: var(--color-theme-gold) !important; }
   .team-request-btn:hover { background: rgba(var(--color-theme-gold-rgb), .1); }
+
+  main{
+    padding: 6rem 1.5rem 5rem;
+  }
 </style>

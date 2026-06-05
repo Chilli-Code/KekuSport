@@ -4,7 +4,7 @@ import PartidoManager from './PartidoManager.astro'
 import { getTournamentsOpenForRegistration } from '../../../server/db'
 
 const user = Astro.locals.user
-const tournaments = user ? getTournamentsOpenForRegistration() : []
+const tournaments = user ? await getTournamentsOpenForRegistration() : []
 const months = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC']
 function formatDate(d: string) {
   if (!d) return ''

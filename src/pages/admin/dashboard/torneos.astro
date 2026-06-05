@@ -1,0 +1,112 @@
+---
+import AdminLayout from "../../../components/admin/AdminLayout.astro";
+import { getTournamentsByUser } from "../../../../server/db";
+
+const user = Astro.locals.user
+const tournaments = user ? await getTournamentsByUser(user.id) : []
+---
+
+<AdminLayout activePage="torneos">
+  <div class="t-content">
+    <div class="t-header">
+      <div>
+        <h1 class="t-title">Torneos</h1>
+        <p class="t-sub">{tournaments.length} torneo{tournaments.length !== 1 ? 's' : ''} creado{tournaments.length !== 1 ? 's' : ''}</p>
+      </div>
+      <a href="/admin/dashboard/crear-torneo" class="t-btn">+ Nuevo Torneo</a>
+    </div>
+
+    {tournaments.length === 0 ? (
+      <div class="t-empty">
+        <span class="t-empty-icon">🏆</span>
+        <p class="t-empty-text">Aún no has creado ningún torneo</p>
+        <a href="/admin/dashboard/crear-torneo" class="t-btn">Crear Torneo</a>
+      </div>
+    ) : (
+      <div class="t-grid">
+        {tournaments.map(t => (
+          <a href={`/admin/dashboard/torneos/${t.id}`} class="t-card">
+            <div class="t-card-top">
+              <span class="t-card-icon">🏆</span>
+              <span class={`t-badge t-badge--${t.status}`}>{t.status}</span>
+            </div>
+            <h3 class="t-card-name">{t.name}</h3>
+            <div class="t-card-meta">
+              <span>📅 {new Date(t.start_date + 'T00:00').toLocaleDateString('es-CO')}</span>
+              <span>📍 {t.venue}</span>
+              <span>👥 {t.num_teams} equipos</span>
+            </div>
+            <div class="t-card-footer">
+              <span class="t-card-format">{t.format}</span>
+            </div>
+          </a>
+        ))}
+      </div>
+    )}
+  </div>
+</AdminLayout>
+
+<style>
+  .t-content { padding: 0; }
+  .t-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    margin-bottom: 1.5rem; gap: 1rem;
+  }
+  .t-title {
+    font-family: var(--font-cinzel,'Cinzel'),serif;
+    font-size: clamp(1.5rem,4vw,2.2rem); font-weight: 900;
+    letter-spacing: .05em; text-transform: uppercase;
+    color: var(--text); line-height: 1;
+  }
+  .t-sub { font-size: .52rem; color: var(--text-3); margin-top: .3rem; }
+  .t-btn {
+    display: inline-flex; padding: .55rem 1.2rem; border-radius: 10px;
+    background: rgba(0,255,136,.1); border: 1px solid rgba(0,255,136,.3);
+    color: var(--green); font-size: .55rem; font-weight: 700;
+    letter-spacing: .1em; text-transform: uppercase; text-decoration: none;
+    white-space: nowrap; transition: background .2s;
+  }
+  .t-btn:hover { background: rgba(0,255,136,.18); }
+
+  .t-empty {
+    border-radius: 14px; border: 1px dashed var(--border);
+    padding: 2.5rem; text-align: center;
+    display: flex; flex-direction: column; align-items: center; gap: .5rem;
+  }
+  .t-empty-icon { font-size: 2.5rem; }
+  .t-empty-text { font-size: .55rem; color: var(--text-3); }
+
+  .t-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem; }
+  .t-card {
+    border-radius: 14px; border: 1px solid var(--border);
+    background: var(--surface); padding: 1.1rem;
+    display: flex; flex-direction: column; gap: .6rem;
+    transition: border-color .2s;
+  }
+  .t-card:hover { border-color: rgba(255,255,255,.15); }
+  .t-card-top { display: flex; justify-content: space-between; align-items: center; }
+  .t-card-icon { font-size: 1.3rem; }
+  .t-badge {
+    font-size: .44rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+    padding: 2px 8px; border-radius: 99px;
+  }
+  .t-badge--active { background: rgba(0,255,136,.1); color: var(--green); border: 1px solid rgba(0,255,136,.25); }
+  .t-badge--draft { background: rgba(255,255,255,.05); color: var(--text-2); border: 1px solid var(--border); }
+  .t-badge--completed { background: rgba(59,130,246,.1); color: #60a5fa; border: 1px solid rgba(59,130,246,.25); }
+  .t-card-name {
+    font-family: var(--font-cinzel,'Cinzel'),serif;
+    font-size: .6rem; font-weight: 800; letter-spacing: .05em;
+    color: rgba(232,226,216,.85); margin: 0;
+  }
+  .t-card-meta { display: flex; flex-direction: column; gap: .2rem; }
+  .t-card-meta span { font-size: .48rem; color: var(--text-3); }
+  .t-card-footer { margin-top: auto; padding-top: .5rem; border-top: 1px solid var(--border); }
+  .t-card-format {
+    font-size: .44rem; color: var(--text-3); text-transform: uppercase; letter-spacing: .12em;
+  }
+
+  @media (max-width: 768px) {
+    .t-header { flex-direction: column; }
+    .t-grid { grid-template-columns: 1fr; }
+  }
+</style>

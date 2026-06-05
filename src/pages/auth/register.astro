@@ -63,6 +63,7 @@ import Layout from '../../layouts/Layout.astro'
               <div class="input-wrap">
                 <input type="email" id="email" placeholder="tucorreo@ejemplo.com" class="form-input" required />
               </div>
+              <span id="email-status" class="email-status"></span>
             </div>
             <div class="form-group">
               <label for="password" class="form-label">Contraseña</label>
@@ -94,6 +95,7 @@ import Layout from '../../layouts/Layout.astro'
 
 <script>
   let selectedRole = 'jugador'
+  let emailAvailable = true
 
   document.querySelectorAll('.role-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -109,6 +111,50 @@ import Layout from '../../layouts/Layout.astro'
   const btnText = document.getElementById('btn-register-text')
   const btnLoader = document.getElementById('btn-register-loader')
   const btn = document.getElementById('btn-register')
+  const emailInput = document.getElementById('email')
+  const emailStatus = document.getElementById('email-status')
+
+  let emailCheckTimer = null
+
+  async function checkEmail(email) {
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      emailStatus.textContent = ''
+      emailStatus.className = 'email-status'
+      emailAvailable = true
+      return
+    }
+    emailStatus.textContent = 'Verificando...'
+    emailStatus.className = 'email-status email-status--checking'
+    try {
+      const res = await fetch(`/api/auth/check-email?email=${encodeURIComponent(email)}`)
+      const data = await res.json()
+      if (data.available) {
+        emailStatus.textContent = 'Email disponible'
+        emailStatus.className = 'email-status email-status--available'
+        emailAvailable = true
+      } else {
+        emailStatus.textContent = 'Este email ya está registrado'
+        emailStatus.className = 'email-status email-status--taken'
+        emailAvailable = false
+      }
+    } catch {
+      emailStatus.textContent = ''
+      emailStatus.className = 'email-status'
+      emailAvailable = true
+    }
+  }
+
+  emailInput.addEventListener('blur', () => checkEmail(emailInput.value.trim()))
+  emailInput.addEventListener('input', () => {
+    clearTimeout(emailCheckTimer)
+    if (!emailInput.value.trim()) {
+      emailStatus.textContent = ''
+      emailStatus.className = 'email-status'
+      emailAvailable = true
+      return
+    }
+    emailCheckTimer = setTimeout(() => checkEmail(emailInput.value.trim()), 400)
+  })
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault()
@@ -119,6 +165,12 @@ import Layout from '../../layouts/Layout.astro'
 
     if (!name || !email || !password) {
       errorEl.textContent = 'Todos los campos son obligatorios'
+      errorEl.classList.remove('hidden')
+      return
+    }
+
+    if (!emailAvailable) {
+      errorEl.textContent = 'Este email ya está registrado. Usa otro o inicia sesión.'
       errorEl.classList.remove('hidden')
       return
     }
@@ -180,4 +232,8 @@ import Layout from '../../layouts/Layout.astro'
   .form-input:focus { border-color: var(--color-theme-gold); }
   .login-loader { display: inline-block; width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--color-theme-midnight); border-top-color: transparent; animation: spin .6s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg) } }
+  .email-status { font-size: .48rem; font-weight: 600; letter-spacing: .05em; min-height: 1rem; margin-top: .2rem; transition: color .2s; }
+  .email-status--available { color: #00ff88; }
+  .email-status--taken { color: #f87171; }
+  .email-status--checking { color: #fbbf24; }
 </style>
