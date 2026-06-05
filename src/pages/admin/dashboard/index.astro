@@ -4,7 +4,7 @@ import { getTournamentsByUser } from "../../../../server/db";
 import Layout from "@/layouts/Layout.astro";
 
 const user = Astro.locals.user
-const tournaments = user ? getTournamentsByUser(user.id) : []
+const tournaments = user ? await getTournamentsByUser(user.id) : []
 const total = tournaments.length
 const active = tournaments.filter(t => t.status === 'active').length
 const drafts = tournaments.filter(t => t.status === 'draft').length

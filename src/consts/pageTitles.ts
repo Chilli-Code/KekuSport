@@ -1,9 +1,9 @@
-export const fixedTitle: string = 'La Velada del Año V Web Oficial - Evento de boxeo de Ibai Llanos con creadores de contenido'
+export const fixedTitle: string = 'KekuSport - Gestión de Torneos Deportivos'
 
-export const porra: string = `La Porra - ${fixedTitle}`
+export const porra: string = `Porra - ${fixedTitle}`
 
-export const combates: string = `Combates - ${fixedTitle}`
+export const combates: string = `Partidos - ${fixedTitle}`
 
 export const combate = (fighter1: string | undefined, fighter2: string | undefined): string => `${fighter1} vs ${fighter2} - ${fixedTitle}`
 
-export const entradas: string = `Entradas - ${fixedTitle}`
+export const entradas: string = `Inscripción - ${fixedTitle}`

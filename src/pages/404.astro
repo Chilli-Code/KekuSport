@@ -1,8 +1,9 @@
 ---
 import Layout from '@/layouts/Layout.astro'
+import { fixedTitle } from '@/consts/pageTitles'
 ---
 
-<Layout title="404 - La Velada del Año V">
+<Layout title={`404 - ${fixedTitle}`}>
   <section
     class="mask-fade-bottom flex min-h-screen w-full items-center justify-center bg-[url('/images/hero.avif')] bg-cover bg-center text-center"
   >
