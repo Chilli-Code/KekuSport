@@ -1,82 +1,22 @@
 ---
 import { PLAYERS } from '@/consts/fighters'
-import { fixedTitle } from '@/consts/pageTitles'
-import Layout from '@/layouts/Layout.astro'
-import BoxerProfileCard from '@/components/BoxerProfileCard.astro'
-import { getPlayerById, getPlayerSocials } from '../../../server/db'
 
 const { id } = Astro.params
 
-let player: any = null
-let isDbPlayer = false
+const found = PLAYERS.find((p: any) => p.id === id)
+if (!found) return Astro.redirect('/404')
 
-try {
-  const dbPlayer = await getPlayerById(id || '')
-  if (dbPlayer) {
-    isDbPlayer = true
-    const socials = dbPlayer ? await getPlayerSocials(dbPlayer.id) : []
-    player = {
-      id: dbPlayer.id,
-      name: dbPlayer.name,
-      realName: dbPlayer.real_name || '',
-      age: dbPlayer.age || 0,
-      country: dbPlayer.country || 'co',
-      city: dbPlayer.city || '',
-      neighborhood: dbPlayer.neighborhood || '',
-      preferredFoot: dbPlayer.preferred_foot || '',
-      team: '',
-      position: dbPlayer.position,
-      number: dbPlayer.number || 0,
-      bio: dbPlayer.bio || '',
-      imageBig: dbPlayer.image_big || '/images/fighters/big/jugador_mistery.webp',
-      imageCard: dbPlayer.image_card || '/images/fighters/cards/jugador_mistery_card.png',
-      socials: socials.map(s => ({
-        id: s.platform.toLowerCase(),
-        name: s.platform,
-        url: s.url || '#',
-        label: `Visitar perfil en ${s.platform}`,
-        followers: s.followers || undefined,
-        image: null,
-      })),
-    }
-  }
-} catch {}
-
-if (!player) {
-  const found = PLAYERS.find((p: any) => p.id === id)
-  if (!found) return Astro.redirect('/404')
-  player = found
-}
-
-const imgSrc = isDbPlayer ? player.imageBig : `/images/fighters/big/jugador_mistery.webp`
+const player = found
+const imgSrc = `/images/fighters/big/jugador_mistery.webp`
 ---
 
-<Layout title={`${player.name} | ${fixedTitle}`}>
-  <section class="relative flex lg:min-h-screen w-full flex-col-reverse lg:flex-row">
-    <div class="ssss">
-      <div class="relative z-10 flex w-full flex-col items-center justify-center pl-0 pr-0 lg:pr-6 pt-24 lg:flex-row lg:items-start lg:pt-32">
-        <div class="relative mt-8 px-6 lg:px-2 flex h-[60vh] w-full lg:min-w-sm items-center justify-center lg:mt-0 lg:h-[80vh] lg:w-1/2">
-          <img
-            src={imgSrc}
-            alt={`Retrato de ${player.name}`}
-            class="animate-fade-in mask-image-fade-bottom h-full w-full object-contain transition-all duration-700 hover:scale-105"
-            transition:name={`image-${id}`}
-          />
-        </div>
-        <div class="w-[95%] md:w-full lg:w-1/2 px-1 sm:px-4 md:px-8 lg:px-0 mx-auto flex flex-col items-center justify-center text-white">
-          <BoxerProfileCard player={player} />
-        </div>
-      </div>
-    </div>
-  </section>
-</Layout>
-
-<style>
-  .ssss { width: 100%; display: flex; }
-  @media (max-width: 1024px) { .ssss { flex-direction: column; justify-content: center; align-items: center; } }
-  .mask-image-fade-bottom { mask-image: linear-gradient(to bottom, black 70%, transparent 100%); -webkit-mask-image: linear-gradient(to bottom, black 70%, transparent 100%); }
-  .boxer-detail-cta { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.4rem 1.3rem; border-radius: 9999px; font-size: 0.6rem; font-weight: 800; letter-spacing: 0.3em; text-transform: uppercase; cursor: pointer; transition: transform 250ms ease, background-color 250ms ease, color 250ms ease, box-shadow 250ms ease; }
-  @media (min-width: 640px) { .boxer-detail-cta { font-size: 0.5rem; padding: 0.8rem 1.5rem; } }
-  .boxer-detail-cta-ghost { background: transparent; color: color-mix(in srgb, var(--color-theme-cream) 80%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-theme-gold) 35%, transparent); }
-  .boxer-detail-cta-ghost:hover, .boxer-detail-cta-ghost:focus-visible { color: var(--color-theme-cream); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-theme-gold) 70%, transparent); transform: translateY(-1px); outline: none; }
-</style>
+<html>
+  <head><title>{player.name}</title></head>
+  <body style="background:#050d08;color:#fef3c7;font-family:sans-serif;padding:2rem">
+    <h1>{player.name}</h1>
+    <p>{player.position} · {player.city}</p>
+    <img src={imgSrc} alt={player.name} style="max-width:300px" />
+    <p>{player.bio}</p>
+    <a href="/" style="color:#fbbf24">&larr; Volver</a>
+  </body>
+</html>
