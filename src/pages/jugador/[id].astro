@@ -1,7 +1,9 @@
 ---
-import { PLAYERS } from '@/consts/fighters'
-
 const { id } = Astro.params
+
+const PLAYERS = [
+  { id: 'alex', name: 'Alex', position: 'Delantero', city: 'Barranquilla', bio: 'Bio de Alex', neighborhood: 'El Prado' },
+]
 
 const found = PLAYERS.find((p: any) => p.id === id)
 if (!found) return Astro.redirect('/404')
