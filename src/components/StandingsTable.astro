@@ -280,7 +280,7 @@ const getFormIcon = (result: 'W' | 'D' | 'L') => {
               {/* Imagen del jugador */}
               {team.team.logo && (
                 <a 
-                  href={`/jugador/${team.team.id}`}
+                  href={`/player/${team.team.id}`}
                   class="flex-shrink-0 transition-transform duration-300 hover:scale-110"
                 >
                   <img 
@@ -295,7 +295,7 @@ const getFormIcon = (result: 'W' | 'D' | 'L') => {
               {/* Nombre y manager con enlace */}
               <div class="flex flex-col">
                 <a 
-                  href={`/jugador/${team.team.id}`}
+                  href={`/player/${team.team.id}`}
                   class="font-cinzel text-xs font-bold uppercase tracking-wide text-theme-cream hover:text-theme-gold transition-colors duration-300"
                 >
                   {team.team.name}

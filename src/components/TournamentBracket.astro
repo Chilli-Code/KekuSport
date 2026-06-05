@@ -117,7 +117,7 @@ const {
           <span class="tb-round-label">Grupo A</span>
           <div class="tb-group-card">
             {groupA.map((t, i) => (
-              <a href={`/jugador/${t.id}`} class="tb-group-row group">
+              <a href={`/player/${t.id}`} class="tb-group-row group">
                 <span class={`tb-pos ${i === 0 ? 'tb-pos--gold' : ''}`}>{i + 1}</span>
                 {t.logo && <div class="tb-avatar"><img src={t.logo} alt={t.name} loading="lazy" /></div>}
                 <span class="tb-team-name">{t.name}</span>
@@ -131,7 +131,7 @@ const {
           <span class="tb-round-label">Grupo B</span>
           <div class="tb-group-card">
             {groupB.map((t, i) => (
-              <a href={`/jugador/${t.id}`} class="tb-group-row group">
+              <a href={`/player/${t.id}`} class="tb-group-row group">
                 <span class={`tb-pos ${i === 0 ? 'tb-pos--gold' : ''}`}>{i + 1}</span>
                 {t.logo && <div class="tb-avatar"><img src={t.logo} alt={t.name} loading="lazy" /></div>}
                 <span class="tb-team-name">{t.name}</span>
@@ -159,7 +159,7 @@ const {
       <div class="flex flex-col gap-3 flex-shrink-0 self-center" style="width:158px">
         <span class="tb-round-label">Cuartos de Final</span>
         {leftQuarterFinals.map((m) => (
-          <a href={`/jugador/${m.winner === 'team1' ? m.team1.id : m.team2.id}`} class="tb-match">
+          <a href={`/player/${m.winner === 'team1' ? m.team1.id : m.team2.id}`} class="tb-match">
             <div class={`tb-match-row ${m.winner === 'team1' ? 'tb-match-row--win' : ''}`}>
               <span class="tb-team-name">{m.team1.name}</span>
               <span class={`tb-score ${m.winner === 'team1' ? 'tb-score--win' : 'tb-score--loss'}`}>{m.score1}</span>
@@ -186,7 +186,7 @@ const {
       <!-- ══════════════ SEMI IZQ ══════════════ -->
       <div class="flex flex-col gap-1.5 flex-shrink-0 self-center" style="width:162px">
         <span class="tb-round-label">Semifinal</span>
-        <a href={`/jugador/${leftSemiFinal.winner === 'team1' ? leftSemiFinal.team1.id : leftSemiFinal.team2.id}`} class="tb-sf">
+        <a href={`/player/${leftSemiFinal.winner === 'team1' ? leftSemiFinal.team1.id : leftSemiFinal.team2.id}`} class="tb-sf">
           <div class={`tb-sf-row ${leftSemiFinal.winner === 'team1' ? 'tb-match-row--win' : ''}`}>
             <span class="tb-team-name">{leftSemiFinal.team1.name}</span>
             <span class={`tb-score ${leftSemiFinal.winner === 'team1' ? 'tb-score--win' : 'tb-score--loss'}`}>{leftSemiFinal.score1}</span>
@@ -208,7 +208,7 @@ const {
       <!-- ══════════════ FINAL ══════════════ -->
       <div class="flex flex-col gap-1.5 flex-shrink-0 self-center" style="width:182px">
         <span class="tb-round-label tb-round-label--final">★ Final ★</span>
-        <a href={`/jugador/${finalMatch.winner === 'team1' ? finalMatch.team1.id : finalMatch.team2.id}`} class="tb-final">
+        <a href={`/player/${finalMatch.winner === 'team1' ? finalMatch.team1.id : finalMatch.team2.id}`} class="tb-final">
           <div class="tb-final-header">CAMPEÓN</div>
           <div class={`tb-final-row ${finalMatch.winner === 'team1' ? 'tb-match-row--win' : ''}`}>
             {finalMatch.team1.logo && (
@@ -243,7 +243,7 @@ const {
       <!-- ══════════════ SEMI DER ══════════════ -->
       <div class="flex flex-col gap-1.5 flex-shrink-0 self-center" style="width:162px">
         <span class="tb-round-label">Semifinal</span>
-        <a href={`/jugador/${rightSemiFinal.winner === 'team1' ? rightSemiFinal.team1.id : rightSemiFinal.team2.id}`} class="tb-sf">
+        <a href={`/player/${rightSemiFinal.winner === 'team1' ? rightSemiFinal.team1.id : rightSemiFinal.team2.id}`} class="tb-sf">
           <div class={`tb-sf-row ${rightSemiFinal.winner === 'team1' ? 'tb-match-row--win' : ''}`}>
             <span class="tb-team-name">{rightSemiFinal.team1.name}</span>
             <span class={`tb-score ${rightSemiFinal.winner === 'team1' ? 'tb-score--win' : 'tb-score--loss'}`}>{rightSemiFinal.score1}</span>
@@ -270,7 +270,7 @@ const {
       <div class="flex flex-col gap-3 flex-shrink-0 self-center" style="width:158px">
         <span class="tb-round-label">Cuartos de Final</span>
         {rightQuarterFinals.map((m) => (
-          <a href={`/jugador/${m.winner === 'team1' ? m.team1.id : m.team2.id}`} class="tb-match">
+          <a href={`/player/${m.winner === 'team1' ? m.team1.id : m.team2.id}`} class="tb-match">
             <div class={`tb-match-row ${m.winner === 'team1' ? 'tb-match-row--win' : ''}`}>
               <span class="tb-team-name">{m.team1.name}</span>
               <span class={`tb-score ${m.winner === 'team1' ? 'tb-score--win' : 'tb-score--loss'}`}>{m.score1}</span>
@@ -302,7 +302,7 @@ const {
           <span class="tb-round-label">Grupo C</span>
           <div class="tb-group-card">
             {groupC.map((t, i) => (
-              <a href={`/jugador/${t.id}`} class="tb-group-row group">
+              <a href={`/player/${t.id}`} class="tb-group-row group">
                 <span class={`tb-pos ${i === 0 ? 'tb-pos--gold' : ''}`}>{i + 1}</span>
                 {t.logo && <div class="tb-avatar"><img src={t.logo} alt={t.name} loading="lazy" /></div>}
                 <span class="tb-team-name">{t.name}</span>
@@ -316,7 +316,7 @@ const {
           <span class="tb-round-label">Grupo D</span>
           <div class="tb-group-card">
             {groupD.map((t, i) => (
-              <a href={`/jugador/${t.id}`} class="tb-group-row group">
+              <a href={`/player/${t.id}`} class="tb-group-row group">
                 <span class={`tb-pos ${i === 0 ? 'tb-pos--gold' : ''}`}>{i + 1}</span>
                 {t.logo && <div class="tb-avatar"><img src={t.logo} alt={t.name} loading="lazy" /></div>}
                 <span class="tb-team-name">{t.name}</span>
