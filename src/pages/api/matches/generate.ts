@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro'
-import { getTournamentById, getTeamsByTournament, deleteAllMatches, createMatch, getMatchesByTournament, createTeam, deleteAllTeams } from '../../../../server/db'
+import { getTournamentById, getTeamsByTournament, deleteAllMatches, createMatch, createTeam, deleteAllTeams } from '../../../../server/db'
 
 function generateRoundRobin(teamIds: string[], doubleRound: boolean): Array<{ round: number; home: string; away: string }> {
   const teams = [...teamIds]
@@ -75,29 +75,28 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return new Response(JSON.stringify({ error: 'tournamentId requerido' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
   }
 
-  const tournament = getTournamentById(tournamentId)
+  const tournament = await getTournamentById(tournamentId)
   if (!tournament) {
     return new Response(JSON.stringify({ error: 'Torneo no encontrado' }), { status: 404, headers: { 'Content-Type': 'application/json' } })
   }
 
-  let teams = getTeamsByTournament(tournamentId)
+  let teams = await getTeamsByTournament(tournamentId)
 
   // If no teams exist, create placeholder teams
   if (teams.length === 0) {
     for (let i = 1; i <= tournament.num_teams; i++) {
-      createTeam({ id: crypto.randomUUID(), tournament_id: tournamentId, name: `Equipo ${i}`, logo: null, color: null, category: '', created_by: user.id })
+      await createTeam({ id: crypto.randomUUID(), tournament_id: tournamentId, name: `Equipo ${i}`, logo: null, color: null, category: '', created_by: user.id })
     }
-    teams = getTeamsByTournament(tournamentId)
+    teams = await getTeamsByTournament(tournamentId)
   }
 
   // Delete existing matches
-  deleteAllMatches(tournamentId)
+  await deleteAllMatches(tournamentId)
 
   const teamIds = teams.map(t => t.id)
   let fixture: Array<{ round: number; home: string; away: string }> = []
 
   if (mode === 'manual' || !mode) {
-    // manual mode: one match at a time will be added via separate API
     return new Response(JSON.stringify({ success: true, matches: [], message: 'Usa modo manual para añadir partidos uno por uno' }), { status: 200, headers: { 'Content-Type': 'application/json' } })
   }
 
@@ -128,7 +127,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const scheduledDate = `${dateStr}T${timeStr}:00`
 
     const id = crypto.randomUUID()
-    createMatch({
+    await createMatch({
       id,
       tournament_id: tournamentId,
       round: m.round,

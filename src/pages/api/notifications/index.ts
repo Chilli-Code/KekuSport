@@ -6,8 +6,8 @@ export const GET: APIRoute = async ({ locals }) => {
     return new Response(JSON.stringify({ error: 'No autorizado' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
   }
 
-  const notifications = getNotificationsByUser(locals.user.id)
-  const unread = getUnreadNotificationCount(locals.user.id)
+  const notifications = await getNotificationsByUser(locals.user.id)
+  const unread = await getUnreadNotificationCount(locals.user.id)
 
   return new Response(JSON.stringify({ success: true, notifications, unread }), { status: 200, headers: { 'Content-Type': 'application/json' } })
 }
@@ -24,12 +24,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (!data.id) {
       return new Response(JSON.stringify({ error: 'ID requerido' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
     }
-    markNotificationRead(data.id)
+    await markNotificationRead(data.id)
     return new Response(JSON.stringify({ success: true }), { status: 200, headers: { 'Content-Type': 'application/json' } })
   }
 
   if (action === 'markAllRead') {
-    markAllNotificationsRead(locals.user.id)
+    await markAllNotificationsRead(locals.user.id)
     return new Response(JSON.stringify({ success: true }), { status: 200, headers: { 'Content-Type': 'application/json' } })
   }
 

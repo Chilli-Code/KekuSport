@@ -11,7 +11,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   if (action === 'create') {
     const id = crypto.randomUUID()
-    createMatch({
+    await createMatch({
       id,
       tournament_id: data.tournamentId,
       round: Number(data.round) || 1,
@@ -27,12 +27,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   if (action === 'update') {
-    updateMatch(data.id, data)
+    await updateMatch(data.id, data)
     return new Response(JSON.stringify({ success: true }), { status: 200, headers: { 'Content-Type': 'application/json' } })
   }
 
   if (action === 'delete') {
-    deleteMatch(data.id)
+    await deleteMatch(data.id)
     return new Response(JSON.stringify({ success: true }), { status: 200, headers: { 'Content-Type': 'application/json' } })
   }
 

@@ -11,21 +11,21 @@ export const GET: APIRoute = async ({ locals, url }) => {
 
   if (locals.user.role === 'tecnico') {
     if (teamId && scope === 'squad') {
-      const squad = getTeamSquadByTeamId(teamId)
+      const squad = await getTeamSquadByTeamId(teamId)
       return new Response(JSON.stringify({ success: true, squad }), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
     if (scope === 'pending') {
-      const pending = getTeamPendingInvitesByOwner(locals.user.id)
+      const pending = await getTeamPendingInvitesByOwner(locals.user.id)
       return new Response(JSON.stringify({ success: true, requests: pending }), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
-    const requests = getTeamRequestsByOwner(locals.user.id)
+    const requests = await getTeamRequestsByOwner(locals.user.id)
     return new Response(JSON.stringify({ success: true, requests }), { status: 200, headers: { 'Content-Type': 'application/json' } })
   }
 
   if (locals.user.role === 'jugador') {
-    const player = getPlayerByUser(locals.user.id)
+    const player = await getPlayerByUser(locals.user.id)
     if (!player) return new Response(JSON.stringify({ success: true, requests: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } })
-    const requests = getTeamRequestsByPlayer(player.id)
+    const requests = await getTeamRequestsByPlayer(player.id)
     return new Response(JSON.stringify({ success: true, requests }), { status: 200, headers: { 'Content-Type': 'application/json' } })
   }
 
@@ -45,15 +45,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return new Response(JSON.stringify({ error: 'Solo los jugadores pueden enviar solicitudes' }), { status: 403, headers: { 'Content-Type': 'application/json' } })
     }
 
-    const player = getPlayerByUser(locals.user.id)
+    const player = await getPlayerByUser(locals.user.id)
     if (!player) {
       return new Response(JSON.stringify({ error: 'Primero crea tu perfil de jugador' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
     }
 
-    // A player can only be in one team
-    const acceptedRequest = getDb().prepare(
-      "SELECT * FROM team_requests WHERE player_id = ? AND status = 'accepted'"
-    ).get(player.id)
+    const db = await getDb()
+    const acceptedRequest = (await db.execute(
+      "SELECT * FROM team_requests WHERE player_id = ? AND status = 'accepted'",
+      [player.id]
+    )).rows[0]
     if (acceptedRequest) {
       return new Response(JSON.stringify({ error: 'Ya perteneces a un equipo. No puedes solicitar unirte a otro.' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
     }
@@ -63,21 +64,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return new Response(JSON.stringify({ error: 'Equipo requerido' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
     }
 
-    const db = getDb()
-    const team = db.prepare('SELECT * FROM teams WHERE id = ?').get(teamId) as { id: string; name: string; created_by: string } | undefined
+    const team = (await db.execute('SELECT * FROM teams WHERE id = ?', [teamId])).rows[0] as unknown as { id: string; name: string; created_by: string } | undefined
     if (!team) {
       return new Response(JSON.stringify({ error: 'Equipo no encontrado' }), { status: 404, headers: { 'Content-Type': 'application/json' } })
     }
 
-    const existing = db.prepare(
-      'SELECT * FROM team_requests WHERE player_id = ? AND team_id = ? AND status = ?'
-    ).get(player.id, teamId, 'pending') as { id: string } | undefined
+    const existing = (await db.execute(
+      'SELECT * FROM team_requests WHERE player_id = ? AND team_id = ? AND status = ?',
+      [player.id, teamId, 'pending']
+    )).rows[0] as unknown as { id: string } | undefined
     if (existing) {
       return new Response(JSON.stringify({ error: 'Ya tienes una solicitud pendiente para este equipo' }), { status: 409, headers: { 'Content-Type': 'application/json' } })
     }
 
     const id = crypto.randomUUID()
-    createTeamRequest({
+    await createTeamRequest({
       id,
       player_id: player.id,
       team_id: teamId,
@@ -85,7 +86,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       status: 'pending',
     })
 
-    createNotification({
+    await createNotification({
       id: crypto.randomUUID(),
       user_id: team.created_by,
       type: 'team_request',
@@ -109,25 +110,25 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return new Response(JSON.stringify({ error: 'Datos inválidos' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
     }
 
-    const req = getTeamRequestById(requestId)
+    const req = await getTeamRequestById(requestId)
     if (!req) {
       return new Response(JSON.stringify({ error: 'Solicitud no encontrada' }), { status: 404, headers: { 'Content-Type': 'application/json' } })
     }
 
-    const db = getDb()
-    const team = db.prepare('SELECT * FROM teams WHERE id = ?').get(req.team_id) as { created_by: string } | undefined
+    const db = await getDb()
+    const team = (await db.execute('SELECT * FROM teams WHERE id = ?', [req.team_id])).rows[0] as unknown as { created_by: string } | undefined
     if (!team || team.created_by !== locals.user.id) {
       return new Response(JSON.stringify({ error: 'No tienes permisos para responder esta solicitud' }), { status: 403, headers: { 'Content-Type': 'application/json' } })
     }
 
-    updateTeamRequestStatus(requestId, status)
+    await updateTeamRequestStatus(requestId, status)
 
-    const player = db.prepare('SELECT * FROM players WHERE id = ?').get(req.player_id) as { name: string; user_id: string } | undefined
-    const teamInfo = db.prepare('SELECT name FROM teams WHERE id = ?').get(req.team_id) as { name: string } | undefined
+    const player = (await db.execute('SELECT * FROM players WHERE id = ?', [req.player_id])).rows[0] as unknown as { name: string; user_id: string } | undefined
+    const teamInfo = (await db.execute('SELECT name FROM teams WHERE id = ?', [req.team_id])).rows[0] as unknown as { name: string } | undefined
 
     if (player) {
       const statusMsg = status === 'accepted' ? 'aceptada' : 'rechazada'
-      createNotification({
+      await createNotification({
         id: crypto.randomUUID(),
         user_id: player.user_id,
         type: 'team_request_response',
@@ -152,31 +153,33 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return new Response(JSON.stringify({ error: 'Jugador y equipo requeridos' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
     }
 
-    const db = getDb()
-    const team = db.prepare('SELECT * FROM teams WHERE id = ? AND created_by = ?').get(teamId, locals.user.id) as { id: string; name: string } | undefined
+    const db = await getDb()
+    const team = (await db.execute('SELECT * FROM teams WHERE id = ? AND created_by = ?', [teamId, locals.user.id])).rows[0] as unknown as { id: string; name: string } | undefined
     if (!team) {
       return new Response(JSON.stringify({ error: 'Equipo no encontrado o no te pertenece' }), { status: 404, headers: { 'Content-Type': 'application/json' } })
     }
 
-    const existing = db.prepare(
-      "SELECT * FROM team_requests WHERE player_id = ? AND team_id = ? AND status = 'accepted'"
-    ).get(playerId, teamId) as { id: string } | undefined
+    const existing = (await db.execute(
+      "SELECT * FROM team_requests WHERE player_id = ? AND team_id = ? AND status = 'accepted'",
+      [playerId, teamId]
+    )).rows[0] as unknown as { id: string } | undefined
     if (existing) {
       return new Response(JSON.stringify({ error: 'Este jugador ya está en tu equipo' }), { status: 409, headers: { 'Content-Type': 'application/json' } })
     }
 
-    const player = db.prepare('SELECT * FROM players WHERE id = ?').get(playerId) as { name: string; user_id: string } | undefined
+    const player = (await db.execute('SELECT * FROM players WHERE id = ?', [playerId])).rows[0] as unknown as { name: string; user_id: string } | undefined
     if (!player) {
       return new Response(JSON.stringify({ error: 'Jugador no encontrado' }), { status: 404, headers: { 'Content-Type': 'application/json' } })
     }
 
-    const existingPending = db.prepare(
-      "SELECT * FROM team_requests WHERE player_id = ? AND team_id = ? AND status = 'pending'"
-    ).get(playerId, teamId) as { id: string } | undefined
+    const existingPending = (await db.execute(
+      "SELECT * FROM team_requests WHERE player_id = ? AND team_id = ? AND status = 'pending'",
+      [playerId, teamId]
+    )).rows[0] as unknown as { id: string } | undefined
 
     if (existingPending) {
-      updateTeamRequestStatus(existingPending.id, 'accepted')
-      createNotification({
+      await updateTeamRequestStatus(existingPending.id, 'accepted')
+      await createNotification({
         id: crypto.randomUUID(),
         user_id: player.user_id,
         type: 'team_invite',
@@ -189,7 +192,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     const id = crypto.randomUUID()
-    createTeamRequest({
+    await createTeamRequest({
       id,
       player_id: playerId,
       team_id: teamId,
@@ -197,7 +200,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       status: 'accepted',
     })
 
-    createNotification({
+    await createNotification({
       id: crypto.randomUUID(),
       user_id: player.user_id,
       type: 'team_invite',

@@ -1,4 +1,4 @@
-import { createUser } from '../../server/db'
+import { createUser, findUserByEmail } from '../../server/db'
 import { hashPassword } from '../../server/auth'
 
 async function seed() {
@@ -10,8 +10,13 @@ async function seed() {
   ]
 
   for (const u of users) {
+    const existing = await findUserByEmail(u.email)
+    if (existing) {
+      console.log(`- Usuario ya existe: ${u.email} (${u.role})`)
+      continue
+    }
     const hashed = await hashPassword(u.password)
-    createUser(u.id, u.email, hashed, u.name, u.role)
+    await createUser(u.id, u.email, hashed, u.name, u.role)
     console.log(`✓ Usuario creado: ${u.email} (${u.role})`)
   }
 

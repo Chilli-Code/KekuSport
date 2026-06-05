@@ -1,7 +1,0 @@
----
-import { PLAYERS } from "@/consts/fighters";
-const { id } = Astro.params;
-
-const player = PLAYERS.find((p) => p.id === id);
-if (!player) return Astro.redirect('/404')
----

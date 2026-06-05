@@ -36,7 +36,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   const tournamentId = crypto.randomUUID()
 
-  createTournament({
+  await createTournament({
     id: tournamentId,
     name: name as string,
     description: (body.description as string) || null,
@@ -73,7 +73,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   if (Array.isArray(categories)) {
     for (const cat of categories) {
-      createCategory({
+      await createCategory({
         id: crypto.randomUUID(),
         tournament_id: tournamentId,
         name: cat.name,

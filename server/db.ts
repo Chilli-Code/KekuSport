@@ -1,52 +1,39 @@
-import Database from 'better-sqlite3'
+import { createClient } from '@libsql/client'
 import path from 'node:path'
 
-const DB_PATH = process.env.DB_PATH || path.join(process.cwd(), 'data', 'keku.db')
+const DB_URL = process.env.TURSO_DB_URL || `file:${process.env.DB_PATH || path.join(process.cwd(), 'data', 'keku.db')}`
+const AUTH_TOKEN = process.env.TURSO_AUTH_TOKEN
 
-let _db: Database.Database | null = null
+let _client: ReturnType<typeof createClient> | null = null
 
-export function getDb(): Database.Database {
-  if (!_db) {
-    _db = new Database(DB_PATH)
-    _db.pragma('journal_mode = WAL')
-    _db.pragma('foreign_keys = ON')
-    initTables()
-    migrateTables()
+export async function getDb() {
+  if (!_client) {
+    _client = createClient({ url: DB_URL, authToken: AUTH_TOKEN })
+    await initTables()
+    await migrateTables()
   }
-  return _db
+  return _client
 }
 
-function migrateTables() {
-  // Add new columns to existing tables
-  try { _db!.exec(`ALTER TABLE teams ADD COLUMN color TEXT DEFAULT '#00ff88'`) } catch {}
-  try { _db!.exec(`ALTER TABLE teams ADD COLUMN category TEXT DEFAULT ''`) } catch {}
+async function migrateTables() {
+  const db = _client!
+  try { await db.execute("ALTER TABLE teams ADD COLUMN color TEXT DEFAULT '#00ff88'") } catch {}
+  try { await db.execute("ALTER TABLE teams ADD COLUMN category TEXT DEFAULT ''") } catch {}
 
-  // Fix: make tournament_id nullable — only if still NOT NULL
-  const colInfo = _db!.prepare("PRAGMA table_info('teams')").all() as { name: string; notnull: number }[]
+  const colResult = await db.execute("PRAGMA table_info('teams')")
+  const colInfo = colResult.rows as unknown as { name: string; notnull: number }[]
   const tIdCol = colInfo.find(c => c.name === 'tournament_id')
   if (tIdCol && tIdCol.notnull === 1) {
-    _db!.exec(`
-      CREATE TABLE teams_migrated (
-        id TEXT PRIMARY KEY,
-        tournament_id TEXT,
-        name TEXT NOT NULL,
-        logo TEXT,
-        color TEXT DEFAULT '#00ff88',
-        category TEXT DEFAULT '',
-        created_by TEXT,
-        created_at TEXT DEFAULT (datetime('now')),
-        FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE
-      );
-      INSERT INTO teams_migrated (id, tournament_id, name, logo, color, category, created_by, created_at)
-        SELECT id, tournament_id, name, logo, IFNULL(color, '#00ff88'), IFNULL(category, ''), created_by, created_at FROM teams;
-      DROP TABLE teams;
-      ALTER TABLE teams_migrated RENAME TO teams;
-    `)
+    await db.execute("CREATE TABLE teams_migrated (id TEXT PRIMARY KEY, tournament_id TEXT, name TEXT NOT NULL, logo TEXT, color TEXT DEFAULT '#00ff88', category TEXT DEFAULT '', created_by TEXT, created_at TEXT DEFAULT (datetime('now')), FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE)")
+    await db.execute("INSERT INTO teams_migrated (id, tournament_id, name, logo, color, category, created_by, created_at) SELECT id, tournament_id, name, logo, IFNULL(color, '#00ff88'), IFNULL(category, ''), created_by, created_at FROM teams")
+    await db.execute('DROP TABLE teams')
+    await db.execute('ALTER TABLE teams_migrated RENAME TO teams')
   }
 }
 
-function initTables() {
-  _db!.exec(`
+async function initTables() {
+  const db = _client!
+  await db.execute(`
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
       email TEXT UNIQUE NOT NULL,
@@ -54,8 +41,9 @@ function initTables() {
       name TEXT NOT NULL,
       role TEXT NOT NULL CHECK(role IN ('admin','tecnico','referee','jugador')),
       created_at TEXT DEFAULT (datetime('now'))
-    );
-
+    )
+  `)
+  await db.execute(`
     CREATE TABLE IF NOT EXISTS tournaments (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
@@ -84,8 +72,9 @@ function initTables() {
       created_by TEXT NOT NULL,
       created_at TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (created_by) REFERENCES users(id)
-    );
-
+    )
+  `)
+  await db.execute(`
     CREATE TABLE IF NOT EXISTS categories (
       id TEXT PRIMARY KEY,
       tournament_id TEXT NOT NULL,
@@ -97,8 +86,9 @@ function initTables() {
       max_teams INTEGER,
       created_at TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE
-    );
-
+    )
+  `)
+  await db.execute(`
     CREATE TABLE IF NOT EXISTS teams (
       id TEXT PRIMARY KEY,
       tournament_id TEXT,
@@ -109,8 +99,9 @@ function initTables() {
       created_by TEXT,
       created_at TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE
-    );
-
+    )
+  `)
+  await db.execute(`
     CREATE TABLE IF NOT EXISTS tournament_invitations (
       id TEXT PRIMARY KEY,
       tournament_id TEXT NOT NULL,
@@ -121,8 +112,9 @@ function initTables() {
       FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE,
       FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
       FOREIGN KEY (created_by) REFERENCES users(id)
-    );
-
+    )
+  `)
+  await db.execute(`
     CREATE TABLE IF NOT EXISTS matches (
       id TEXT PRIMARY KEY,
       tournament_id TEXT NOT NULL,
@@ -138,8 +130,9 @@ function initTables() {
       FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE,
       FOREIGN KEY (home_team_id) REFERENCES teams(id),
       FOREIGN KEY (away_team_id) REFERENCES teams(id)
-    );
-
+    )
+  `)
+  await db.execute(`
     CREATE TABLE IF NOT EXISTS players (
       id TEXT PRIMARY KEY,
       user_id TEXT UNIQUE NOT NULL,
@@ -157,8 +150,9 @@ function initTables() {
       image_card TEXT,
       created_at TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (user_id) REFERENCES users(id)
-    );
-
+    )
+  `)
+  await db.execute(`
     CREATE TABLE IF NOT EXISTS player_socials (
       id TEXT PRIMARY KEY,
       player_id TEXT NOT NULL,
@@ -167,8 +161,9 @@ function initTables() {
       followers TEXT,
       created_at TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE
-    );
-
+    )
+  `)
+  await db.execute(`
     CREATE TABLE IF NOT EXISTS team_requests (
       id TEXT PRIMARY KEY,
       player_id TEXT NOT NULL,
@@ -178,8 +173,9 @@ function initTables() {
       created_at TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE,
       FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE
-    );
-
+    )
+  `)
+  await db.execute(`
     CREATE TABLE IF NOT EXISTS notifications (
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL,
@@ -190,7 +186,7 @@ function initTables() {
       read INTEGER DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-    );
+    )
   `)
 }
 
@@ -205,22 +201,25 @@ export interface User {
   created_at: string
 }
 
-export function findUserByEmail(email: string): User | undefined {
-  return getDb().prepare('SELECT * FROM users WHERE email = ?').get(email) as User | undefined
+export async function findUserByEmail(email: string): Promise<User | undefined> {
+  const db = await getDb()
+  const result = await db.execute({ sql: 'SELECT * FROM users WHERE email = ?', args: [email] })
+  return result.rows[0] as unknown as User | undefined
 }
 
-export function findUserById(id: string): User | undefined {
-  return getDb().prepare('SELECT * FROM users WHERE id = ?').get(id) as User | undefined
+export async function findUserById(id: string): Promise<User | undefined> {
+  const db = await getDb()
+  const result = await db.execute({ sql: 'SELECT * FROM users WHERE id = ?', args: [id] })
+  return result.rows[0] as unknown as User | undefined
 }
 
-export function createUser(id: string, email: string, password: string, name: string, role: UserRole): void {
-  getDb().prepare(`
-    INSERT INTO users (id, email, password, name, role)
-    VALUES (?, ?, ?, ?, ?)
-  `).run(id, email, password, name, role)
+export async function createUser(id: string, email: string, password: string, name: string, role: UserRole): Promise<void> {
+  const db = await getDb()
+  await db.execute({
+    sql: 'INSERT INTO users (id, email, password, name, role) VALUES (?, ?, ?, ?, ?)',
+    args: [id, email, password, name, role],
+  })
 }
-
-// ── Tournament types ──
 
 export interface Tournament {
   id: string
@@ -263,11 +262,10 @@ export interface Category {
   created_at: string
 }
 
-// ── Tournament CRUD ──
-
-export function createTournament(tournament: Omit<Tournament, 'created_at'>): void {
-  getDb().prepare(`
-    INSERT INTO tournaments (
+export async function createTournament(tournament: Omit<Tournament, 'created_at'>): Promise<void> {
+  const db = await getDb()
+  await db.execute(
+    `INSERT INTO tournaments (
       id, name, description, logo, venue, city, start_date, end_date,
       format, num_teams, players_per_team, match_duration, points_per_win,
       rules, open_registration, reg_deadline, registration_fee,
@@ -279,30 +277,36 @@ export function createTournament(tournament: Omit<Tournament, 'created_at'>): vo
       @rules, @open_registration, @reg_deadline, @registration_fee,
       @min_age, @max_age, @requirements, @prizes, @awards, @notes,
       @status, @created_by
-    )
-  `).run(tournament)
+    )`,
+    tournament as any,
+  )
 }
 
-export function createCategory(category: Omit<Category, 'created_at'>): void {
-  getDb().prepare(`
-    INSERT INTO categories (id, tournament_id, name, description, min_age, max_age, gender, max_teams)
-    VALUES (@id, @tournament_id, @name, @description, @min_age, @max_age, @gender, @max_teams)
-  `).run(category)
+export async function createCategory(category: Omit<Category, 'created_at'>): Promise<void> {
+  const db = await getDb()
+  await db.execute(
+    'INSERT INTO categories (id, tournament_id, name, description, min_age, max_age, gender, max_teams) VALUES (@id, @tournament_id, @name, @description, @min_age, @max_age, @gender, @max_teams)',
+    category as any,
+  )
 }
 
-export function getTournamentsByUser(userId: string): Tournament[] {
-  return getDb().prepare('SELECT * FROM tournaments WHERE created_by = ? ORDER BY created_at DESC').all(userId) as Tournament[]
+export async function getTournamentsByUser(userId: string): Promise<Tournament[]> {
+  const db = await getDb()
+  const result = await db.execute({ sql: 'SELECT * FROM tournaments WHERE created_by = ? ORDER BY created_at DESC', args: [userId] })
+  return result.rows as unknown as Tournament[]
 }
 
-export function getTournamentById(id: string): Tournament | undefined {
-  return getDb().prepare('SELECT * FROM tournaments WHERE id = ?').get(id) as Tournament | undefined
+export async function getTournamentById(id: string): Promise<Tournament | undefined> {
+  const db = await getDb()
+  const result = await db.execute({ sql: 'SELECT * FROM tournaments WHERE id = ?', args: [id] })
+  return result.rows[0] as unknown as Tournament | undefined
 }
 
-export function getCategoriesByTournament(tournamentId: string): Category[] {
-  return getDb().prepare('SELECT * FROM categories WHERE tournament_id = ? ORDER BY name').all(tournamentId) as Category[]
+export async function getCategoriesByTournament(tournamentId: string): Promise<Category[]> {
+  const db = await getDb()
+  const result = await db.execute({ sql: 'SELECT * FROM categories WHERE tournament_id = ? ORDER BY name', args: [tournamentId] })
+  return result.rows as unknown as Category[]
 }
-
-// ── Team types ──
 
 export interface Team {
   id: string
@@ -315,56 +319,63 @@ export interface Team {
   created_at: string
 }
 
-export function createTeam(team: Omit<Team, 'created_at'>): void {
-  getDb().prepare(`
-    INSERT INTO teams (id, tournament_id, name, logo, color, category, created_by)
-    VALUES (@id, @tournament_id, @name, @logo, @color, @category, @created_by)
-  `).run(team)
+export async function createTeam(team: Omit<Team, 'created_at'>): Promise<void> {
+  const db = await getDb()
+  await db.execute(
+    'INSERT INTO teams (id, tournament_id, name, logo, color, category, created_by) VALUES (@id, @tournament_id, @name, @logo, @color, @category, @created_by)',
+    team as any,
+  )
 }
 
-export function getTeamsByTournament(tournamentId: string): Team[] {
-  return getDb().prepare('SELECT * FROM teams WHERE tournament_id = ? ORDER BY name').all(tournamentId) as Team[]
+export async function getTeamsByTournament(tournamentId: string): Promise<Team[]> {
+  const db = await getDb()
+  const result = await db.execute({ sql: 'SELECT * FROM teams WHERE tournament_id = ? ORDER BY name', args: [tournamentId] })
+  return result.rows as unknown as Team[]
 }
 
-export function getTeamsByUser(userId: string): (Team & { tournament_name: string | null })[] {
-  return getDb().prepare(`
-    SELECT t.*, tr.name as tournament_name
-    FROM teams t
-    LEFT JOIN tournaments tr ON tr.id = t.tournament_id
-    WHERE t.created_by = ?
-    ORDER BY t.created_at DESC
-  `).all(userId) as (Team & { tournament_name: string | null })[]
+export async function getTeamsByUser(userId: string): Promise<(Team & { tournament_name: string | null })[]> {
+  const db = await getDb()
+  const result = await db.execute({
+    sql: `SELECT t.*, tr.name as tournament_name
+          FROM teams t
+          LEFT JOIN tournaments tr ON tr.id = t.tournament_id
+          WHERE t.created_by = ?
+          ORDER BY t.created_at DESC`,
+    args: [userId],
+  })
+  return result.rows as unknown as (Team & { tournament_name: string | null })[]
 }
 
-export function getTournamentsOpenForRegistration(): Tournament[] {
-  return getDb().prepare(`
-    SELECT * FROM tournaments
-    WHERE open_registration = 1 AND status = 'active'
-    ORDER BY created_at DESC
-  `).all() as Tournament[]
+export async function getTournamentsOpenForRegistration(): Promise<Tournament[]> {
+  const db = await getDb()
+  const result = await db.execute({
+    sql: "SELECT * FROM tournaments WHERE open_registration = 1 AND status = 'active' ORDER BY created_at DESC",
+  })
+  return result.rows as unknown as Tournament[]
 }
 
-export function searchTeams(query: string): Team[] {
-  return getDb().prepare(
-    'SELECT * FROM teams WHERE name LIKE ? ORDER BY name LIMIT 10'
-  ).all(`%${query}%`) as Team[]
+export async function searchTeams(query: string): Promise<Team[]> {
+  const db = await getDb()
+  const result = await db.execute({ sql: 'SELECT * FROM teams WHERE name LIKE ? ORDER BY name LIMIT 10', args: [`%${query}%`] })
+  return result.rows as unknown as Team[]
 }
 
-export function deleteTeam(id: string): void {
-  getDb().prepare('DELETE FROM teams WHERE id = ?').run(id)
+export async function deleteTeam(id: string): Promise<void> {
+  const db = await getDb()
+  await db.execute({ sql: 'DELETE FROM teams WHERE id = ?', args: [id] })
 }
 
-export function deleteAllTeams(tournamentId: string): void {
-  getDb().prepare('DELETE FROM teams WHERE tournament_id = ?').run(tournamentId)
+export async function deleteAllTeams(tournamentId: string): Promise<void> {
+  const db = await getDb()
+  await db.execute({ sql: 'DELETE FROM teams WHERE tournament_id = ?', args: [tournamentId] })
 }
 
-export function removeTeamFromTournament(teamId: string, tournamentId: string): void {
-  getDb().prepare('UPDATE teams SET tournament_id = NULL WHERE id = ? AND tournament_id = ?').run(teamId, tournamentId)
-  getDb().prepare('DELETE FROM tournament_invitations WHERE team_id = ? AND tournament_id = ?').run(teamId, tournamentId)
-  getDb().prepare('DELETE FROM matches WHERE tournament_id = ? AND (home_team_id = ? OR away_team_id = ?)').run(tournamentId, teamId, teamId)
+export async function removeTeamFromTournament(teamId: string, tournamentId: string): Promise<void> {
+  const db = await getDb()
+  await db.execute({ sql: 'UPDATE teams SET tournament_id = NULL WHERE id = ? AND tournament_id = ?', args: [teamId, tournamentId] })
+  await db.execute({ sql: 'DELETE FROM tournament_invitations WHERE team_id = ? AND tournament_id = ?', args: [teamId, tournamentId] })
+  await db.execute({ sql: 'DELETE FROM matches WHERE tournament_id = ? AND (home_team_id = ? OR away_team_id = ?)', args: [tournamentId, teamId, teamId] })
 }
-
-// ── Invitation types ──
 
 export interface TournamentInvitation {
   id: string
@@ -375,52 +386,63 @@ export interface TournamentInvitation {
   created_at: string
 }
 
-export function getPendingInvitation(tournamentId: string, teamId: string): TournamentInvitation | undefined {
-  return getDb().prepare(
-    'SELECT * FROM tournament_invitations WHERE tournament_id = ? AND team_id = ? AND status = ?'
-  ).get(tournamentId, teamId, 'pending') as TournamentInvitation | undefined
+export async function getPendingInvitation(tournamentId: string, teamId: string): Promise<TournamentInvitation | undefined> {
+  const db = await getDb()
+  const result = await db.execute({
+    sql: "SELECT * FROM tournament_invitations WHERE tournament_id = ? AND team_id = ? AND status = ?",
+    args: [tournamentId, teamId, 'pending'],
+  })
+  return result.rows[0] as unknown as TournamentInvitation | undefined
 }
 
-export function createInvitation(inv: Omit<TournamentInvitation, 'created_at'>): void {
-  getDb().prepare(`
-    INSERT INTO tournament_invitations (id, tournament_id, team_id, status, created_by)
-    VALUES (@id, @tournament_id, @team_id, @status, @created_by)
-  `).run(inv)
+export async function createInvitation(inv: Omit<TournamentInvitation, 'created_at'>): Promise<void> {
+  const db = await getDb()
+  await db.execute(
+    'INSERT INTO tournament_invitations (id, tournament_id, team_id, status, created_by) VALUES (@id, @tournament_id, @team_id, @status, @created_by)',
+    inv as any,
+  )
 }
 
-export function getInvitationsByTournament(tournamentId: string): (TournamentInvitation & { team_name: string; team_color: string })[] {
-  return getDb().prepare(`
-    SELECT i.*, t.name as team_name, t.color as team_color
-    FROM tournament_invitations i
-    JOIN teams t ON t.id = i.team_id
-    WHERE i.tournament_id = ?
-    ORDER BY i.created_at DESC
-  `).all(tournamentId) as (TournamentInvitation & { team_name: string; team_color: string })[]
+export async function getInvitationsByTournament(tournamentId: string): Promise<(TournamentInvitation & { team_name: string; team_color: string })[]> {
+  const db = await getDb()
+  const result = await db.execute({
+    sql: `SELECT i.*, t.name as team_name, t.color as team_color
+          FROM tournament_invitations i
+          JOIN teams t ON t.id = i.team_id
+          WHERE i.tournament_id = ?
+          ORDER BY i.created_at DESC`,
+    args: [tournamentId],
+  })
+  return result.rows as unknown as (TournamentInvitation & { team_name: string; team_color: string })[]
 }
 
-export function getInvitationsByUser(userId: string): (TournamentInvitation & { team_name: string; team_color: string; tournament_name: string })[] {
-  return getDb().prepare(`
-    SELECT i.*, t.name as team_name, t.color as team_color, tr.name as tournament_name
-    FROM tournament_invitations i
-    JOIN teams t ON t.id = i.team_id
-    JOIN tournaments tr ON tr.id = i.tournament_id
-    WHERE t.created_by = ?
-    ORDER BY i.created_at DESC
-  `).all(userId) as (TournamentInvitation & { team_name: string; team_color: string; tournament_name: string })[]
+export async function getInvitationsByUser(userId: string): Promise<(TournamentInvitation & { team_name: string; team_color: string; tournament_name: string })[]> {
+  const db = await getDb()
+  const result = await db.execute({
+    sql: `SELECT i.*, t.name as team_name, t.color as team_color, tr.name as tournament_name
+          FROM tournament_invitations i
+          JOIN teams t ON t.id = i.team_id
+          JOIN tournaments tr ON tr.id = i.tournament_id
+          WHERE t.created_by = ?
+          ORDER BY i.created_at DESC`,
+    args: [userId],
+  })
+  return result.rows as unknown as (TournamentInvitation & { team_name: string; team_color: string; tournament_name: string })[]
 }
 
-export function updateInvitationStatus(id: string, status: 'accepted' | 'rejected'): void {
-  getDb().prepare('UPDATE tournament_invitations SET status = ? WHERE id = ?').run(status, id)
+export async function updateInvitationStatus(id: string, status: 'accepted' | 'rejected'): Promise<void> {
+  const db = await getDb()
+  await db.execute({ sql: 'UPDATE tournament_invitations SET status = ? WHERE id = ?', args: [status, id] })
 }
 
-export function acceptInvitation(id: string): void {
-  const inv = getDb().prepare('SELECT * FROM tournament_invitations WHERE id = ?').get(id) as TournamentInvitation | undefined
+export async function acceptInvitation(id: string): Promise<void> {
+  const db = await getDb()
+  const result = await db.execute({ sql: 'SELECT * FROM tournament_invitations WHERE id = ?', args: [id] })
+  const inv = result.rows[0] as unknown as TournamentInvitation | undefined
   if (!inv) return
-  getDb().prepare('UPDATE tournament_invitations SET status = ? WHERE id = ?').run('accepted', id)
-  getDb().prepare('UPDATE teams SET tournament_id = ? WHERE id = ?').run(inv.tournament_id, inv.team_id)
+  await db.execute({ sql: "UPDATE tournament_invitations SET status = ? WHERE id = ?", args: ['accepted', id] })
+  await db.execute({ sql: 'UPDATE teams SET tournament_id = ? WHERE id = ?', args: [inv.tournament_id, inv.team_id] })
 }
-
-// ── Player types ──
 
 export interface DBPlayer {
   id: string
@@ -448,19 +470,25 @@ export interface PlayerSocial {
   followers: string | null
 }
 
-export function getPlayerByUser(userId: string): DBPlayer | undefined {
-  return getDb().prepare('SELECT * FROM players WHERE user_id = ?').get(userId) as DBPlayer | undefined
+export async function getPlayerByUser(userId: string): Promise<DBPlayer | undefined> {
+  const db = await getDb()
+  const result = await db.execute({ sql: 'SELECT * FROM players WHERE user_id = ?', args: [userId] })
+  return result.rows[0] as unknown as DBPlayer | undefined
 }
 
-export function getPlayerById(id: string): DBPlayer | undefined {
-  return getDb().prepare('SELECT * FROM players WHERE id = ?').get(id) as DBPlayer | undefined
+export async function getPlayerById(id: string): Promise<DBPlayer | undefined> {
+  const db = await getDb()
+  const result = await db.execute({ sql: 'SELECT * FROM players WHERE id = ?', args: [id] })
+  return result.rows[0] as unknown as DBPlayer | undefined
 }
 
-export function getPlayerSocials(playerId: string): PlayerSocial[] {
-  return getDb().prepare('SELECT * FROM player_socials WHERE player_id = ?').all(playerId) as PlayerSocial[]
+export async function getPlayerSocials(playerId: string): Promise<PlayerSocial[]> {
+  const db = await getDb()
+  const result = await db.execute({ sql: 'SELECT * FROM player_socials WHERE player_id = ?', args: [playerId] })
+  return result.rows as unknown as PlayerSocial[]
 }
 
-export function upsertPlayer(player: {
+export async function upsertPlayer(player: {
   id: string
   user_id: string
   name: string
@@ -475,26 +503,29 @@ export function upsertPlayer(player: {
   bio: string | null
   image_big: string | null
   image_card: string | null
-}): void {
-  getDb().prepare(`
-    INSERT INTO players (id, user_id, name, real_name, age, country, city, neighborhood, preferred_foot, position, number, bio, image_big, image_card)
-    VALUES (@id, @user_id, @name, @real_name, @age, @country, @city, @neighborhood, @preferred_foot, @position, @number, @bio, @image_big, @image_card)
-    ON CONFLICT(user_id) DO UPDATE SET
-      name=@name, real_name=@real_name, age=@age, country=@country, city=@city,
-      neighborhood=@neighborhood, preferred_foot=@preferred_foot, position=@position,
-      number=@number, bio=@bio, image_big=@image_big, image_card=@image_card
-  `).run(player)
+}): Promise<void> {
+  const db = await getDb()
+  await db.execute(
+    `INSERT INTO players (id, user_id, name, real_name, age, country, city, neighborhood, preferred_foot, position, number, bio, image_big, image_card)
+     VALUES (@id, @user_id, @name, @real_name, @age, @country, @city, @neighborhood, @preferred_foot, @position, @number, @bio, @image_big, @image_card)
+     ON CONFLICT(user_id) DO UPDATE SET
+       name=@name, real_name=@real_name, age=@age, country=@country, city=@city,
+       neighborhood=@neighborhood, preferred_foot=@preferred_foot, position=@position,
+       number=@number, bio=@bio, image_big=@image_big, image_card=@image_card`,
+    player as any,
+  )
 }
 
-export function savePlayerSocials(playerId: string, socials: { platform: string; url: string | null; followers: string | null }[]): void {
-  getDb().prepare('DELETE FROM player_socials WHERE player_id = ?').run(playerId)
-  const insert = getDb().prepare('INSERT INTO player_socials (id, player_id, platform, url, followers) VALUES (?, ?, ?, ?, ?)')
+export async function savePlayerSocials(playerId: string, socials: { platform: string; url: string | null; followers: string | null }[]): Promise<void> {
+  const db = await getDb()
+  await db.execute({ sql: 'DELETE FROM player_socials WHERE player_id = ?', args: [playerId] })
   for (const s of socials) {
-    insert.run(crypto.randomUUID(), playerId, s.platform, s.url, s.followers)
+    await db.execute({
+      sql: 'INSERT INTO player_socials (id, player_id, platform, url, followers) VALUES (?, ?, ?, ?, ?)',
+      args: [crypto.randomUUID(), playerId, s.platform, s.url, s.followers],
+    })
   }
 }
-
-// ── Match types ──
 
 export interface Match {
   id: string
@@ -510,49 +541,60 @@ export interface Match {
   created_at: string
 }
 
-export function createMatch(m: Omit<Match, 'created_at'>): void {
-  getDb().prepare(`
-    INSERT INTO matches (id, tournament_id, round, home_team_id, away_team_id, home_score, away_score, scheduled_date, venue, status)
-    VALUES (@id, @tournament_id, @round, @home_team_id, @away_team_id, @home_score, @away_score, @scheduled_date, @venue, @status)
-  `).run(m)
+export async function createMatch(m: Omit<Match, 'created_at'>): Promise<void> {
+  const db = await getDb()
+  await db.execute(
+    `INSERT INTO matches (id, tournament_id, round, home_team_id, away_team_id, home_score, away_score, scheduled_date, venue, status)
+     VALUES (@id, @tournament_id, @round, @home_team_id, @away_team_id, @home_score, @away_score, @scheduled_date, @venue, @status)`,
+    m as any,
+  )
 }
 
-export function getMatchesByTournament(tournamentId: string): Match[] {
-  return getDb().prepare('SELECT * FROM matches WHERE tournament_id = ? ORDER BY round, created_at').all(tournamentId) as Match[]
+export async function getMatchesByTournament(tournamentId: string): Promise<Match[]> {
+  const db = await getDb()
+  const result = await db.execute({ sql: 'SELECT * FROM matches WHERE tournament_id = ? ORDER BY round, created_at', args: [tournamentId] })
+  return result.rows as unknown as Match[]
 }
 
-export function getAllTournaments(): Tournament[] {
-  return getDb().prepare('SELECT * FROM tournaments ORDER BY created_at DESC').all() as Tournament[]
+export async function getAllTournaments(): Promise<Tournament[]> {
+  const db = await getDb()
+  const result = await db.execute({ sql: 'SELECT * FROM tournaments ORDER BY created_at DESC' })
+  return result.rows as unknown as Tournament[]
 }
 
 export interface MatchWithTournament extends Match {
   tournament_name: string
 }
 
-export function getAllMatchesWithTournament(): MatchWithTournament[] {
-  return getDb().prepare(`
-    SELECT m.*, t.name as tournament_name
-    FROM matches m
-    JOIN tournaments t ON t.id = m.tournament_id
-    ORDER BY m.scheduled_date, m.round
-  `).all() as MatchWithTournament[]
+export async function getAllMatchesWithTournament(): Promise<MatchWithTournament[]> {
+  const db = await getDb()
+  const result = await db.execute({
+    sql: `SELECT m.*, t.name as tournament_name
+          FROM matches m
+          JOIN tournaments t ON t.id = m.tournament_id
+          ORDER BY m.scheduled_date, m.round`,
+  })
+  return result.rows as unknown as MatchWithTournament[]
 }
 
-export function deleteAllMatches(tournamentId: string): void {
-  getDb().prepare('DELETE FROM matches WHERE tournament_id = ?').run(tournamentId)
+export async function deleteAllMatches(tournamentId: string): Promise<void> {
+  const db = await getDb()
+  await db.execute({ sql: 'DELETE FROM matches WHERE tournament_id = ?', args: [tournamentId] })
 }
 
-export function updateMatch(id: string, data: Partial<Match>): void {
-  const fields = Object.keys(data).filter(k => k !== 'id').map(k => `${k} = @${k}`).join(', ')
-  if (!fields) return
-  getDb().prepare(`UPDATE matches SET ${fields} WHERE id = @id`).run({ ...data, id })
+export async function updateMatch(id: string, data: Partial<Match>): Promise<void> {
+  const db = await getDb()
+  const keys = Object.keys(data).filter(k => k !== 'id')
+  if (keys.length === 0) return
+  const setClause = keys.map(k => `${k} = ?`).join(', ')
+  const values = keys.map(k => (data as any)[k])
+  await db.execute({ sql: `UPDATE matches SET ${setClause} WHERE id = ?`, args: [...values, id] })
 }
 
-export function deleteMatch(id: string): void {
-  getDb().prepare('DELETE FROM matches WHERE id = ?').run(id)
+export async function deleteMatch(id: string): Promise<void> {
+  const db = await getDb()
+  await db.execute({ sql: 'DELETE FROM matches WHERE id = ?', args: [id] })
 }
-
-// ── Team Request types ──
 
 export interface TeamRequest {
   id: string
@@ -572,50 +614,58 @@ export interface TeamRequestWithDetails extends TeamRequest {
   team_color: string | null
 }
 
-export function createTeamRequest(req: Omit<TeamRequest, 'created_at'>): void {
-  getDb().prepare(`
-    INSERT INTO team_requests (id, player_id, team_id, message, status)
-    VALUES (@id, @player_id, @team_id, @message, @status)
-  `).run(req)
+export async function createTeamRequest(req: Omit<TeamRequest, 'created_at'>): Promise<void> {
+  const db = await getDb()
+  await db.execute(
+    'INSERT INTO team_requests (id, player_id, team_id, message, status) VALUES (@id, @player_id, @team_id, @message, @status)',
+    req as any,
+  )
 }
 
-export function getTeamRequestsByPlayer(playerId: string): TeamRequest[] {
-  return getDb().prepare(
-    'SELECT * FROM team_requests WHERE player_id = ? ORDER BY created_at DESC'
-  ).all(playerId) as TeamRequest[]
+export async function getTeamRequestsByPlayer(playerId: string): Promise<TeamRequest[]> {
+  const db = await getDb()
+  const result = await db.execute({ sql: 'SELECT * FROM team_requests WHERE player_id = ? ORDER BY created_at DESC', args: [playerId] })
+  return result.rows as unknown as TeamRequest[]
 }
 
-export function getTeamRequestsByOwner(userId: string): TeamRequestWithDetails[] {
-  return getDb().prepare(`
-    SELECT r.*, p.name as player_name, p.position as player_position, p.age as player_age, p.image_big as player_image,
-           t.name as team_name, t.color as team_color
-    FROM team_requests r
-    JOIN teams t ON t.id = r.team_id
-    JOIN players p ON p.id = r.player_id
-    WHERE t.created_by = ?
-    ORDER BY r.created_at DESC
-  `).all(userId) as TeamRequestWithDetails[]
+export async function getTeamRequestsByOwner(userId: string): Promise<TeamRequestWithDetails[]> {
+  const db = await getDb()
+  const result = await db.execute({
+    sql: `SELECT r.*, p.name as player_name, p.position as player_position, p.age as player_age, p.image_big as player_image,
+                 t.name as team_name, t.color as team_color
+          FROM team_requests r
+          JOIN teams t ON t.id = r.team_id
+          JOIN players p ON p.id = r.player_id
+          WHERE t.created_by = ?
+          ORDER BY r.created_at DESC`,
+    args: [userId],
+  })
+  return result.rows as unknown as TeamRequestWithDetails[]
 }
 
-export function getTeamRequestById(id: string): TeamRequest | undefined {
-  return getDb().prepare('SELECT * FROM team_requests WHERE id = ?').get(id) as TeamRequest | undefined
+export async function getTeamRequestById(id: string): Promise<TeamRequest | undefined> {
+  const db = await getDb()
+  const result = await db.execute({ sql: 'SELECT * FROM team_requests WHERE id = ?', args: [id] })
+  return result.rows[0] as unknown as TeamRequest | undefined
 }
 
-export function updateTeamRequestStatus(id: string, status: 'accepted' | 'rejected'): void {
-  getDb().prepare('UPDATE team_requests SET status = ? WHERE id = ?').run(status, id)
+export async function updateTeamRequestStatus(id: string, status: 'accepted' | 'rejected'): Promise<void> {
+  const db = await getDb()
+  await db.execute({ sql: 'UPDATE team_requests SET status = ? WHERE id = ?', args: [status, id] })
 }
 
-export function getPlayerAcceptedTeam(playerId: string): (TeamRequest & { team_name: string; team_color: string | null }) | undefined {
-  return getDb().prepare(`
-    SELECT r.*, t.name as team_name, t.color as team_color
-    FROM team_requests r
-    JOIN teams t ON t.id = r.team_id
-    WHERE r.player_id = ? AND r.status = 'accepted'
-    LIMIT 1
-  `).get(playerId) as (TeamRequest & { team_name: string; team_color: string | null }) | undefined
+export async function getPlayerAcceptedTeam(playerId: string): Promise<(TeamRequest & { team_name: string; team_color: string | null }) | undefined> {
+  const db = await getDb()
+  const result = await db.execute({
+    sql: `SELECT r.*, t.name as team_name, t.color as team_color
+          FROM team_requests r
+          JOIN teams t ON t.id = r.team_id
+          WHERE r.player_id = ? AND r.status = 'accepted'
+          LIMIT 1`,
+    args: [playerId],
+  })
+  return result.rows[0] as unknown as (TeamRequest & { team_name: string; team_color: string | null }) | undefined
 }
-
-// ── Notification types ──
 
 export interface Notification {
   id: string
@@ -628,72 +678,84 @@ export interface Notification {
   created_at: string
 }
 
-export function createNotification(n: Omit<Notification, 'created_at'>): void {
-  getDb().prepare(`
-    INSERT INTO notifications (id, user_id, type, title, message, related_id, read)
-    VALUES (@id, @user_id, @type, @title, @message, @related_id, @read)
-  `).run(n)
+export async function createNotification(n: Omit<Notification, 'created_at'>): Promise<void> {
+  const db = await getDb()
+  await db.execute(
+    'INSERT INTO notifications (id, user_id, type, title, message, related_id, read) VALUES (@id, @user_id, @type, @title, @message, @related_id, @read)',
+    n as any,
+  )
 }
 
-export function getNotificationsByUser(userId: string): Notification[] {
-  return getDb().prepare(
-    'SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 50'
-  ).all(userId) as Notification[]
+export async function getNotificationsByUser(userId: string): Promise<Notification[]> {
+  const db = await getDb()
+  const result = await db.execute({ sql: 'SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 50', args: [userId] })
+  return result.rows as unknown as Notification[]
 }
 
-export function markNotificationRead(id: string): void {
-  getDb().prepare('UPDATE notifications SET read = 1 WHERE id = ?').run(id)
+export async function markNotificationRead(id: string): Promise<void> {
+  const db = await getDb()
+  await db.execute({ sql: 'UPDATE notifications SET read = 1 WHERE id = ?', args: [id] })
 }
 
-export function markAllNotificationsRead(userId: string): void {
-  getDb().prepare('UPDATE notifications SET read = 1 WHERE user_id = ? AND read = 0').run(userId)
+export async function markAllNotificationsRead(userId: string): Promise<void> {
+  const db = await getDb()
+  await db.execute({ sql: 'UPDATE notifications SET read = 1 WHERE user_id = ? AND read = 0', args: [userId] })
 }
 
-export function getUnreadNotificationCount(userId: string): number {
-  const row = getDb().prepare(
-    'SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND read = 0'
-  ).get(userId) as { count: number } | undefined
+export async function getUnreadNotificationCount(userId: string): Promise<number> {
+  const db = await getDb()
+  const result = await db.execute({ sql: 'SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND read = 0', args: [userId] })
+  const row = result.rows[0] as unknown as { count: number } | undefined
   return row?.count ?? 0
 }
 
-export function searchPlayers(query: string): DBPlayer[] {
-  return getDb().prepare(
-    'SELECT * FROM players WHERE name LIKE ? ORDER BY name LIMIT 10'
-  ).all(`%${query}%`) as DBPlayer[]
+export async function searchPlayers(query: string): Promise<DBPlayer[]> {
+  const db = await getDb()
+  const result = await db.execute({ sql: 'SELECT * FROM players WHERE name LIKE ? ORDER BY name LIMIT 10', args: [`%${query}%`] })
+  return result.rows as unknown as DBPlayer[]
 }
 
-export function getTeamSquadByOwner(userId: string): (TeamRequestWithDetails & { user_id: string })[] {
-  return getDb().prepare(`
-    SELECT r.*, p.name as player_name, p.position as player_position, p.age as player_age, p.image_big as player_image,
-           p.user_id, t.name as team_name, t.color as team_color
-    FROM team_requests r
-    JOIN teams t ON t.id = r.team_id
-    JOIN players p ON p.id = r.player_id
-    WHERE t.created_by = ? AND r.status = 'accepted'
-    ORDER BY r.created_at DESC
-  `).all(userId) as (TeamRequestWithDetails & { user_id: string })[]
+export async function getTeamSquadByOwner(userId: string): Promise<(TeamRequestWithDetails & { user_id: string })[]> {
+  const db = await getDb()
+  const result = await db.execute({
+    sql: `SELECT r.*, p.name as player_name, p.position as player_position, p.age as player_age, p.image_big as player_image,
+                 p.user_id, t.name as team_name, t.color as team_color
+          FROM team_requests r
+          JOIN teams t ON t.id = r.team_id
+          JOIN players p ON p.id = r.player_id
+          WHERE t.created_by = ? AND r.status = 'accepted'
+          ORDER BY r.created_at DESC`,
+    args: [userId],
+  })
+  return result.rows as unknown as (TeamRequestWithDetails & { user_id: string })[]
 }
 
-export function getTeamPendingInvitesByOwner(userId: string): (TeamRequestWithDetails & { user_id: string })[] {
-  return getDb().prepare(`
-    SELECT r.*, p.name as player_name, p.position as player_position, p.age as player_age, p.image_big as player_image,
-           p.user_id, t.name as team_name, t.color as team_color
-    FROM team_requests r
-    JOIN teams t ON t.id = r.team_id
-    JOIN players p ON p.id = r.player_id
-    WHERE t.created_by = ? AND r.status = 'pending'
-    ORDER BY r.created_at DESC
-  `).all(userId) as (TeamRequestWithDetails & { user_id: string })[]
+export async function getTeamPendingInvitesByOwner(userId: string): Promise<(TeamRequestWithDetails & { user_id: string })[]> {
+  const db = await getDb()
+  const result = await db.execute({
+    sql: `SELECT r.*, p.name as player_name, p.position as player_position, p.age as player_age, p.image_big as player_image,
+                 p.user_id, t.name as team_name, t.color as team_color
+          FROM team_requests r
+          JOIN teams t ON t.id = r.team_id
+          JOIN players p ON p.id = r.player_id
+          WHERE t.created_by = ? AND r.status = 'pending'
+          ORDER BY r.created_at DESC`,
+    args: [userId],
+  })
+  return result.rows as unknown as (TeamRequestWithDetails & { user_id: string })[]
 }
 
-export function getTeamSquadByTeamId(teamId: string): (TeamRequestWithDetails & { user_id: string })[] {
-  return getDb().prepare(`
-    SELECT r.*, p.name as player_name, p.position as player_position, p.age as player_age, p.image_big as player_image,
-           p.user_id, t.name as team_name, t.color as team_color
-    FROM team_requests r
-    JOIN teams t ON t.id = r.team_id
-    JOIN players p ON p.id = r.player_id
-    WHERE r.team_id = ? AND r.status = 'accepted'
-    ORDER BY r.created_at DESC
-  `).all(teamId) as (TeamRequestWithDetails & { user_id: string })[]
+export async function getTeamSquadByTeamId(teamId: string): Promise<(TeamRequestWithDetails & { user_id: string })[]> {
+  const db = await getDb()
+  const result = await db.execute({
+    sql: `SELECT r.*, p.name as player_name, p.position as player_position, p.age as player_age, p.image_big as player_image,
+                 p.user_id, t.name as team_name, t.color as team_color
+          FROM team_requests r
+          JOIN teams t ON t.id = r.team_id
+          JOIN players p ON p.id = r.player_id
+          WHERE r.team_id = ? AND r.status = 'accepted'
+          ORDER BY r.created_at DESC`,
+    args: [teamId],
+  })
+  return result.rows as unknown as (TeamRequestWithDetails & { user_id: string })[]
 }

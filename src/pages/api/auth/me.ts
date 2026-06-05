@@ -17,7 +17,7 @@ export const GET: APIRoute = async ({ cookies }) => {
     })
   }
 
-  const user = findUserById(payload.sub)
+  const user = await findUserById(payload.sub)
   if (!user) {
     return new Response(JSON.stringify({ user: null }), {
       status: 200, headers: { 'Content-Type': 'application/json' },

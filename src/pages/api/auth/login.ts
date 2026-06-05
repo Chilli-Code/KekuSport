@@ -12,7 +12,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     })
   }
 
-  const user = findUserByEmail(email)
+  const user = await findUserByEmail(email)
   if (!user) {
     return new Response(JSON.stringify({ error: 'Credenciales inválidas' }), {
       status: 401, headers: { 'Content-Type': 'application/json' },

@@ -15,7 +15,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   const validRoles = ['admin', 'tecnico', 'referee', 'jugador']
   const userRole = validRoles.includes(role) ? role : 'jugador'
 
-  const existing = findUserByEmail(email)
+  const existing = await findUserByEmail(email)
   if (existing) {
     return new Response(JSON.stringify({ error: 'El email ya está registrado' }), {
       status: 409, headers: { 'Content-Type': 'application/json' },
@@ -24,7 +24,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
   const id = crypto.randomUUID()
   const hashed = await hashPassword(password)
-  createUser(id, email, hashed, name, userRole)
+  await createUser(id, email, hashed, name, userRole)
 
   const token = await signToken({ sub: id, email, role: userRole, name })
 

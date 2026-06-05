@@ -11,7 +11,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   if (action === 'create') {
     const id = crypto.randomUUID()
-    createTeam({
+    await createTeam({
       id,
       tournament_id: data.tournamentId || null,
       name: data.name,
@@ -24,29 +24,29 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   if (action === 'delete') {
-    deleteTeam(data.id)
+    await deleteTeam(data.id)
     return new Response(JSON.stringify({ success: true }), { status: 200, headers: { 'Content-Type': 'application/json' } })
   }
 
   if (action === 'removeFromTournament') {
-    removeTeamFromTournament(data.id, data.tournamentId)
+    await removeTeamFromTournament(data.id, data.tournamentId)
     return new Response(JSON.stringify({ success: true }), { status: 200, headers: { 'Content-Type': 'application/json' } })
   }
 
   if (action === 'list') {
-    const teams = getTeamsByTournament(data.tournamentId)
+    const teams = await getTeamsByTournament(data.tournamentId)
     return new Response(JSON.stringify({ success: true, teams }), { status: 200, headers: { 'Content-Type': 'application/json' } })
   }
 
   if (action === 'listByUser') {
-    const teams = getTeamsByUser(locals.user.id)
+    const teams = await getTeamsByUser(locals.user.id)
     return new Response(JSON.stringify({ success: true, teams }), { status: 200, headers: { 'Content-Type': 'application/json' } })
   }
 
   if (action === 'search') {
     const q = (data.q || '').trim()
     if (!q) return new Response(JSON.stringify({ success: true, teams: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } })
-    const teams = searchTeams(q)
+    const teams = await searchTeams(q)
     return new Response(JSON.stringify({ success: true, teams }), { status: 200, headers: { 'Content-Type': 'application/json' } })
   }
 

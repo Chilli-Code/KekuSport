@@ -6,9 +6,9 @@ export const GET: APIRoute = async ({ url, locals }) => {
   const userId = url.searchParams.get('userId')
 
   if (id) {
-    const player = getPlayerById(id)
+    const player = await getPlayerById(id)
     if (!player) return new Response(JSON.stringify({ error: 'Jugador no encontrado' }), { status: 404, headers: { 'Content-Type': 'application/json' } })
-    const socials = getPlayerSocials(id)
+    const socials = await getPlayerSocials(id)
     return new Response(JSON.stringify({ success: true, player, socials }), { status: 200, headers: { 'Content-Type': 'application/json' } })
   }
 
@@ -17,8 +17,8 @@ export const GET: APIRoute = async ({ url, locals }) => {
   }
 
   const targetUserId = userId || locals.user.id
-  const player = getPlayerByUser(targetUserId)
-  const socials = player ? getPlayerSocials(player.id) : []
+  const player = await getPlayerByUser(targetUserId)
+  const socials = player ? await getPlayerSocials(player.id) : []
   return new Response(JSON.stringify({ success: true, player, socials }), { status: 200, headers: { 'Content-Type': 'application/json' } })
 }
 
@@ -33,13 +33,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (action === 'search') {
     const q = (data.q || '').trim()
     if (!q) return new Response(JSON.stringify({ success: true, players: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } })
-    const players = searchPlayers(q)
+    const players = await searchPlayers(q)
     return new Response(JSON.stringify({ success: true, players }), { status: 200, headers: { 'Content-Type': 'application/json' } })
   }
 
   if (action === 'save') {
     const id = data.id || crypto.randomUUID()
-    upsertPlayer({
+    await upsertPlayer({
       id,
       user_id: locals.user.id,
       name: data.name || '',
@@ -57,7 +57,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     })
 
     if (Array.isArray(data.socials)) {
-      savePlayerSocials(id, data.socials)
+      await savePlayerSocials(id, data.socials)
     }
 
     return new Response(JSON.stringify({ success: true, id }), { status: 200, headers: { 'Content-Type': 'application/json' } })
