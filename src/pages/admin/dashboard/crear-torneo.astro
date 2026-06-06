@@ -233,13 +233,15 @@ import AdminLayout from "../../../components/admin/AdminLayout.astro";
                           <span class="ct-input-icon">⬆️</span>
                           <select id="t-advancers" name="advancersPerGroup" class="ct-input ct-input--icon">
                             {[1,2,3,4].map(n => (
-                              <option value={n} selected={n===2}>{n} {(n)}</option>
+                              <option value={n} selected={n===4 && false}>{n} {(n)}</option>
                             ))}
                           </select>
                         </div>
+                        <p class="ct-field-hint" id="advancers-hint">Total en eliminatorias: <strong id="total-advancers-label">0</strong> equipos</p>
                       </div>
                     </div>
-                    <!-- Estructura del torneo (vista previa de fases) -->
+
+                    <!-- Cuadro resumen del torneo -->
                     <div class="ct-structure-display" id="structure-display">
                       <div class="ct-structure-phase" id="phase-grupos">
                         <span class="ct-structure-icon">📊</span>
@@ -248,19 +250,23 @@ import AdminLayout from "../../../components/admin/AdminLayout.astro";
                       <span class="ct-structure-arrow">→</span>
                       <div class="ct-structure-phase" id="phase-cuartos">
                         <span class="ct-structure-icon">🏃</span>
-                        <span class="ct-structure-label">Cuartos de final</span>
+                        <span class="ct-structure-label" id="struct-cuartos-label">Cuartos de final</span>
+                        <span class="ct-structure-count" id="struct-cuartos-count">8</span>
                       </div>
                       <span class="ct-structure-arrow">→</span>
                       <div class="ct-structure-phase" id="phase-semis">
                         <span class="ct-structure-icon">⚔️</span>
                         <span class="ct-structure-label">Semifinal</span>
+                        <span class="ct-structure-count" id="struct-semis-count">4</span>
                       </div>
                       <span class="ct-structure-arrow">→</span>
                       <div class="ct-structure-phase ct-structure-phase--final" id="phase-final">
                         <span class="ct-structure-icon">🏆</span>
                         <span class="ct-structure-label">Final</span>
+                        <span class="ct-structure-count" id="struct-final-count">2</span>
                       </div>
                     </div>
+                    <p class="ct-structure-desc" id="structure-desc">8 equipos se enfrentan en cuartos de final → 4 en semifinal → 2 en la final</p>
                   </div>
 
                   <!-- Ida y vuelta (visible en formatos liga, grupos) -->
@@ -281,9 +287,19 @@ import AdminLayout from "../../../components/admin/AdminLayout.astro";
                     <div class="ct-toggle-row" style="margin-top:0.5rem">
                       <div>
                         <p class="ct-toggle-title">Ida y vuelta en playoffs</p>
-                        <p class="ct-toggle-sub">Cuartos de final, semifinal y final se juegan a dos partidos</p>
+                        <p class="ct-toggle-sub">Semifinales y cuartos de final se juegan a dos partidos</p>
                       </div>
                       <button type="button" class="ct-toggle" id="playoffs-two-legged-toggle" aria-pressed="false">
+                        <span class="ct-toggle-thumb"></span>
+                      </button>
+                    </div>
+                    <!-- Final a partido único -->
+                    <div class="ct-toggle-row" style="margin-top:0.5rem">
+                      <div>
+                        <p class="ct-toggle-title">Final a partido único</p>
+                        <p class="ct-toggle-sub">La final se juega en un solo partido, incluso si los playoffs son de ida y vuelta</p>
+                      </div>
+                      <button type="button" class="ct-toggle ct-toggle--on" id="single-final-toggle" aria-pressed="true">
                         <span class="ct-toggle-thumb"></span>
                       </button>
                     </div>
@@ -641,6 +657,19 @@ import AdminLayout from "../../../components/admin/AdminLayout.astro";
     const perGroup = numGroups > 0 ? Math.floor(numTeams / numGroups) : 0
     const el = document.getElementById('teams-per-group') as HTMLInputElement
     if (el) el.value = perGroup > 0 ? `${perGroup} equipos` : '—'
+
+    // Smart default: set advancers based on group size
+    const advancersSelect = document.getElementById('t-advancers') as HTMLSelectElement
+    if (advancersSelect) {
+      let defaultAdvancers = 2
+      if (perGroup >= 6) defaultAdvancers = 4
+      else if (perGroup >= 4) defaultAdvancers = 2
+      else defaultAdvancers = 1
+      Array.from(advancersSelect.options).forEach((opt, i) => {
+        opt.selected = Number(opt.value) === defaultAdvancers
+      })
+    }
+
     updateStructure(perGroup)
   }
 
@@ -656,31 +685,56 @@ import AdminLayout from "../../../components/admin/AdminLayout.astro";
     const totalAdvancers = groups * advancers
     const tpg = teamsPerGroup ?? Number((document.getElementById('teams-per-group') as HTMLInputElement)?.value?.split(' ')[0] || 0)
 
+    // Update total advancers hint
+    const totalLabel = document.getElementById('total-advancers-label')
+    if (totalLabel) totalLabel.textContent = String(totalAdvancers)
+
     // Update grupos label
     const structGrupos = document.getElementById('struct-grupos')
     if (structGrupos) structGrupos.textContent = tpg > 0 ? `${groups} grupos de ${tpg}` : `${groups} grupos`
 
-    // Determine knockout phases
+    // Determine knockout phases based on totalAdvancers
+    // If totalAdvancers 2 → only final
+    // If totalAdvancers 4 → semifinal + final
+    // If totalAdvancers >= 8 → cuartos + semifinal + final
     const showCuartos = document.getElementById('phase-cuartos')
     const showSemis = document.getElementById('phase-semis')
     const showFinal = document.getElementById('phase-final')
     if (!showCuartos || !showSemis || !showFinal) return
 
-    // Show/hide phases based on total advancers
-    // 2 advancers total → just final
-    // 4 advancers total → semifinal + final
-    // 8+ advancers total → cuartos + semifinal + final
-    showCuartos.style.display = totalAdvancers >= 8 ? 'flex' : 'none'
-    showSemis.style.display = totalAdvancers >= 4 ? 'flex' : 'none'
+    const hasCuartos = totalAdvancers >= 8
+    const hasSemis = totalAdvancers >= 4
+    showCuartos.style.display = hasCuartos ? 'flex' : 'none'
+    showSemis.style.display = hasSemis ? 'flex' : 'none'
     showFinal.style.display = 'flex'
+
+    // Update team counts per phase
+    const cuartosCount = document.getElementById('struct-cuartos-count')
+    const semisCount = document.getElementById('struct-semis-count')
+    const finalCount = document.getElementById('struct-final-count')
+    if (cuartosCount) cuartosCount.textContent = String(totalAdvancers)
+    if (semisCount) semisCount.textContent = String(Math.floor(totalAdvancers / 2))
+    if (finalCount) finalCount.textContent = hasSemis ? '2' : String(Math.min(totalAdvancers, 2))
 
     // Update arrows visibility
     const arrows = sd.querySelectorAll<HTMLElement>('.ct-structure-arrow')
     arrows.forEach((a, i) => {
-      if (i === 0) a.style.display = 'inline' // always show first arrow
-      else if (i === 1) a.style.display = totalAdvancers >= 4 ? 'inline' : 'none'
-      else if (i === 2) a.style.display = totalAdvancers >= 8 ? 'inline' : 'none'
+      if (i === 0) a.style.display = 'inline'
+      else if (i === 1) a.style.display = hasSemis ? 'inline' : 'none'
+      else if (i === 2) a.style.display = hasCuartos ? 'inline' : 'none'
     })
+
+    // Update description text
+    const desc = document.getElementById('structure-desc')
+    if (desc) {
+      if (hasCuartos) {
+        desc.textContent = `${totalAdvancers} equipos en cuartos → ${Math.floor(totalAdvancers/2)} en semifinal → 2 en la final`
+      } else if (hasSemis) {
+        desc.textContent = `${totalAdvancers} equipos en semifinal → 2 en la final`
+      } else {
+        desc.textContent = `${totalAdvancers} equipos se enfrentan en la final`
+      }
+    }
   }
 
   document.querySelectorAll<HTMLButtonElement>('.ct-format-btn').forEach(btn => {
@@ -733,6 +787,10 @@ import AdminLayout from "../../../components/admin/AdminLayout.astro";
   // ── Toggle playoffs ida y vuelta ──
   const playoffsTwoLegged = document.getElementById('playoffs-two-legged-toggle')!
   playoffsTwoLegged.addEventListener('click', () => toggleClick(playoffsTwoLegged))
+
+  // ── Toggle final a partido único ──
+  const singleFinal = document.getElementById('single-final-toggle')!
+  singleFinal.addEventListener('click', () => toggleClick(singleFinal))
 
   // ── Checklist & progress ──
   function checkItem(id: string, ok: boolean) {
@@ -853,6 +911,7 @@ import AdminLayout from "../../../components/admin/AdminLayout.astro";
     const openReg = document.getElementById('open-reg-toggle')!.getAttribute('aria-pressed') === 'true'
     const twoLegged = document.getElementById('two-legged-toggle')!.getAttribute('aria-pressed') === 'true'
     const playoffsTwoLegged = document.getElementById('playoffs-two-legged-toggle')!.getAttribute('aria-pressed') === 'true'
+    const singleFinalMatch = document.getElementById('single-final-toggle')!.getAttribute('aria-pressed') === 'true'
     const numGroups = document.getElementById('t-groups') ? Number((document.getElementById('t-groups') as HTMLSelectElement).value) : null
     const advancersPerGroup = document.getElementById('t-advancers') ? Number((document.getElementById('t-advancers') as HTMLSelectElement).value) : null
 
@@ -902,6 +961,7 @@ import AdminLayout from "../../../components/admin/AdminLayout.astro";
       advancersPerGroup,
       twoLegged,
       playoffsTwoLegged,
+      singleFinalMatch,
       categories,
     }
   }
@@ -1360,13 +1420,13 @@ import AdminLayout from "../../../components/admin/AdminLayout.astro";
   .ct-structure-phase {
     display: flex;
     align-items: center;
-    gap: 0.35rem;
-    padding: 0.4rem 0.7rem;
+    gap: 0.3rem;
+    padding: 0.4rem 0.6rem;
     border-radius: 8px;
     border: 1px solid rgba(255,255,255,.08);
     background: rgba(255,255,255,.03);
-    font-size: 0.52rem;
-    font-weight: 600;
+    font-size: 0.5rem;
+    font-weight: 700;
     letter-spacing: 0.05em;
     color: var(--text-2);
   }
@@ -1377,10 +1437,33 @@ import AdminLayout from "../../../components/admin/AdminLayout.astro";
   }
   .ct-structure-icon { font-size: 0.85rem; line-height: 1; }
   .ct-structure-label { white-space: nowrap; }
+  .ct-structure-count {
+    font-family: var(--font-cinzel,'Cinzel'),serif;
+    font-size: 0.48rem;
+    font-weight: 900;
+    color: var(--green);
+    background: rgba(0,255,136,.1);
+    padding: 0.05rem 0.35rem;
+    border-radius: 99px;
+    line-height: 1.4;
+  }
   .ct-structure-arrow {
     color: var(--text-3);
-    font-size: 0.8rem;
+    font-size: 0.9rem;
   }
+  .ct-structure-desc {
+    font-size: 0.48rem;
+    color: var(--text-3);
+    text-align: center;
+    margin-top: 0.35rem;
+    font-style: italic;
+  }
+  .ct-field-hint {
+    font-size: 0.48rem;
+    color: var(--text-3);
+    margin-top: 0.25rem;
+  }
+  .ct-field-hint strong { color: var(--green); font-weight: 700; }
   .ct-card-sep-light {
     height: 1px;
     background: rgba(255,255,255,.05);

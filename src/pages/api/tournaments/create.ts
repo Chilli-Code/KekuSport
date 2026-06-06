@@ -71,6 +71,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     advancers_per_group: (body.advancersPerGroup as number) ?? null,
     two_legged: body.twoLegged ? 1 : 0,
     playoffs_two_legged: body.playoffsTwoLegged ? 1 : 0,
+    single_final_match: body.singleFinalMatch !== false ? 1 : 0,
     status: 'active',
     created_by: user.id,
   })
