@@ -104,6 +104,12 @@ function formatDate(d: string) {
       <div id="solicitudes-list" class="flex flex-col gap-2">
         <p class="tec-empty">Cargando solicitudes...</p>
       </div>
+
+      <div class="border-t border-white/10 my-4"></div>
+      <p class="tec-section-label !mb-3">INVITACIONES A TORNEOS</p>
+      <div id="invitaciones-list" class="flex flex-col gap-2">
+        <p class="tec-empty">Cargando invitaciones...</p>
+      </div>
     </div>
 
     <!-- ══════ AJUSTES ══════ -->
@@ -1592,7 +1598,7 @@ function formatDate(d: string) {
       if (sections[key]) sections[key].classList.toggle('hidden', key !== tabId);
     });
     if (tabId === 'equipos') { fetchUserTeams().then(() => setTimeout(renderTeams, 50)); }
-    if (tabId === 'solicitudes') { loadSolicitudes(); }
+    if (tabId === 'solicitudes') { loadSolicitudes(); loadInvitaciones(); }
   }
 
   tabs.forEach(tab => {
@@ -1619,6 +1625,34 @@ function formatDate(d: string) {
       localStorage.setItem('tec_coachName', tecNameInput.value);
     });
   }
+
+  // ── On load: check already-inscribed tournaments ──
+  (async function initInscriptionStates() {
+    try {
+      const res = await fetch('/api/invitations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'listByUser' }),
+      });
+      const data = await res.json();
+      if (data.success && data.invitations) {
+        data.invitations.forEach(inv => {
+          const btn = document.querySelector(`.tec-inscribir-btn[data-tourney="${inv.tournament_id}"]`);
+          if (btn) {
+            if (inv.status === 'accepted') {
+              btn.textContent = 'YA INSCRITO';
+              btn.disabled = true;
+              btn.style.opacity = '.5';
+            } else if (inv.status === 'pending') {
+              btn.textContent = 'SOLICITUD ENVIADA';
+              btn.disabled = true;
+              btn.style.opacity = '.5';
+            }
+          }
+        });
+      }
+    } catch (e) { /* ignore */ }
+  })();
 
   // ── Tournament INSCRIBIRSE buttons (direct send, no modal) ──
   document.querySelectorAll('.tec-inscribir-btn').forEach(btn => {
@@ -2124,7 +2158,7 @@ function formatDate(d: string) {
         container.innerHTML = '<p class="tec-empty">Error al cargar solicitudes</p>';
         return;
       }
-      const requests = data.requests;
+      const requests = (data.requests || []).filter(r => r.type !== 'invite');
       if (!requests.length) {
         container.innerHTML = '<p class="tec-empty">No hay solicitudes de jugadores</p>';
         return;
@@ -2162,6 +2196,76 @@ function formatDate(d: string) {
       });
     } catch {
       container.innerHTML = '<p class="tec-empty">Error de red</p>';
+    }
+  }
+
+  // ── Tournament invitations (admin → tecnico) ──
+  async function loadInvitaciones() {
+    const container = document.getElementById('invitaciones-list');
+    if (!container) return;
+    container.innerHTML = '<p class="tec-empty">Cargando invitaciones...</p>';
+    try {
+      const res = await fetch('/api/invitations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'listByUser' }),
+      });
+      const data = await res.json();
+      if (!data.success || !data.invitations) {
+        container.innerHTML = '<p class="tec-empty">Error al cargar invitaciones</p>';
+        return;
+      }
+      const pending = data.invitations.filter(inv => inv.status === 'pending');
+      if (!pending.length) {
+        container.innerHTML = '<p class="tec-empty">No hay invitaciones pendientes</p>';
+        return;
+      }
+      container.innerHTML = pending.map(inv => `
+        <div class="tec-search-result" style="flex-wrap:wrap">
+          <div class="tec-search-avatar" style="background:${inv.team_color || '#00ff88'}22;border-color:${inv.team_color || '#00ff88'}44">
+            🏆
+          </div>
+          <div class="flex-1 min-w-0" style="min-width:120px">
+            <div style="font-family:var(--font-display);font-size:.55rem;font-weight:600;letter-spacing:.06em;color:var(--cream)">${esc(inv.tournament_name)}</div>
+            <div style="font-size:.4rem;letter-spacing:.1em;color:rgba(232,220,200,.25);text-transform:uppercase;margin-top:.05rem">Equipo: ${esc(inv.team_name)}</div>
+          </div>
+          <div style="display:flex;gap:.35rem;width:100%;margin-top:.3rem">
+            <button class="invitacion-btn--accept" data-id="${inv.id}" style="flex:1;padding:.3rem;border-radius:6px;font-family:var(--font-display);font-size:.4rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;border:1px solid rgba(52,211,153,.3);color:#34d399;background:rgba(52,211,153,.06);transition:all .2s">ACEPTAR</button>
+            <button class="invitacion-btn--reject" data-id="${inv.id}" style="flex:1;padding:.3rem;border-radius:6px;font-family:var(--font-display);font-size:.4rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;border:1px solid rgba(239,68,68,.3);color:#ef4444;background:rgba(239,68,68,.06);transition:all .2s">RECHAZAR</button>
+          </div>
+        </div>
+      `).join('');
+
+      container.querySelectorAll('.invitacion-btn--accept').forEach(btn => {
+        btn.addEventListener('click', () => respondInvitacion(btn.dataset.id, 'accept'));
+      });
+      container.querySelectorAll('.invitacion-btn--reject').forEach(btn => {
+        btn.addEventListener('click', () => respondInvitacion(btn.dataset.id, 'reject'));
+      });
+    } catch {
+      container.innerHTML = '<p class="tec-empty">Error de red</p>';
+    }
+  }
+
+  async function respondInvitacion(id, action) {
+    const btns = document.querySelectorAll(`[data-id="${id}"]`);
+    btns.forEach(b => { b.disabled = true; b.textContent = '...'; });
+    try {
+      const res = await fetch('/api/invitations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, id }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        loadInvitaciones();
+      } else {
+        alert(data.error || 'Error al responder');
+        btns.forEach(b => { b.disabled = false; b.textContent = action === 'accept' ? 'ACEPTAR' : 'RECHAZAR'; });
+      }
+    } catch {
+      alert('Error de red');
+      btns.forEach(b => { b.disabled = false; b.textContent = action === 'accept' ? 'ACEPTAR' : 'RECHAZAR'; });
     }
   }
 

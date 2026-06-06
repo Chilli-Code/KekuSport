@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro'
-import { createInvitation, getInvitationsByTournament, getInvitationsByUser, acceptInvitation, updateInvitationStatus, getPendingInvitation } from '../../../../server/db'
+import { createInvitation, getInvitationsByTournament, getInvitationsByUser, acceptInvitation, updateInvitationStatus, getPendingInvitation, getTournamentById, getTeamById, getInvitationById, createNotification } from '../../../../server/db'
 
 export const POST: APIRoute = async ({ request, locals }) => {
   if (!locals.user) {
@@ -22,6 +22,24 @@ export const POST: APIRoute = async ({ request, locals }) => {
       status: 'pending',
       created_by: locals.user.id,
     })
+
+    const [tournament, team] = await Promise.all([
+      getTournamentById(data.tournamentId),
+      getTeamById(data.teamId),
+    ])
+
+    if (tournament) {
+      await createNotification({
+        id: crypto.randomUUID(),
+        user_id: tournament.created_by,
+        type: 'tournament_request',
+        title: 'Nueva solicitud de inscripción',
+        message: `El equipo ${team?.name || 'desconocido'} quiere inscribirse en ${tournament.name}`,
+        related_id: id,
+        read: 0,
+      })
+    }
+
     return new Response(JSON.stringify({ success: true, id }), { status: 201, headers: { 'Content-Type': 'application/json' } })
   }
 
@@ -36,7 +54,27 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   if (action === 'accept') {
+    const inv = await getInvitationById(data.id)
     await acceptInvitation(data.id)
+
+    if (inv) {
+      const [team, tournament] = await Promise.all([
+        getTeamById(inv.team_id),
+        getTournamentById(inv.tournament_id),
+      ])
+      if (team?.created_by) {
+        await createNotification({
+          id: crypto.randomUUID(),
+          user_id: team.created_by,
+          type: 'tournament_accepted',
+          title: 'Inscripción aceptada',
+          message: `Tu equipo ha sido aceptado en el torneo ${tournament?.name || 'desconocido'}`,
+          related_id: data.id,
+          read: 0,
+        })
+      }
+    }
+
     return new Response(JSON.stringify({ success: true }), { status: 200, headers: { 'Content-Type': 'application/json' } })
   }
 

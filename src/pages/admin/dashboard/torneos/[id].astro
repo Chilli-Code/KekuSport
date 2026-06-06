@@ -9,6 +9,7 @@ const { id } = Astro.params
 const user = Astro.locals.user
 
 const tournament = id ? await getTournamentById(id) : undefined
+const canDelete = user && tournament && (user.role === 'admin' || tournament.created_by === user.id)
 
 if (!tournament) {
   return Astro.redirect('/admin/dashboard/torneos')
@@ -84,7 +85,10 @@ for (const m of finishedMatches) {
         </div>
         <h1 class="tm-title">{tournament.name}</h1>
       </div>
-      <span class={`tm-badge tm-badge--${tournament.status}`}>{tournament.status}</span>
+      <div class="tm-header-actions">
+        <span class={`tm-badge tm-badge--${tournament.status}`}>{tournament.status}</span>
+        {canDelete && <button id="btn-delete-tournament" class="tm-btn-danger" title="Eliminar torneo" data-tournament-id={tournament.id}>🗑️</button>}
+      </div>
     </div>
 
     <!-- Info strip -->
@@ -277,7 +281,7 @@ for (const m of finishedMatches) {
 
     <!-- ── TAB: Equipos ── -->
     <div class="tm-tab-content tm-tab-content--hidden" data-tab-content="equipos">
-      <TeamManager tournamentId={tournament.id} maxTeams={tournament.num_teams} />
+      <TeamManager tournamentId={tournament.id} maxTeams={tournament.num_teams} userId={user.id} />
     </div>
 
     <!-- ── TAB: Categorías ── -->
@@ -309,6 +313,24 @@ for (const m of finishedMatches) {
     </div>
   </div>
 </AdminLayout>
+
+<!-- ── Confirmación eliminar torneo ── -->
+<div id="delete-modal" class="tm-modal tm-modal--hidden">
+  <div class="tm-modal-backdrop" id="delete-modal-backdrop"></div>
+  <div class="tm-modal-content">
+    <div class="tm-modal-header">
+      <span class="tm-modal-icon">⚠️</span>
+      <h3 class="tm-modal-title">Eliminar torneo</h3>
+    </div>
+    <p class="tm-modal-text">¿Estás seguro de que quieres eliminar <strong>{tournament.name}</strong>?</p>
+    <p class="tm-modal-text tm-modal-text--dim">Se eliminarán todos los equipos, partidos, categorías y datos asociados. Esta acción no se puede deshacer.</p>
+    <div class="tm-modal-actions">
+      <button id="delete-cancel" class="tm-btn-ghost-sm">Cancelar</button>
+      <button id="delete-confirm" class="tm-btn-danger-sm">Eliminar torneo</button>
+    </div>
+  </div>
+</div>
+
 </Layout>
 
 <script>
@@ -323,7 +345,49 @@ for (const m of finishedMatches) {
     })
   })
 
+  // ── Delete tournament ──
+  const deleteBtn = document.getElementById('btn-delete-tournament')
+  const deleteModal = document.getElementById('delete-modal')
+  const deleteBackdrop = document.getElementById('delete-modal-backdrop')
+  const deleteCancel = document.getElementById('delete-cancel')
+  const deleteConfirm = document.getElementById('delete-confirm')
 
+  function showDeleteModal() {
+    deleteModal?.classList.remove('tm-modal--hidden')
+  }
+  function hideDeleteModal() {
+    deleteModal?.classList.add('tm-modal--hidden')
+  }
+
+  deleteBtn?.addEventListener('click', showDeleteModal)
+  deleteCancel?.addEventListener('click', hideDeleteModal)
+  deleteBackdrop?.addEventListener('click', hideDeleteModal)
+
+  deleteConfirm?.addEventListener('click', async () => {
+    const tournamentId = deleteBtn?.dataset.tournamentId
+    if (!tournamentId) { alert('Error: ID del torneo no encontrado'); return }
+    deleteConfirm.disabled = true
+    deleteConfirm.textContent = 'Eliminando...'
+    try {
+      const res = await fetch('/api/tournaments/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tournamentId }),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        alert(err.error || 'Error al eliminar')
+        deleteConfirm.disabled = false
+        deleteConfirm.textContent = 'Eliminar torneo'
+        return
+      }
+      window.location.href = '/admin/dashboard/torneos'
+    } catch {
+      alert('Error de conexión')
+      deleteConfirm.disabled = false
+      deleteConfirm.textContent = 'Eliminar torneo'
+    }
+  })
 </script>
 
 <style>
@@ -503,6 +567,53 @@ for (const m of finishedMatches) {
   }
   .tm-stats-bar-fill--blue { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
   .tm-stats-bar-val { font-size: .46rem; font-weight: 700; color: var(--text-2); min-width: 50px; text-align: right; }
+
+  .tm-header-actions { display: flex; align-items: center; gap: .5rem; }
+
+  .tm-btn-danger {
+    padding: .35rem .6rem; border-radius: 8px; border: 1px solid rgba(239,68,68,.3);
+    background: rgba(239,68,68,.1); color: #f87171; cursor: pointer; font-size: .8rem;
+    line-height: 1; transition: background .2s;
+  }
+  .tm-btn-danger:hover { background: rgba(239,68,68,.2); }
+
+  .tm-btn-danger-sm {
+    padding: .45rem .85rem; border-radius: 8px; border: none;
+    background: #dc2626; color: #fff; cursor: pointer;
+    font-family: var(--font-cinzel,'Cinzel'),serif;
+    font-size: .48rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+    transition: background .2s;
+  }
+  .tm-btn-danger-sm:hover { background: #b91c1c; }
+  .tm-btn-danger-sm:disabled { opacity: .5; cursor: not-allowed; }
+
+  .tm-btn-ghost-sm {
+    padding: .45rem .85rem; border-radius: 8px; border: 1px solid var(--border);
+    background: transparent; color: var(--text-2); cursor: pointer;
+    font-family: var(--font-cinzel,'Cinzel'),serif;
+    font-size: .48rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+    transition: background .2s;
+  }
+  .tm-btn-ghost-sm:hover { background: rgba(255,255,255,.05); }
+
+  .tm-modal { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; }
+  .tm-modal--hidden { display: none; }
+  .tm-modal-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,.6); }
+  .tm-modal-content {
+    position: relative; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 1.5rem; max-width: 420px; width: 90%;
+    box-shadow: 0 20px 60px rgba(0,0,0,.5);
+  }
+  .tm-modal-header { display: flex; align-items: center; gap: .5rem; margin-bottom: .75rem; }
+  .tm-modal-icon { font-size: 1.2rem; }
+  .tm-modal-title {
+    font-family: var(--font-cinzel,'Cinzel'),serif;
+    font-size: .65rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--text);
+  }
+  .tm-modal-text { font-size: .52rem; color: var(--text-2); line-height: 1.6; margin-bottom: .3rem; }
+  .tm-modal-text--dim { color: var(--text-3); }
+  .tm-modal-actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: 1rem; }
 
   @media (max-width: 768px) {
     .tm-grid2 { grid-template-columns: 1fr; }

@@ -52,7 +52,7 @@ function getRedirectForRole(role: string): string {
     admin: '/admin/dashboard/crear-torneo',
     tecnico: '/tecnico',
     referee: '/referee',
-    jugador: '/jugador',
+    jugador: '/jugador/dashboard',
   }
   return routes[role] || '/'
 }

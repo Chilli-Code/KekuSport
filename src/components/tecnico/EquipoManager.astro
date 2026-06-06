@@ -58,7 +58,7 @@ const COLORS = ['#00ff88','#f59e0b','#f87171','#a78bfa','#38bdf8','#e2ff5d','#ff
   <!-- ══════ PLANTILLA ══════ -->
   <div class="flex items-center justify-between mt-6 mb-3">
     <p class="tec-section-label !mb-0">PLANTILLA</p>
-    <span class="tec-chip" id="squad-count">0 / 15</span>
+    <span class="tec-chip" id="squad-count">0 / 20</span>
   </div>
   <div class="flex flex-col gap-2" id="squad-list">
     <p class="tec-empty">Aún no hay jugadores. Invítalos desde buscador.</p>
@@ -212,6 +212,28 @@ const COLORS = ['#00ff88','#f59e0b','#f87171','#a78bfa','#38bdf8','#e2ff5d','#ff
     return id || '';
   }
 
+  function getActiveTeam() {
+    const activeId = getActiveTeamId();
+    if (!activeId) return null;
+    const teams = JSON.parse(localStorage.getItem('tec_teams') || '[]');
+    return teams.find(t => t.id === activeId) || null;
+  }
+
+  function isTeamInTournament() {
+    const team = getActiveTeam();
+    return team && team.tournament_id ? true : false;
+  }
+
+  async function syncToApi() {
+    const teamId = getActiveTeamId();
+    if (!teamId) return;
+    await fetch('/api/teams', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'update', id: teamId, name: state.teamName, logo: state.teamLogo, color: state.teamColor }),
+    }).catch(() => {});
+  }
+
   function save(){
     localStorage.setItem('tec_teamName',  state.teamName);
     localStorage.setItem('tec_teamColor', state.teamColor);
@@ -238,11 +260,39 @@ const COLORS = ['#00ff88','#f59e0b','#f87171','#a78bfa','#38bdf8','#e2ff5d','#ff
   function renderHero(){
     $('team-name-display').textContent = state.teamName;
 
+    const inTournament = isTeamInTournament();
     const logoEmoji = $('team-logo-emoji');
     if (state.teamLogo) {
       logoEmoji.innerHTML = `<img src="${state.teamLogo}" alt="${state.teamName}" style="width:100%;height:100%;object-fit:cover;border-radius:inherit" />`;
     } else {
       logoEmoji.textContent = state.teamEmoji;
+    }
+
+    // Lock editing if team is in a tournament
+    const editNameBtn = $('btn-edit-name');
+    const changeLogoBtn = $('btn-change-logo');
+    const colorDots = document.querySelectorAll('.tec-color-dot');
+    if (inTournament) {
+      if (editNameBtn) editNameBtn.style.display = 'none';
+      if (changeLogoBtn) changeLogoBtn.style.display = 'none';
+      colorDots.forEach(b => { b.style.pointerEvents = 'none'; b.style.opacity = '0.3'; });
+      let badge = $('tournament-badge');
+      if (!badge) {
+        const nameEl = $('team-name-display');
+        if (nameEl) {
+          badge = document.createElement('span');
+          badge.id = 'tournament-badge';
+          badge.textContent = '🔒 EN TORNEO';
+          badge.style.cssText = 'display:inline-block;font-size:.38rem;font-weight:700;letter-spacing:.12em;color:#f59e0b;border:1px solid rgba(251,191,36,.25);background:rgba(251,191,36,.08);border-radius:4px;padding:.1rem .35rem;margin-left:.4rem;vertical-align:middle';
+          nameEl.parentNode?.appendChild(badge);
+        }
+      }
+    } else {
+      if (editNameBtn) editNameBtn.style.display = '';
+      if (changeLogoBtn) changeLogoBtn.style.display = '';
+      colorDots.forEach(b => { b.style.pointerEvents = ''; b.style.opacity = ''; });
+      const badge = $('tournament-badge');
+      if (badge) badge.remove();
     }
 
     const glow = $('team-hero-glow');
@@ -254,25 +304,27 @@ const COLORS = ['#00ff88','#f59e0b','#f87171','#a78bfa','#38bdf8','#e2ff5d','#ff
       logoWrap.style.boxShadow   = `0 0 30px ${state.teamColor}15, inset 0 0 20px ${state.teamColor}05`;
     }
 
-    document.querySelectorAll('.tec-color-dot').forEach(b => {
+    colorDots.forEach(b => {
       b.classList.toggle('active', b.dataset.color === state.teamColor);
     });
   }
 
   document.querySelectorAll('.tec-color-dot').forEach(btn => {
     btn.addEventListener('click', () => {
-      state.teamColor = btn.dataset.color; save(); renderHero();
+      if (isTeamInTournament()) { alert('No puedes cambiar el color mientras el equipo esté en un torneo'); return; }
+      state.teamColor = btn.dataset.color; save(); syncToTeams(); syncToApi(); renderHero();
     });
   });
 
   $('btn-edit-name').addEventListener('click', () => {
+    if (isTeamInTournament()) { alert('No puedes cambiar el nombre mientras el equipo esté en un torneo'); return; }
     $('team-name-input').value = state.teamName;
     $('modal-name').classList.remove('hidden');
   });
 
   $('btn-save-name').addEventListener('click', () => {
     const v = $('team-name-input').value.trim();
-    if(v){ state.teamName = v; save(); renderHero(); }
+    if(v){ state.teamName = v; save(); syncToTeams(); syncToApi(); renderHero(); }
     $('modal-name').classList.add('hidden');
   });
 
@@ -290,12 +342,13 @@ const COLORS = ['#00ff88','#f59e0b','#f87171','#a78bfa','#38bdf8','#e2ff5d','#ff
     const reader = new FileReader();
     reader.onload = (ev) => {
       state.teamLogo = ev.target.result;
-      save(); renderHero();
+      save(); syncToTeams(); syncToApi(); renderHero();
     };
     reader.readAsDataURL(file);
   });
 
   $('btn-change-logo').addEventListener('click', () => {
+    if (isTeamInTournament()) { alert('No puedes cambiar el logo mientras el equipo esté en un torneo'); return; }
     logoInput.click();
   });
 
@@ -305,7 +358,7 @@ const COLORS = ['#00ff88','#f59e0b','#f87171','#a78bfa','#38bdf8','#e2ff5d','#ff
     const teamId = getActiveTeamId();
     if (!teamId) {
       list.innerHTML = '<p class="tec-empty">Aún no tienes un equipo. Crea uno en EQUIPOS.</p>';
-      $('squad-count').textContent = '0 / 15';
+      $('squad-count').textContent = '0 / 20';
       return;
     }
     try {
@@ -316,9 +369,9 @@ const COLORS = ['#00ff88','#f59e0b','#f87171','#a78bfa','#38bdf8','#e2ff5d','#ff
         return;
       }
       const squad = data.squad;
-      $('squad-count').textContent = `${squad.length} / 15`;
+      $('squad-count').textContent = `${squad.length} / 20`;
       $('stat-players').textContent = squad.length;
-      const pct = Math.min(squad.length / 15 * 100, 100);
+      const pct = Math.min(squad.length / 20 * 100, 100);
       const bar = document.getElementById('stat-players-bar');
       if(bar) bar.style.width = pct + '%';
 
@@ -326,6 +379,8 @@ const COLORS = ['#00ff88','#f59e0b','#f87171','#a78bfa','#38bdf8','#e2ff5d','#ff
         list.innerHTML = '<p class="tec-empty">Aún no hay jugadores. Invítalos desde el buscador.</p>';
         return;
       }
+
+      const inTournament = isTeamInTournament();
 
       function cardHTML(p) {
         const posLabel = FIFA_POS[p.player_position] || p.player_position || '—';
@@ -346,6 +401,7 @@ const COLORS = ['#00ff88','#f59e0b','#f87171','#a78bfa','#38bdf8','#e2ff5d','#ff
               <div class="squad-pcard-lightning squad-pcard-lightning--r"></div>
             </div>
             <div class="squad-pcard-glow"></div>
+            ${!inTournament ? `<button class="kick-btn absolute top-1 left-1 z-20 w-5 h-5 rounded-full bg-black/60 border border-white/20 flex items-center justify-center hover:bg-[#ef4444] hover:border-[#ef4444] transition-colors" data-id="${p.id}" data-name="${esc(p.player_name)}" title="Eliminar jugador"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" class="text-white"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg></button>` : ''}
             <div class="absolute bottom-0 left-0 right-0 p-1.5 text-center z-10">
               <div class="squad-pcard-divider"></div>
               <span class="block font-cinzel text-[.45rem] font-bold tracking-wider text-[var(--color-theme-cream)] uppercase truncate drop-shadow-[0_0_12px_rgba(0,0,0,0.9)] transition-colors duration-300 group-hover:text-white">${esc(p.player_name)}</span>
@@ -356,6 +412,12 @@ const COLORS = ['#00ff88','#f59e0b','#f87171','#a78bfa','#38bdf8','#e2ff5d','#ff
       }
 
       list.innerHTML = `<div class="flex gap-2.5 overflow-x-auto snap-x snap-mandatory pb-1 squad-row">${squad.map(cardHTML).join('')}</div>`;
+
+      if (!inTournament) {
+        list.querySelectorAll('.kick-btn').forEach(btn => {
+          btn.addEventListener('click', () => kickPlayer(btn.dataset.id, btn.dataset.name));
+        });
+      }
     } catch {
       list.innerHTML = '<p class="tec-empty">Error de red</p>';
     }
@@ -454,6 +516,26 @@ const COLORS = ['#00ff88','#f59e0b','#f87171','#a78bfa','#38bdf8','#e2ff5d','#ff
       alert('Error de red');
       btn.textContent = 'INVITAR';
       btn.disabled = false;
+    }
+  }
+
+  // ── Kick player ──
+  async function kickPlayer(requestId, playerName) {
+    if (!confirm(`¿Eliminar a ${playerName} del equipo?`)) return;
+    try {
+      const res = await fetch('/api/team-requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'kick', id: requestId }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        loadSquad();
+      } else {
+        alert(data.error || 'Error al eliminar jugador');
+      }
+    } catch {
+      alert('Error de red');
     }
   }
 

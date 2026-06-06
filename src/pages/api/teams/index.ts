@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro'
-import { createTeam, deleteTeam, getTeamsByTournament, getTeamsByUser, searchTeams, removeTeamFromTournament } from '../../../../server/db'
+import { createTeam, deleteTeam, getTeamsByTournament, getTeamsByUser, searchTeams, removeTeamFromTournament, updateTeam } from '../../../../server/db'
 
 export const POST: APIRoute = async ({ request, locals }) => {
   if (!locals.user) {
@@ -21,6 +21,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
       created_by: locals.user.id,
     })
     return new Response(JSON.stringify({ success: true, id }), { status: 201, headers: { 'Content-Type': 'application/json' } })
+  }
+
+  if (action === 'update') {
+    await updateTeam(data.id, { name: data.name, logo: data.logo ?? null, color: data.color })
+    return new Response(JSON.stringify({ success: true }), { status: 200, headers: { 'Content-Type': 'application/json' } })
   }
 
   if (action === 'delete') {

@@ -1,6 +1,15 @@
 ---
 import Layout from '../../layouts/Layout.astro'
+import { getPlayerByUser } from '../../../server/db'
+
 const user = Astro.locals.user
+if (!user || user.role !== 'jugador') {
+  return Astro.redirect('/login')
+}
+const existingPlayer = await getPlayerByUser(user.id)
+if (existingPlayer) {
+  return Astro.redirect('/jugador/dashboard')
+}
 const FIFA_POSITIONS = [
   { value: 'GK', label: 'Portero (GK)' },
   { value: 'CB', label: 'Defensa Central (CB)' },
@@ -126,7 +135,6 @@ const FIFA_POSITIONS = [
 
 <script>
   const $ = id => document.getElementById(id)
-  const loadingEl = $('player-loading')
   const formEl = $('player-form')
   const msgEl = $('form-message')
   const btnSave = $('btn-save')
@@ -134,45 +142,9 @@ const FIFA_POSITIONS = [
 
   let playerId = null
 
-  async function loadProfile() {
-    try {
-      const res = await fetch('/api/players')
-      const data = await res.json()
-      loadingEl.style.display = 'none'
-      if (data.success && data.player) {
-        // Already has a profile — go to dashboard
-        window.location.href = '/jugador/dashboard'
-      } else {
-        showForm()
-      }
-    } catch {
-      loadingEl.style.display = 'none'
-      showForm()
-    }
-  }
-
-  function showForm(data) {
-    formEl.style.display = 'block'
-
-    if (data) {
-      subtitle.textContent = 'Edita tu perfil de jugador'
-      btnSave.textContent = 'GUARDAR CAMBIOS'
-      $('field-name').value = data.name || ''
-      $('field-realName').value = data.real_name || ''
-      $('field-age').value = data.age || ''
-      $('field-city').value = data.city || ''
-      $('field-neighborhood').value = data.neighborhood || ''
-      $('field-number').value = data.number || ''
-      $('field-foot').value = data.preferred_foot || ''
-      $('field-position').value = data.position || ''
-      $('field-bio').value = data.bio || ''
-      $('preview-big').src = data.image_big || '/images/fighters/big/jugador_mistery.webp'
-      $('preview-card').src = data.image_card || '/images/fighters/cards/jugador_mistery_card.png'
-    } else {
-      subtitle.textContent = 'Crea tu perfil de jugador'
-      btnSave.textContent = 'GUARDAR PERFIL'
-    }
-  }
+  // Player has no profile (server already redirected if they did)
+  $('player-loading').style.display = 'none'
+  formEl.style.display = 'block'
 
   btnSave.addEventListener('click', async () => {
     const name = $('field-name').value.trim()
@@ -220,5 +192,4 @@ const FIFA_POSITIONS = [
     }
   })
 
-  loadProfile()
 </script>

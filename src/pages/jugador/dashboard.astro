@@ -27,6 +27,10 @@ const hasTeam = !!acceptedTeam
         </div>
         <div style="display:flex;gap:.4rem;align-items:center">
           {player && <a href="/jugador" style="padding:.35rem .7rem;border-radius:6px;font-family:'Cinzel',serif;font-size:.42rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;text-decoration:none;border:1px solid var(--color-theme-gold);color:var(--color-theme-gold);background:transparent;transition:all .2s">EDITAR PERFIL</a>}
+          <div style="position:relative;display:inline-block">
+            <button id="btn-notif" style="position:relative;padding:.35rem .5rem;border-radius:6px;border:1px solid rgba(255,255,255,.1);color:rgba(232,220,200,.5);background:transparent;cursor:pointer;font-size:.7rem;line-height:1;transition:all .2s">🔔</button>
+            <span id="notif-badge" style="display:none;position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;font-size:.35rem;font-weight:700;font-family:monospace;min-width:14px;height:14px;border-radius:7px;display:none;align-items:center;justify-content:center;padding:0 3px;box-shadow:0 0 8px rgba(239,68,68,.4)"></span>
+          </div>
           <button id="btn-logout" style="padding:.35rem .7rem;border-radius:6px;font-family:'Cinzel',serif;font-size:.42rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;border:1px solid #f87171;color:#f87171;background:transparent;transition:all .2s">CERRAR SESIÓN</button>
         </div>
       </div>
@@ -39,23 +43,37 @@ const hasTeam = !!acceptedTeam
       ) : (
         <>
           <!-- Team Status -->
-          <div style="margin-top:1.5rem;padding:1rem;border-radius:12px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.02)">
+          <div id="team-status-section" style="margin-top:1.5rem;padding:1rem;border-radius:12px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.02)">
             <p style="font-size:.5rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:rgba(232,220,200,.4);margin-bottom:.5rem">MI EQUIPO</p>
             {hasTeam ? (
-              <div style="display:flex;align-items:center;gap:.7rem">
-                <div style="width:40px;height:40px;border-radius:8px;background:{acceptedTeam.team_color || '#00ff88'}22;border:1px solid {acceptedTeam.team_color || '#00ff88'}44;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-                  🏆
+              <div>
+                <div style="display:flex;align-items:center;gap:.7rem">
+                  <div style="width:40px;height:40px;border-radius:8px;background:{acceptedTeam.team_color || '#00ff88'}22;border:1px solid {acceptedTeam.team_color || '#00ff88'}44;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                    🏆
+                  </div>
+                  <div>
+                    <div style="font-size:.8rem;font-weight:600;color:var(--color-theme-cream)">{acceptedTeam.team_name}</div>
+                    <div style="font-size:.5rem;color:#00ff88;font-weight:600;letter-spacing:.1em;text-transform:uppercase">✓ ACEPTADO</div>
+                  </div>
                 </div>
-                <div>
-                  <div style="font-size:.8rem;font-weight:600;color:var(--color-theme-cream)">{acceptedTeam.team_name}</div>
-                  <div style="font-size:.5rem;color:#00ff88;font-weight:600;letter-spacing:.1em;text-transform:uppercase">✓ ACEPTADO</div>
-                </div>
+                <button id="btn-leave-team" class="team-leave-btn" style="margin-top:.6rem;padding:.3rem .7rem;border-radius:6px;font-family:'Cinzel',serif;font-size:.42rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;border:1px solid #f87171;color:#f87171;background:transparent;transition:all .2s">SALIR DEL EQUIPO</button>
               </div>
             ) : (
               <div>
                 <p style="font-size:.6rem;color:rgba(232,220,200,.25)">Aún no estás en ningún equipo. Busca uno abajo.</p>
               </div>
             )}
+          </div>
+
+          <!-- Notifications Panel -->
+          <div id="notif-panel" style="display:none;margin-top:1rem;padding:.7rem;border-radius:10px;border:1px solid rgba(255,255,255,.08);background:rgba(0,0,0,.6);backdrop-filter:blur(12px)">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.4rem">
+              <p style="font-size:.5rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:rgba(232,220,200,.4)">NOTIFICACIONES</p>
+              <button id="btn-mark-read" style="font-size:.4rem;padding:.15rem .4rem;border-radius:4px;border:1px solid rgba(255,255,255,.1);color:rgba(232,220,200,.3);background:transparent;cursor:pointer">✓ TODO LEÍDO</button>
+            </div>
+            <div id="notif-list" style="display:flex;flex-direction:column;gap:.35rem;max-height:250px;overflow-y:auto">
+              <p style="font-size:.5rem;color:rgba(232,220,200,.2)">Cargando...</p>
+            </div>
           </div>
 
           <!-- Team Search -->
@@ -66,6 +84,14 @@ const hasTeam = !!acceptedTeam
               <span style="position:absolute;left:.7rem;top:50%;transform:translateY(-50%);font-size:.85rem;color:rgba(232,220,200,.25)">🔍</span>
             </div>
             <div id="team-search-results" style="display:flex;flex-direction:column;gap:.5rem;min-height:2rem"></div>
+          </div>
+
+          <!-- Team Invitations (técnico → player) -->
+          <div id="team-invitations-section" style="margin-top:1.5rem">
+            <p style="font-size:.55rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:rgba(232,220,200,.4);margin-bottom:.5rem">INVITACIONES DE EQUIPOS</p>
+            <div id="team-invitations-list" style="display:flex;flex-direction:column;gap:.4rem">
+              <p style="font-size:.55rem;color:rgba(232,220,200,.2)">Cargando invitaciones...</p>
+            </div>
           </div>
 
           <!-- My Requests -->
@@ -114,6 +140,105 @@ const hasTeam = !!acceptedTeam
       return data.success ? data.requests : []
     } catch { return [] }
   }
+
+  // ── Team invitations (técnico → player) ──
+  async function loadTeamInvitations() {
+    const container = $('team-invitations-list')
+    if (!container) return
+    try {
+      const res = await fetch('/api/team-requests')
+      const data = await res.json()
+      if (!data.success) { container.innerHTML = '<p style="font-size:.55rem;color:rgba(232,220,200,.2)">Error al cargar</p>'; return }
+      const invites = (data.requests || []).filter(r => r.status === 'pending' && r.type === 'invite')
+      if (!invites.length) {
+        container.innerHTML = '<p style="font-size:.55rem;color:rgba(232,220,200,.2)">No tienes invitaciones pendientes</p>'
+        return
+      }
+      container.innerHTML = ''
+      invites.forEach(inv => {
+        const card = document.createElement('div')
+        card.style.cssText = 'display:flex;align-items:center;gap:.5rem;padding:.5rem .7rem;border-radius:8px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.02);flex-wrap:wrap'
+
+        const info = document.createElement('div')
+        info.style.cssText = 'flex:1;min-width:120px'
+        const nameEl = document.createElement('div')
+        nameEl.style.cssText = 'font-size:.65rem;font-weight:600;color:var(--color-theme-cream)'
+        nameEl.textContent = inv.team_name || 'Equipo'
+        info.appendChild(nameEl)
+        const subEl = document.createElement('div')
+        subEl.style.cssText = 'font-size:.45rem;color:rgba(232,220,200,.3);letter-spacing:.05em'
+        subEl.textContent = 'Te invitan a unirte'
+        info.appendChild(subEl)
+        card.appendChild(info)
+
+        const actions = document.createElement('div')
+        actions.style.cssText = 'display:flex;gap:.35rem'
+
+        const acceptBtn = document.createElement('button')
+        acceptBtn.className = 'invite-accept-btn'
+        acceptBtn.dataset.id = inv.id
+        acceptBtn.style.cssText = "padding:.25rem .6rem;border-radius:6px;font-family:'Cinzel',serif;font-size:.4rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;border:1px solid rgba(52,211,153,.3);color:#34d399;background:rgba(52,211,153,.06);transition:all .2s"
+        acceptBtn.textContent = 'ACEPTAR'
+        acceptBtn.addEventListener('click', () => respondToInvite(inv.id, 'accepted'))
+        actions.appendChild(acceptBtn)
+
+        const rejectBtn = document.createElement('button')
+        rejectBtn.className = 'invite-reject-btn'
+        rejectBtn.dataset.id = inv.id
+        rejectBtn.style.cssText = "padding:.25rem .6rem;border-radius:6px;font-family:'Cinzel',serif;font-size:.4rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;border:1px solid rgba(239,68,68,.3);color:#ef4444;background:rgba(239,68,68,.06);transition:all .2s"
+        rejectBtn.textContent = 'RECHAZAR'
+        rejectBtn.addEventListener('click', () => respondToInvite(inv.id, 'rejected'))
+        actions.appendChild(rejectBtn)
+
+        card.appendChild(actions)
+        container.appendChild(card)
+      })
+    } catch (e) {
+      container.innerHTML = `<p style="font-size:.55rem;color:rgba(232,220,200,.5)">Error: ${e?.message || 'desconocido'}</p>`
+      console.error('loadTeamInvitations error:', e)
+    }
+  }
+
+  async function respondToInvite(id, status) {
+    try {
+      const res = await fetch('/api/team-requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'player-respond', id, status }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        loadTeamInvitations()
+        loadMyRequests()
+        location.reload()
+      } else {
+        alert(data.error || 'Error al responder')
+      }
+    } catch {
+      alert('Error de red')
+    }
+  }
+
+  // ── Leave team ──
+  $('btn-leave-team')?.addEventListener('click', async () => {
+    if (!confirm('¿Estás seguro de que quieres salir del equipo?')) return
+    try {
+      const res = await fetch('/api/team-requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'leave' }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        alert('Has salido del equipo')
+        location.reload()
+      } else {
+        alert(data.error || 'Error al salir del equipo')
+      }
+    } catch {
+      alert('Error de red')
+    }
+  })
 
   async function renderTeamResults(teams) {
     const container = $('team-search-results')
@@ -176,7 +301,8 @@ const hasTeam = !!acceptedTeam
   }
 
   async function loadMyRequests() {
-    const requests = await fetchMyRequests()
+    const all = await fetchMyRequests()
+    const requests = all.filter(r => r.type === 'request')
     const container = $('my-requests-list')
     if (!container) return
     if (!requests.length) {
@@ -195,7 +321,66 @@ const hasTeam = !!acceptedTeam
     }).join('')
   }
 
+  loadTeamInvitations()
   loadMyRequests()
+
+  // ── Notifications ──
+  let notifOpen = false
+
+  async function loadNotificaciones() {
+    const list = $('notif-list')
+    if (!list) return
+    try {
+      const res = await fetch('/api/notifications')
+      const data = await res.json()
+      if (!data.success) return
+      const badge = $('#notif-badge')
+      if (data.unread > 0) {
+        badge.style.display = 'flex'
+        badge.textContent = data.unread > 9 ? '9+' : data.unread
+      } else {
+        badge.style.display = 'none'
+      }
+      if (!notifOpen) return
+      if (!data.notifications.length) {
+        list.innerHTML = '<p style="font-size:.5rem;color:rgba(232,220,200,.2)">Sin notificaciones</p>'
+        return
+      }
+      list.innerHTML = ''
+      data.notifications.forEach(n => {
+        const item = document.createElement('div')
+        item.style.cssText = `padding:.4rem .5rem;border-radius:6px;border:1px solid rgba(255,255,255,${n.read ? '.04' : '.1'});background:rgba(255,255,255,${n.read ? '.01' : '.04'});font-size:.5rem`
+        const titleEl = document.createElement('div')
+        titleEl.style.cssText = 'font-weight:600;color:var(--color-theme-cream);margin-bottom:.1rem'
+        titleEl.textContent = n.title || ''
+        item.appendChild(titleEl)
+        const msgEl = document.createElement('div')
+        msgEl.style.cssText = 'color:rgba(232,220,200,.4)'
+        msgEl.textContent = n.message || ''
+        item.appendChild(msgEl)
+        list.appendChild(item)
+      })
+    } catch {}
+  }
+
+  $('#btn-notif')?.addEventListener('click', () => {
+    notifOpen = !notifOpen
+    $('notif-panel').style.display = notifOpen ? 'block' : 'none'
+    if (notifOpen) loadNotificaciones()
+  })
+
+  $('#btn-mark-read')?.addEventListener('click', async () => {
+    try {
+      await fetch('/api/notifications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'markAllRead' }),
+      })
+      loadNotificaciones()
+    } catch {}
+  })
+
+  setInterval(loadNotificaciones, 15000)
 
   // ── Logout ──
   $('btn-logout').addEventListener('click', async () => {

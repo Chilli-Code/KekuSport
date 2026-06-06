@@ -2,12 +2,13 @@
 export interface Props {
   tournamentId: string
   maxTeams: number
+  userId: string
 }
 
-const { tournamentId, maxTeams } = Astro.props
+const { tournamentId, maxTeams, userId } = Astro.props
 ---
 
-<div class="tm-teams" id="team-manager" data-tournament-id={tournamentId} data-max-teams={maxTeams}>
+<div class="tm-teams" id="team-manager" data-tournament-id={tournamentId} data-max-teams={maxTeams} data-user-id={userId}>
   <!-- Header -->
   <div class="tm-teams-header">
     <div class="tm-teams-header-left">
@@ -85,6 +86,7 @@ const { tournamentId, maxTeams } = Astro.props
   const root = document.getElementById('team-manager')!
   const tournamentId = root.dataset.tournamentId!
   const maxTeams = Number(root.dataset.maxTeams)
+  const currentUserId = root.dataset.userId
 
   const teamList = document.getElementById('team-list')!
   const teamEmpty = document.getElementById('team-empty')!
@@ -281,7 +283,7 @@ const { tournamentId, maxTeams } = Astro.props
       })
       const data = await res.json()
       if (!data.success) return
-      const pending = (data.invitations || []).filter((inv: any) => inv.status === 'pending')
+      const pending = (data.invitations || []).filter((inv: any) => inv.status === 'pending' && inv.created_by !== currentUserId)
       if (!pending.length) {
         section.classList.add('hidden')
         return

@@ -24,6 +24,7 @@ async function migrateTables() {
   try { await db.execute("ALTER TABLE tournaments ADD COLUMN playoffs_two_legged INTEGER DEFAULT 0") } catch {}
   try { await db.execute("ALTER TABLE tournaments ADD COLUMN advancers_per_group INTEGER DEFAULT NULL") } catch {}
   try { await db.execute("ALTER TABLE tournaments ADD COLUMN single_final_match INTEGER DEFAULT 1") } catch {}
+  try { await db.execute("ALTER TABLE team_requests ADD COLUMN type TEXT DEFAULT 'request'") } catch {}
 
   const colResult = await db.execute("PRAGMA table_info('teams')")
   const colInfo = colResult.rows as unknown as { name: string; notnull: number }[]
@@ -294,6 +295,12 @@ export async function createTournament(tournament: Omit<Tournament, 'created_at'
   )
 }
 
+export async function deleteTournament(id: string): Promise<void> {
+  const db = await getDb()
+  // CASCADE will delete related matches, teams, categories, etc.
+  await db.execute('DELETE FROM tournaments WHERE id = ?', [id])
+}
+
 export async function createCategory(category: Omit<Category, 'created_at'>): Promise<void> {
   const db = await getDb()
   await db.execute(
@@ -364,6 +371,12 @@ export async function getTournamentsOpenForRegistration(): Promise<Tournament[]>
     sql: "SELECT * FROM tournaments WHERE open_registration = 1 AND status = 'active' ORDER BY created_at DESC",
   })
   return result.rows as unknown as Tournament[]
+}
+
+export async function getTeamById(id: string): Promise<Team | undefined> {
+  const db = await getDb()
+  const result = await db.execute({ sql: 'SELECT * FROM teams WHERE id = ?', args: [id] })
+  return result.rows[0] as unknown as Team | undefined
 }
 
 export async function searchTeams(query: string): Promise<Team[]> {
@@ -440,6 +453,12 @@ export async function getInvitationsByUser(userId: string): Promise<(TournamentI
     args: [userId],
   })
   return result.rows as unknown as (TournamentInvitation & { team_name: string; team_color: string; tournament_name: string })[]
+}
+
+export async function getInvitationById(id: string): Promise<TournamentInvitation | undefined> {
+  const db = await getDb()
+  const result = await db.execute({ sql: 'SELECT * FROM tournament_invitations WHERE id = ?', args: [id] })
+  return result.rows[0] as unknown as TournamentInvitation | undefined
 }
 
 export async function updateInvitationStatus(id: string, status: 'accepted' | 'rejected'): Promise<void> {
@@ -614,6 +633,7 @@ export interface TeamRequest {
   team_id: string
   message: string | null
   status: 'pending' | 'accepted' | 'rejected'
+  type: 'request' | 'invite'
   created_at: string
 }
 
@@ -629,7 +649,7 @@ export interface TeamRequestWithDetails extends TeamRequest {
 export async function createTeamRequest(req: Omit<TeamRequest, 'created_at'>): Promise<void> {
   const db = await getDb()
   await db.execute(
-    'INSERT INTO team_requests (id, player_id, team_id, message, status) VALUES (@id, @player_id, @team_id, @message, @status)',
+    'INSERT INTO team_requests (id, player_id, team_id, message, status, type) VALUES (@id, @player_id, @team_id, @message, @status, @type)',
     req as any,
   )
 }
@@ -638,6 +658,19 @@ export async function getTeamRequestsByPlayer(playerId: string): Promise<TeamReq
   const db = await getDb()
   const result = await db.execute({ sql: 'SELECT * FROM team_requests WHERE player_id = ? ORDER BY created_at DESC', args: [playerId] })
   return result.rows as unknown as TeamRequest[]
+}
+
+export async function getTeamRequestsByPlayerWithTeam(playerId: string): Promise<(TeamRequest & { team_name: string; team_color: string | null })[]> {
+  const db = await getDb()
+  const result = await db.execute({
+    sql: `SELECT r.*, t.name as team_name, t.color as team_color
+          FROM team_requests r
+          JOIN teams t ON t.id = r.team_id
+          WHERE r.player_id = ?
+          ORDER BY r.created_at DESC`,
+    args: [playerId],
+  })
+  return result.rows as unknown as (TeamRequest & { team_name: string; team_color: string | null })[]
 }
 
 export async function getTeamRequestsByOwner(userId: string): Promise<TeamRequestWithDetails[]> {
@@ -666,17 +699,34 @@ export async function updateTeamRequestStatus(id: string, status: 'accepted' | '
   await db.execute({ sql: 'UPDATE team_requests SET status = ? WHERE id = ?', args: [status, id] })
 }
 
-export async function getPlayerAcceptedTeam(playerId: string): Promise<(TeamRequest & { team_name: string; team_color: string | null }) | undefined> {
+export async function getPlayerAcceptedTeam(playerId: string): Promise<(TeamRequest & { team_name: string; team_color: string | null; team_tournament_id: string | null }) | undefined> {
   const db = await getDb()
   const result = await db.execute({
-    sql: `SELECT r.*, t.name as team_name, t.color as team_color
+    sql: `SELECT r.*, t.name as team_name, t.color as team_color, t.tournament_id as team_tournament_id
           FROM team_requests r
           JOIN teams t ON t.id = r.team_id
           WHERE r.player_id = ? AND r.status = 'accepted'
           LIMIT 1`,
     args: [playerId],
   })
-  return result.rows[0] as unknown as (TeamRequest & { team_name: string; team_color: string | null }) | undefined
+  return result.rows[0] as unknown as (TeamRequest & { team_name: string; team_color: string | null; team_tournament_id: string | null }) | undefined
+}
+
+export async function updateTeam(id: string, data: { name?: string; logo?: string | null; color?: string }): Promise<void> {
+  const db = await getDb()
+  const sets: string[] = []
+  const args: any[] = []
+  if (data.name !== undefined) { sets.push('name = ?'); args.push(data.name) }
+  if (data.logo !== undefined) { sets.push('logo = ?'); args.push(data.logo) }
+  if (data.color !== undefined) { sets.push('color = ?'); args.push(data.color) }
+  if (sets.length === 0) return
+  args.push(id)
+  await db.execute({ sql: `UPDATE teams SET ${sets.join(', ')} WHERE id = ?`, args })
+}
+
+export async function deleteTeamRequest(id: string): Promise<void> {
+  const db = await getDb()
+  await db.execute({ sql: 'DELETE FROM team_requests WHERE id = ?', args: [id] })
 }
 
 export interface Notification {
@@ -750,7 +800,7 @@ export async function getTeamPendingInvitesByOwner(userId: string): Promise<(Tea
           FROM team_requests r
           JOIN teams t ON t.id = r.team_id
           JOIN players p ON p.id = r.player_id
-          WHERE t.created_by = ? AND r.status = 'pending'
+          WHERE t.created_by = ? AND r.status = 'pending' AND r.type = 'request'
           ORDER BY r.created_at DESC`,
     args: [userId],
   })
