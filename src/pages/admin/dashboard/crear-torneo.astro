@@ -233,7 +233,7 @@ import AdminLayout from "../../../components/admin/AdminLayout.astro";
                           <span class="ct-input-icon">⬆️</span>
                           <select id="t-advancers" name="advancersPerGroup" class="ct-input ct-input--icon">
                             {[1,2,3,4].map(n => (
-                              <option value={n} selected={n===4 && false}>{n} {(n)}</option>
+                              <option value={n}>{n}</option>
                             ))}
                           </select>
                         </div>
