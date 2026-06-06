@@ -22,6 +22,7 @@ async function migrateTables() {
   try { await db.execute("ALTER TABLE tournaments ADD COLUMN num_groups INTEGER DEFAULT NULL") } catch {}
   try { await db.execute("ALTER TABLE tournaments ADD COLUMN two_legged INTEGER DEFAULT 0") } catch {}
   try { await db.execute("ALTER TABLE tournaments ADD COLUMN playoffs_two_legged INTEGER DEFAULT 0") } catch {}
+  try { await db.execute("ALTER TABLE tournaments ADD COLUMN advancers_per_group INTEGER DEFAULT NULL") } catch {}
 
   const colResult = await db.execute("PRAGMA table_info('teams')")
   const colInfo = colResult.rows as unknown as { name: string; notnull: number }[]
@@ -249,6 +250,7 @@ export interface Tournament {
   awards: string
   notes: string | null
   num_groups: number | null
+  advancers_per_group: number | null
   two_legged: number
   playoffs_two_legged: number
   status: string
@@ -276,14 +278,14 @@ export async function createTournament(tournament: Omit<Tournament, 'created_at'
       format, num_teams, players_per_team, match_duration, points_per_win,
       rules, open_registration, reg_deadline, registration_fee,
       min_age, max_age, requirements, prizes, awards, notes,
-      num_groups, two_legged, playoffs_two_legged,
+      num_groups, advancers_per_group, two_legged, playoffs_two_legged,
       status, created_by
     ) VALUES (
       @id, @name, @description, @logo, @venue, @city, @start_date, @end_date,
       @format, @num_teams, @players_per_team, @match_duration, @points_per_win,
       @rules, @open_registration, @reg_deadline, @registration_fee,
       @min_age, @max_age, @requirements, @prizes, @awards, @notes,
-      @num_groups, @two_legged, @playoffs_two_legged,
+      @num_groups, @advancers_per_group, @two_legged, @playoffs_two_legged,
       @status, @created_by
     )`,
     tournament as any,

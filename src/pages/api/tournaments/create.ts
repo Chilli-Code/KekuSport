@@ -68,6 +68,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     awards: JSON.stringify(body.awards || []),
     notes: (body.notes as string) || null,
     num_groups: (body.numGroups as number) ?? null,
+    advancers_per_group: (body.advancersPerGroup as number) ?? null,
     two_legged: body.twoLegged ? 1 : 0,
     playoffs_two_legged: body.playoffsTwoLegged ? 1 : 0,
     status: 'active',

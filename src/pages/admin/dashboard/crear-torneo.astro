@@ -206,39 +206,87 @@ import AdminLayout from "../../../components/admin/AdminLayout.astro";
                   <div class="ct-card-sep-light"></div>
                   <label class="ct-label" style="margin-bottom:0.75rem">Fases del torneo</label>
 
-                  <!-- N° grupos (visible solo si formato = grupos) -->
-                  <div class="ct-field" id="num-groups-field" style="display:none">
-                    <label class="ct-label" for="t-groups">Número de grupos</label>
-                    <div class="ct-input-wrap">
-                      <span class="ct-input-icon">📊</span>
-                      <select id="t-groups" name="numGroups" class="ct-input ct-input--icon">
-                        {[2,4,6,8].map(n => (
-                          <option value={n} selected={n===4}>{n} grupos</option>
-                        ))}
-                      </select>
+                  <!-- Configuración de grupos (solo si formato = grupos) -->
+                  <div id="grupos-config" style="display:none">
+                    <div class="ct-groups-grid">
+                      <div class="ct-field">
+                        <label class="ct-label" for="t-groups">Número de grupos</label>
+                        <div class="ct-input-wrap">
+                          <span class="ct-input-icon">📊</span>
+                          <select id="t-groups" name="numGroups" class="ct-input ct-input--icon">
+                            {[2,3,4,6].map(n => (
+                              <option value={n} selected={n===2}>{(n)} grupos</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                      <div class="ct-field">
+                        <label class="ct-label">Equipos por grupo</label>
+                        <div class="ct-input-wrap">
+                          <span class="ct-input-icon">👥</span>
+                          <input id="teams-per-group" type="text" class="ct-input ct-input--icon" readonly disabled />
+                        </div>
+                      </div>
+                      <div class="ct-field">
+                        <label class="ct-label" for="t-advancers">Avanzan por grupo</label>
+                        <div class="ct-input-wrap">
+                          <span class="ct-input-icon">⬆️</span>
+                          <select id="t-advancers" name="advancersPerGroup" class="ct-input ct-input--icon">
+                            {[1,2,3,4].map(n => (
+                              <option value={n} selected={n===2}>{n} {(n)}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                    <!-- Estructura del torneo (vista previa de fases) -->
+                    <div class="ct-structure-display" id="structure-display">
+                      <div class="ct-structure-phase" id="phase-grupos">
+                        <span class="ct-structure-icon">📊</span>
+                        <span class="ct-structure-label" id="struct-grupos">Fase de grupos</span>
+                      </div>
+                      <span class="ct-structure-arrow">→</span>
+                      <div class="ct-structure-phase" id="phase-cuartos">
+                        <span class="ct-structure-icon">🏃</span>
+                        <span class="ct-structure-label">Cuartos de final</span>
+                      </div>
+                      <span class="ct-structure-arrow">→</span>
+                      <div class="ct-structure-phase" id="phase-semis">
+                        <span class="ct-structure-icon">⚔️</span>
+                        <span class="ct-structure-label">Semifinal</span>
+                      </div>
+                      <span class="ct-structure-arrow">→</span>
+                      <div class="ct-structure-phase ct-structure-phase--final" id="phase-final">
+                        <span class="ct-structure-icon">🏆</span>
+                        <span class="ct-structure-label">Final</span>
+                      </div>
                     </div>
                   </div>
 
-                  <!-- Ida y vuelta fase de grupos -->
-                  <div class="ct-toggle-row" style="margin-top:0.5rem">
-                    <div>
-                      <p class="ct-toggle-title">Partidos de ida y vuelta</p>
-                      <p class="ct-toggle-sub">Cada equipo juega dos veces contra el mismo rival (local y visitante)</p>
+                  <!-- Ida y vuelta (visible en formatos liga, grupos) -->
+                  <div id="two-legged-group-wrap">
+                    <div class="ct-toggle-row" style="margin-top:0.5rem">
+                      <div>
+                        <p class="ct-toggle-title">Partidos de ida y vuelta</p>
+                        <p class="ct-toggle-sub">Cada equipo juega dos veces contra el mismo rival (local y visitante)</p>
+                      </div>
+                      <button type="button" class="ct-toggle" id="two-legged-toggle" aria-pressed="false">
+                        <span class="ct-toggle-thumb"></span>
+                      </button>
                     </div>
-                    <button type="button" class="ct-toggle" id="two-legged-toggle" aria-pressed="false">
-                      <span class="ct-toggle-thumb"></span>
-                    </button>
                   </div>
 
-                  <!-- Ida y vuelta en playoffs -->
-                  <div class="ct-toggle-row" style="margin-top:0.5rem">
-                    <div>
-                      <p class="ct-toggle-title">Ida y vuelta en playoffs</p>
-                      <p class="ct-toggle-sub">Cuartos de final, semifinal y final se juegan a dos partidos</p>
+                  <!-- Ida y vuelta en playoffs (visible en formatos grupos, copa) -->
+                  <div id="playoffs-two-legged-wrap">
+                    <div class="ct-toggle-row" style="margin-top:0.5rem">
+                      <div>
+                        <p class="ct-toggle-title">Ida y vuelta en playoffs</p>
+                        <p class="ct-toggle-sub">Cuartos de final, semifinal y final se juegan a dos partidos</p>
+                      </div>
+                      <button type="button" class="ct-toggle" id="playoffs-two-legged-toggle" aria-pressed="false">
+                        <span class="ct-toggle-thumb"></span>
+                      </button>
                     </div>
-                    <button type="button" class="ct-toggle" id="playoffs-two-legged-toggle" aria-pressed="false">
-                      <span class="ct-toggle-thumb"></span>
-                    </button>
                   </div>
                 </div>
 
@@ -573,6 +621,68 @@ import AdminLayout from "../../../components/admin/AdminLayout.astro";
   })
 
   // ── Formato ──
+  function updateFormatVisibility(format: string) {
+    const gruposConfig = document.getElementById('grupos-config')
+    const twoLeggedWrap = document.getElementById('two-legged-group-wrap')
+    const playoffsWrap = document.getElementById('playoffs-two-legged-wrap')
+    if (gruposConfig) gruposConfig.style.display = format === 'grupos' ? 'block' : 'none'
+    if (twoLeggedWrap) twoLeggedWrap.style.display = (format === 'liga' || format === 'grupos') ? 'block' : 'none'
+    if (playoffsWrap) playoffsWrap.style.display = (format === 'grupos' || format === 'copa') ? 'block' : 'none'
+    if (format !== 'grupos') {
+      const sd = document.getElementById('structure-display')
+      if (sd) sd.style.display = 'none'
+    }
+    calcTeamsPerGroup()
+  }
+
+  function calcTeamsPerGroup() {
+    const numTeams = Number((document.getElementById('t-teams') as HTMLSelectElement)?.value || 0)
+    const numGroups = Number((document.getElementById('t-groups') as HTMLSelectElement)?.value || 1)
+    const perGroup = numGroups > 0 ? Math.floor(numTeams / numGroups) : 0
+    const el = document.getElementById('teams-per-group') as HTMLInputElement
+    if (el) el.value = perGroup > 0 ? `${perGroup} equipos` : '—'
+    updateStructure(perGroup)
+  }
+
+  function updateStructure(teamsPerGroup?: number) {
+    const sd = document.getElementById('structure-display')
+    if (!sd) return
+    const fmt = document.querySelector<HTMLButtonElement>('.ct-format-btn--active')?.dataset.format
+    sd.style.display = fmt === 'grupos' ? 'flex' : 'none'
+    if (fmt !== 'grupos') return
+
+    const groups = Number((document.getElementById('t-groups') as HTMLSelectElement)?.value || 2)
+    const advancers = Number((document.getElementById('t-advancers') as HTMLSelectElement)?.value || 2)
+    const totalAdvancers = groups * advancers
+    const tpg = teamsPerGroup ?? Number((document.getElementById('teams-per-group') as HTMLInputElement)?.value?.split(' ')[0] || 0)
+
+    // Update grupos label
+    const structGrupos = document.getElementById('struct-grupos')
+    if (structGrupos) structGrupos.textContent = tpg > 0 ? `${groups} grupos de ${tpg}` : `${groups} grupos`
+
+    // Determine knockout phases
+    const showCuartos = document.getElementById('phase-cuartos')
+    const showSemis = document.getElementById('phase-semis')
+    const showFinal = document.getElementById('phase-final')
+    if (!showCuartos || !showSemis || !showFinal) return
+
+    // Show/hide phases based on total advancers
+    // 2 advancers total → just final
+    // 4 advancers total → semifinal + final
+    // 8+ advancers total → cuartos + semifinal + final
+    showCuartos.style.display = totalAdvancers >= 8 ? 'flex' : 'none'
+    showSemis.style.display = totalAdvancers >= 4 ? 'flex' : 'none'
+    showFinal.style.display = 'flex'
+
+    // Update arrows visibility
+    const arrows = sd.querySelectorAll<HTMLElement>('.ct-structure-arrow')
+    arrows.forEach((a, i) => {
+      if (i === 0) a.style.display = 'inline' // always show first arrow
+      else if (i === 1) a.style.display = totalAdvancers >= 4 ? 'inline' : 'none'
+      else if (i === 2) a.style.display = totalAdvancers >= 8 ? 'inline' : 'none'
+    })
+  }
+
   document.querySelectorAll<HTMLButtonElement>('.ct-format-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.ct-format-btn').forEach(b => b.classList.remove('ct-format-btn--active'))
@@ -580,14 +690,17 @@ import AdminLayout from "../../../components/admin/AdminLayout.astro";
       const el = document.getElementById('preview-type')
       if (el) el.textContent = btn.querySelector('.ct-format-label')?.textContent ?? ''
       checkItem('chk-format', true)
-
-      // Show/hide num groups field
-      const groupsField = document.getElementById('num-groups-field')
-      if (groupsField) {
-        groupsField.style.display = btn.dataset.format === 'grupos' ? 'block' : 'none'
-      }
+      updateFormatVisibility(btn.dataset.format || 'liga')
     })
   })
+
+  // ── Listeners for groups/advancers/teams changes ──
+  document.getElementById('t-groups')?.addEventListener('change', calcTeamsPerGroup)
+  document.getElementById('t-advancers')?.addEventListener('change', () => updateStructure())
+  document.getElementById('t-teams')?.addEventListener('change', calcTeamsPerGroup)
+
+  // Initial calc
+  calcTeamsPerGroup()
 
   // ── Puntos ──
   document.querySelectorAll<HTMLButtonElement>('.ct-pts-btn').forEach(btn => {
@@ -741,6 +854,7 @@ import AdminLayout from "../../../components/admin/AdminLayout.astro";
     const twoLegged = document.getElementById('two-legged-toggle')!.getAttribute('aria-pressed') === 'true'
     const playoffsTwoLegged = document.getElementById('playoffs-two-legged-toggle')!.getAttribute('aria-pressed') === 'true'
     const numGroups = document.getElementById('t-groups') ? Number((document.getElementById('t-groups') as HTMLSelectElement).value) : null
+    const advancersPerGroup = document.getElementById('t-advancers') ? Number((document.getElementById('t-advancers') as HTMLSelectElement).value) : null
 
     const categories: Array<Record<string, unknown>> = []
     document.querySelectorAll<HTMLElement>('.ct-category-row').forEach(row => {
@@ -785,6 +899,7 @@ import AdminLayout from "../../../components/admin/AdminLayout.astro";
       awards,
       notes: fd.get('notes') || null,
       numGroups,
+      advancersPerGroup,
       twoLegged,
       playoffsTwoLegged,
       categories,
@@ -1218,6 +1333,54 @@ import AdminLayout from "../../../components/admin/AdminLayout.astro";
   }
 
   /* Card separator */
+  /* Groups config grid */
+  .ct-groups-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+  @media (max-width: 640px) {
+    .ct-groups-grid { grid-template-columns: 1fr; }
+  }
+
+  /* Tournament structure display */
+  .ct-structure-display {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 1rem;
+    border-radius: 12px;
+    border: 1px solid rgba(0,255,136,.12);
+    background: rgba(0,255,136,.025);
+    flex-wrap: wrap;
+    margin-top: 0.75rem;
+  }
+  .ct-structure-phase {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.4rem 0.7rem;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,.08);
+    background: rgba(255,255,255,.03);
+    font-size: 0.52rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    color: var(--text-2);
+  }
+  .ct-structure-phase--final {
+    border-color: rgba(251,191,36,.25);
+    background: rgba(251,191,36,.06);
+    color: #fbbf24;
+  }
+  .ct-structure-icon { font-size: 0.85rem; line-height: 1; }
+  .ct-structure-label { white-space: nowrap; }
+  .ct-structure-arrow {
+    color: var(--text-3);
+    font-size: 0.8rem;
+  }
   .ct-card-sep-light {
     height: 1px;
     background: rgba(255,255,255,.05);
