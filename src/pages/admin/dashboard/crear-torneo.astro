@@ -201,6 +201,47 @@ import AdminLayout from "../../../components/admin/AdminLayout.astro";
                   </div>
                 </div>
 
+                <!-- ── Fases del torneo ── -->
+                <div class="ct-col-2">
+                  <div class="ct-card-sep-light"></div>
+                  <label class="ct-label" style="margin-bottom:0.75rem">Fases del torneo</label>
+
+                  <!-- N° grupos (visible solo si formato = grupos) -->
+                  <div class="ct-field" id="num-groups-field" style="display:none">
+                    <label class="ct-label" for="t-groups">Número de grupos</label>
+                    <div class="ct-input-wrap">
+                      <span class="ct-input-icon">📊</span>
+                      <select id="t-groups" name="numGroups" class="ct-input ct-input--icon">
+                        {[2,4,6,8].map(n => (
+                          <option value={n} selected={n===4}>{n} grupos</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <!-- Ida y vuelta fase de grupos -->
+                  <div class="ct-toggle-row" style="margin-top:0.5rem">
+                    <div>
+                      <p class="ct-toggle-title">Partidos de ida y vuelta</p>
+                      <p class="ct-toggle-sub">Cada equipo juega dos veces contra el mismo rival (local y visitante)</p>
+                    </div>
+                    <button type="button" class="ct-toggle" id="two-legged-toggle" aria-pressed="false">
+                      <span class="ct-toggle-thumb"></span>
+                    </button>
+                  </div>
+
+                  <!-- Ida y vuelta en playoffs -->
+                  <div class="ct-toggle-row" style="margin-top:0.5rem">
+                    <div>
+                      <p class="ct-toggle-title">Ida y vuelta en playoffs</p>
+                      <p class="ct-toggle-sub">Cuartos de final, semifinal y final se juegan a dos partidos</p>
+                    </div>
+                    <button type="button" class="ct-toggle" id="playoffs-two-legged-toggle" aria-pressed="false">
+                      <span class="ct-toggle-thumb"></span>
+                    </button>
+                  </div>
+                </div>
+
                 <!-- Reglas -->
                 <div class="ct-col-2 ct-field">
                   <label class="ct-label">Reglas adicionales</label>
@@ -539,6 +580,12 @@ import AdminLayout from "../../../components/admin/AdminLayout.astro";
       const el = document.getElementById('preview-type')
       if (el) el.textContent = btn.querySelector('.ct-format-label')?.textContent ?? ''
       checkItem('chk-format', true)
+
+      // Show/hide num groups field
+      const groupsField = document.getElementById('num-groups-field')
+      if (groupsField) {
+        groupsField.style.display = btn.dataset.format === 'grupos' ? 'block' : 'none'
+      }
     })
   })
 
@@ -555,13 +602,24 @@ import AdminLayout from "../../../components/admin/AdminLayout.astro";
     btn.addEventListener('click', () => btn.classList.toggle('ct-tag--active'))
   })
 
+  // ── Toggle helper ──
+  function toggleClick(el: HTMLElement) {
+    const on = el.getAttribute('aria-pressed') === 'true'
+    el.setAttribute('aria-pressed', String(!on))
+    el.classList.toggle('ct-toggle--on', !on)
+  }
+
   // ── Toggle inscripción ──
   const openReg = document.getElementById('open-reg-toggle')!
-  openReg.addEventListener('click', () => {
-    const on = openReg.getAttribute('aria-pressed') === 'true'
-    openReg.setAttribute('aria-pressed', String(!on))
-    openReg.classList.toggle('ct-toggle--on', !on)
-  })
+  openReg.addEventListener('click', () => toggleClick(openReg))
+
+  // ── Toggle ida y vuelta ──
+  const twoLegged = document.getElementById('two-legged-toggle')!
+  twoLegged.addEventListener('click', () => toggleClick(twoLegged))
+
+  // ── Toggle playoffs ida y vuelta ──
+  const playoffsTwoLegged = document.getElementById('playoffs-two-legged-toggle')!
+  playoffsTwoLegged.addEventListener('click', () => toggleClick(playoffsTwoLegged))
 
   // ── Checklist & progress ──
   function checkItem(id: string, ok: boolean) {
@@ -680,6 +738,9 @@ import AdminLayout from "../../../components/admin/AdminLayout.astro";
     const ptsBtn = document.querySelector<HTMLButtonElement>('.ct-pts-btn--active')
     const pointsPerWin = Number(ptsBtn?.dataset.pts) || 3
     const openReg = document.getElementById('open-reg-toggle')!.getAttribute('aria-pressed') === 'true'
+    const twoLegged = document.getElementById('two-legged-toggle')!.getAttribute('aria-pressed') === 'true'
+    const playoffsTwoLegged = document.getElementById('playoffs-two-legged-toggle')!.getAttribute('aria-pressed') === 'true'
+    const numGroups = document.getElementById('t-groups') ? Number((document.getElementById('t-groups') as HTMLSelectElement).value) : null
 
     const categories: Array<Record<string, unknown>> = []
     document.querySelectorAll<HTMLElement>('.ct-category-row').forEach(row => {
@@ -723,6 +784,9 @@ import AdminLayout from "../../../components/admin/AdminLayout.astro";
       prize3desc: fd.get('prize3desc') || null,
       awards,
       notes: fd.get('notes') || null,
+      numGroups,
+      twoLegged,
+      playoffsTwoLegged,
       categories,
     }
   }
@@ -1154,6 +1218,11 @@ import AdminLayout from "../../../components/admin/AdminLayout.astro";
   }
 
   /* Card separator */
+  .ct-card-sep-light {
+    height: 1px;
+    background: rgba(255,255,255,.05);
+    margin: 1rem 0;
+  }
   .ct-card-sep {
     height: 1px;
     background: var(--border);
