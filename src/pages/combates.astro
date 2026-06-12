@@ -1,18 +1,115 @@
 ---
 import Layout from '@/layouts/Layout.astro'
-import { COMBATS } from '@/consts/combats'
 import DuelCard from '@/components/DuelCard.astro'
+import { getActiveTournamentsWithMatches } from '../../server/db'
+import { TEAMS } from '@/consts/teams'
+import { COMBATS } from '@/consts/combats'
 
-const combats = COMBATS.sort((a, b) => a.number - b.number)
+let tournaments = await getActiveTournamentsWithMatches()
 
-const simulatedDetails: Record<string, { hour: string; date: string; venue: string; stage: string }> = {
-  "1-thunder-vs-blaze": { hour: "18:00", date: "SÁB 12 JUL", venue: "CANCHA LA 93", stage: "CUARTOS DE FINAL" },
-  "2-shadow-vs-frost":  { hour: "18:45", date: "SÁB 12 JUL", venue: "CANCHA LA 93", stage: "CUARTOS DE FINAL" },
-  "3-iron-vs-storm":    { hour: "19:30", date: "SÁB 12 JUL", venue: "CANCHA LA 93", stage: "CUARTOS DE FINAL" },
-  "4-night-vs-golden":  { hour: "20:15", date: "SÁB 12 JUL", venue: "CANCHA LA 93", stage: "CUARTOS DE FINAL" },
-  "5-red-vs-dark":      { hour: "21:00", date: "SÁB 12 JUL", venue: "CANCHA LA 93", stage: "SEMIFINALES" },
-  "6-wild-vs-steel":    { hour: "21:45", date: "SÁB 12 JUL", venue: "CANCHA LA 93", stage: "SEMIFINALES" },
+const fallbackTournament = {
+  id: 'mock-tournament',
+  name: 'Torneo PES',
+  description: null, logo: null,
+  venue: 'CANCHA LA 93', city: null,
+  start_date: '2025-07-12', end_date: null,
+  format: 'liga', num_teams: 12, players_per_team: 1,
+  match_duration: null, points_per_win: 3, rules: '[]',
+  open_registration: 0, reg_deadline: null, registration_fee: null,
+  min_age: null, max_age: null, requirements: null,
+  prizes: '{}', awards: '[]', notes: null,
+  num_groups: null, advancers_per_group: null,
+  two_legged: 0, playoffs_two_legged: 0, single_final_match: 1,
+  status: 'active', created_by: 'system', created_at: '2025-01-01',
+  matches: COMBATS.map(c => {
+    const teamA = TEAMS.find(t => t.id === c.fighters[0])
+    const teamB = TEAMS.find(t => t.id === c.fighters[1])
+    const simulated = ({
+      "1-thunder-vs-blaze": { hour: "18:00", date: "SÁB 12 JUL", scheduled_date: "2025-07-12", venue: "CANCHA LA 93", stage: "CUARTOS DE FINAL" },
+      "2-shadow-vs-frost":  { hour: "18:45", date: "SÁB 12 JUL", scheduled_date: "2025-07-12", venue: "CANCHA LA 93", stage: "CUARTOS DE FINAL" },
+      "3-iron-vs-storm":    { hour: "19:30", date: "SÁB 12 JUL", scheduled_date: "2025-07-12", venue: "CANCHA LA 93", stage: "CUARTOS DE FINAL" },
+      "4-night-vs-golden":  { hour: "20:15", date: "SÁB 12 JUL", scheduled_date: "2025-07-12", venue: "CANCHA LA 93", stage: "CUARTOS DE FINAL" },
+      "5-red-vs-dark":      { hour: "21:00", date: "DOM 13 JUL", scheduled_date: "2025-07-13", venue: "CANCHA LA 93", stage: "SEMIFINALES" },
+      "6-wild-vs-steel":    { hour: "21:45", date: "DOM 13 JUL", scheduled_date: "2025-07-13", venue: "CANCHA LA 93", stage: "SEMIFINALES" },
+    } as Record<string, { hour: string; date: string; scheduled_date: string; venue: string; stage: string }>)
+    return {
+      id: c.id, tournament_id: 'mock-tournament', round: 1,
+      home_team_id: c.fighters[0], away_team_id: c.fighters[1],
+      home_score: null, away_score: null,
+      scheduled_date: simulated[c.id]?.scheduled_date || null, venue: null, status: 'pending',
+      created_at: '', round_label: null,
+      home_team_name: teamA?.name ?? null, home_team_logo: null, home_team_color: null,
+      away_team_name: teamB?.name ?? null, away_team_logo: null, away_team_color: null,
+      title: c.title,
+      _hour: simulated[c.id]?.hour,
+      _date: simulated[c.id]?.date,
+      _venue: simulated[c.id]?.venue,
+      _stage: simulated[c.id]?.stage,
+    }
+  }),
 }
+
+if (tournaments.length === 0) {
+  tournaments = [fallbackTournament as any]
+}
+
+const typedTournaments = tournaments as any[]
+const totalCombates = typedTournaments.reduce((acc: number, t: any) => acc + t.matches.length, 0)
+const formats = [...new Set(typedTournaments.map((t: any) => t.format))] as string[]
+
+function extractHour(scheduledDate: string | null | undefined): string | undefined {
+  if (!scheduledDate) return undefined
+  const parts = scheduledDate.split(/[T ]/)
+  if (parts.length < 2) return undefined
+  return parts[1].slice(0, 5)
+}
+
+function formatDisplayDate(scheduledDate: string | null | undefined): string | undefined {
+  if (!scheduledDate) return undefined
+  const datePart = scheduledDate.split(/[T ]/)[0]
+  if (!datePart) return undefined
+  const d = new Date(datePart + 'T12:00:00')
+  if (isNaN(d.getTime())) return undefined
+  return d.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' }).toUpperCase().replace(/\./g, '')
+}
+
+type MatchInfo = {
+  id: string
+  home_team_id: string
+  away_team_id: string
+  title: string
+  _hour?: string
+  _date?: string
+  _venue?: string
+  _stage?: string
+  home_team_name?: string | null
+  away_team_name?: string | null
+  scheduled_date?: string | null
+  venue?: string | null
+  round_label?: string | null
+}
+
+const tournamentsJson = JSON.stringify(typedTournaments.map((t: any) => ({
+  id: t.id,
+  name: t.name,
+  logo: t.logo,
+  venue: t.venue,
+  start_date: t.start_date,
+  format: t.format,
+  matches: t.matches.map((m: MatchInfo) => ({
+    id: m.id,
+    home_team_id: m.home_team_id,
+    away_team_id: m.away_team_id,
+    home_team_name: m.home_team_name,
+    away_team_name: m.away_team_name,
+    scheduled_date: m.scheduled_date,
+    venue: m.venue,
+    round_label: m.round_label,
+    _hour: m._hour,
+    _date: m._date,
+    _stage: m._stage,
+  }))
+})))
 ---
 
 <Layout>
@@ -33,36 +130,418 @@ const simulatedDetails: Record<string, { hour: string; date: string; venue: stri
           <span class="combates-orn-line"></span>
         </div>
         <h1 class="combates-h1">COMBATES</h1>
-        <p class="combates-desc">{combats.length} DUELOS PROGRAMADOS</p>
+        <p class="combates-desc" id="combates-desc">{totalCombates} DUELOS PROGRAMADOS</p>
       </header>
 
-      <div class="combates-grid">
-        {combats.map((combat) => {
-          const details = simulatedDetails[combat.id] || {}
-          return (
-            <DuelCard
-              id={combat.id}
-              team1Id={combat.fighters[0]}
-              team2Id={combat.fighters[1]}
-              title={combat.title}
-              hour={details.hour}
-              date={details.date}
-              venue={details.venue}
-              stage={details.stage}
-            />
-          )
-        })}
-      </div>
     </div>
+
+    <div class="flex w-full flex-1 gap-5 combates-layout">
+      <!-- FILTER PANEL -->
+      <aside class="filter-panel" id="filter-panel">
+        <div class="filter-corner filter-corner--tl"></div>
+        <div class="filter-corner filter-corner--tr"></div>
+        <div class="filter-corner filter-corner--bl"></div>
+        <div class="filter-corner filter-corner--br"></div>
+  
+        <div class="filter-header">
+          <span class="filter-diamond"></span>
+          <span class="filter-eyebrow" id="filter-eyebrow">FILTROS</span>
+          <span class="filter-line"></span>
+        </div>
+  
+        <!-- Tournament filters (default) -->
+        <div class="filter-body flex flex-col items-center" id="filter-body-tournament">
+          <div class="filter-group">
+            <label class="filter-label" for="filter-search">BUSCAR TORNEO</label>
+            <div class="filter-input-wrap">
+              <svg class="filter-input-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input id="filter-search" class="filter-input" type="text" placeholder="Nombre o sede..." />
+            </div>
+          </div>
+          <div class="filter-group">
+            <label class="filter-label" for="filter-format">FORMATO</label>
+            <select id="filter-format" class="filter-select">
+              <option value="all">TODOS</option>
+              {formats.map(f => (
+                <option value={f}>{f.toUpperCase()}</option>
+              ))}
+            </select>
+          </div>
+          <button id="filter-reset" class="filter-reset">LIMPIAR</button>
+        </div>
+  
+        <!-- Match filters (shown when a tournament is selected) -->
+        <div class="filter-body flex-col" id="filter-body-match" style="display:none">
+          <div class="filter-group">
+            <label class="filter-label" for="filter-match-search">BUSCAR EQUIPO</label>
+            <div class="filter-input-wrap">
+              <svg class="filter-input-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input id="filter-match-search" class="filter-input" type="text" placeholder="Nombre del equipo..." />
+            </div>
+          </div>
+          <div class="filter-divider"></div>
+          <div class="filter-group">
+            <label class="filter-label" for="filter-date">
+              <span class="filter-label-diamond"></span>
+              FECHA
+            </label>
+            <input id="filter-date" class="filter-input filter-date-input" type="date" />
+          </div>
+          <div class="filter-divider"></div>
+          <div id="filter-group-section" class="filter-group" style="display:none">
+            <label class="filter-label">
+              <span class="filter-label-diamond"></span>
+              GRUPO
+            </label>
+            <div id="filter-group-pills" class="comb-filter-pills" role="group" aria-label="Filtrar por grupo">
+              <button type="button" data-filter="group" data-value="all" aria-pressed="true" class="comb-filter-pill">
+                <span class="comb-filter-pill-label">TODOS</span>
+              </button>
+            </div>
+          </div>
+          <button id="filter-match-reset" class="filter-reset">LIMPIAR</button>
+        </div>
+
+        <!-- BACK BUTTON (inside filter panel) -->
+        <div id="back-wrap" class="back-wrap" style="display:none">
+          <button id="back-btn" class="back-btn">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+              <path d="M10 13L5 8l5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            VOLVER A TORNEOS
+          </button>
+        </div>
+      </aside>
+      
+            <div class="combates-main w-full">
+              <!-- TOURNAMENT GRID -->
+              <div id="tournament-grid" class="combates-grid">
+                {typedTournaments.map((t: any, i: number) => (
+                  <button class="tcard" data-tid={t.id} style={`animation-delay:${i * 0.06}s`}>
+                    <span class="tcard-corner tcard-corner--tl"></span>
+                    <span class="tcard-corner tcard-corner--tr"></span>
+                    <span class="tcard-corner tcard-corner--bl"></span>
+                    <span class="tcard-corner tcard-corner--br"></span>
+                    <div class="tcard-glow" aria-hidden="true"></div>
+                    <div class="tcard-logo-wrap">
+                      {t.logo ? <img src={t.logo} alt={t.name} class="tcard-logo" /> : <span class="tcard-logo-fallback">🏆</span>}
+                    </div>
+                    <div class="tcard-body">
+                      <span class="tcard-name">{t.name}</span>
+                      <div class="tcard-meta">
+                        <span class="tcard-meta-item">
+                          <svg class="tcard-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                          {t.venue}
+                        </span>
+                        <span class="tcard-meta-item">
+                          <svg class="tcard-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          {new Date(t.start_date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase().replace(/\./g, '')}
+                        </span>
+                        <span class="tcard-meta-item">
+                          <svg class="tcard-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                          {t.matches.length} DUELOS
+                        </span>
+                      </div>
+                      <span class="tcard-format-badge">{t.format.toUpperCase()}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+      
+              <!-- Pre-rendered match grids (hidden) -->
+              {typedTournaments.map((t: any) => (
+                <div id={`match-grid-${t.id}`} class="combates-grid" style="display:none" data-tgrid={t.id}>
+                  {t.matches.map((m: MatchInfo) => {
+                    const derivedHour = (m as any)._hour || extractHour(m.scheduled_date)
+                    const derivedDate = (m as any)._date || formatDisplayDate(m.scheduled_date)
+                    const derivedVenue = (m as any)._venue || m.venue || undefined
+                    const derivedStage = (m as any)._stage || m.round_label || undefined
+                    return (
+                    <DuelCard
+                        id={m.id}
+                        team1Id={m.home_team_id}
+                        team2Id={m.away_team_id}
+                        team1Name={m.home_team_name || undefined}
+                        team2Name={m.away_team_name || undefined}
+                        title={m.title}
+                        hour={derivedHour}
+                        date={derivedDate}
+                        venue={derivedVenue}
+                        stage={derivedStage}
+                      />
+                    )
+                  })}
+                </div>
+              ))}
+      
+              <!-- NO RESULTS -->
+              <div id="no-results" class="no-results" style="display:none">
+                <span class="no-results-icon">🔍</span>
+                <p class="no-results-text">No se encontraron resultados</p>
+              </div>
+            </div>
+
+    </div>
+      
+      <script id="combates-data" type="application/json" set:html={tournamentsJson}></script>
   </section>
 </Layout>
+
+<script>
+function initCombates() {
+  var dataEl = document.getElementById('combates-data');
+  if (!dataEl) return;
+  var tournaments = JSON.parse(dataEl.textContent);
+  var tournamentGrid = document.getElementById('tournament-grid');
+  var matchGrids = document.querySelectorAll('[data-tgrid]');
+  var backWrap = document.getElementById('back-wrap');
+  var descEl = document.getElementById('combates-desc');
+  var noResults = document.getElementById('no-results');
+  var filterEyebrow = document.getElementById('filter-eyebrow');
+  var filterBodyTournament = document.getElementById('filter-body-tournament');
+  var filterBodyMatch = document.getElementById('filter-body-match');
+  var filterSearch = document.getElementById('filter-search');
+  var filterFormat = document.getElementById('filter-format');
+  var filterReset = document.getElementById('filter-reset');
+  var filterMatchSearch = document.getElementById('filter-match-search');
+  var filterDateInput = document.getElementById('filter-date');
+  var filterGroupSection = document.getElementById('filter-group-section');
+  var filterGroupPills = document.getElementById('filter-group-pills');
+  var filterMatchReset = document.getElementById('filter-match-reset');
+
+  if (!tournamentGrid || !filterSearch) return;
+
+  // Reset to tournament view on re-init
+  var currentTournamentId = null;
+  var activeMatchGrid = null;
+  matchGrids.forEach(function(g) { g.style.display = 'none'; });
+  tournamentGrid.style.display = '';
+  if (backWrap) backWrap.style.display = 'none';
+  if (noResults) noResults.style.display = 'none';
+  if (filterEyebrow) filterEyebrow.textContent = 'FILTROS';
+  if (filterBodyTournament) filterBodyTournament.style.display = '';
+  if (filterBodyMatch) filterBodyMatch.style.display = 'none';
+  if (filterSearch) filterSearch.value = '';
+  if (filterFormat) filterFormat.value = 'all';
+  if (filterMatchSearch) filterMatchSearch.value = '';
+  if (filterDateInput) filterDateInput.value = '';
+
+  function filterTournaments() {
+    var q = filterSearch.value.toLowerCase().trim();
+    var fmt = filterFormat.value;
+    var cards = tournamentGrid.querySelectorAll('.tcard');
+    var visible = 0;
+    cards.forEach(function(card) {
+      var tid = card.dataset.tid;
+      var t = tournaments.find(function(t) { return t.id === tid; });
+      if (!t) return;
+      var matchName = t.name.toLowerCase().includes(q);
+      var matchVenue = (t.venue || '').toLowerCase().includes(q);
+      var matchFormat = fmt === 'all' || t.format === fmt;
+      var show = matchFormat && (q === '' || matchName || matchVenue);
+      card.style.display = show ? '' : 'none';
+      if (show) visible++;
+    });
+    noResults.style.display = visible === 0 ? '' : 'none';
+    return visible;
+  }
+
+  function extractGroup(label) {
+    var m = label.match(/(Grupo\s+\w+)/i);
+    return m ? m[1] : null;
+  }
+
+  function dateToDisplay(iso) {
+    if (!iso) return '';
+    var d = new Date(iso + 'T12:00:00');
+    return d.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' }).toUpperCase().replace(/\./g, '');
+  }
+
+  function filterMatches() {
+    var q = filterMatchSearch.value.toLowerCase().trim();
+    var selectedDate = filterDateInput.value;
+    var selectedDisplay = dateToDisplay(selectedDate);
+    var activeGroupPill = filterGroupPills.querySelector('[aria-pressed="true"]');
+    var selectedGroup = activeGroupPill ? activeGroupPill.dataset.value : 'all';
+    if (!activeMatchGrid) return 0;
+    var cards = activeMatchGrid.querySelectorAll('.duel-card');
+    var t = tournaments.find(function(t) { return t.id === currentTournamentId; });
+    var matchData = t ? t.matches : [];
+    var visible = 0;
+    cards.forEach(function(card, i) {
+      var show = true;
+      if (q) {
+        var nameEls = card.querySelectorAll('.duel-name');
+        var match = Array.from(nameEls).some(function(el) { return el.textContent && el.textContent.toLowerCase().includes(q); });
+        if (!match) show = false;
+      }
+      if (selectedDate) {
+        var m = matchData[i];
+        var dateRaw = m ? (m.scheduled_date || '') : '';
+        var datePart = dateRaw.split('T')[0] || dateRaw;
+        var dateDisplay = m ? (m._date || '') : '';
+        if (datePart !== selectedDate && dateDisplay !== selectedDisplay) show = false;
+      }
+      if (selectedGroup !== 'all') {
+        var m = matchData[i];
+        var label = m ? (m.round_label || '') : '';
+        var group = extractGroup(label);
+        if (!group || group !== selectedGroup) show = false;
+      }
+      card.setAttribute('style', show ? '' : 'display:none');
+      if (show) visible++;
+    });
+    noResults.style.display = visible === 0 ? '' : 'none';
+    return visible;
+  }
+
+  function showTournamentFilters() {
+    filterEyebrow.textContent = 'FILTROS';
+    filterBodyTournament.style.display = '';
+    filterBodyMatch.style.display = 'none';
+  }
+
+  function showMatchFilters() {
+    filterEyebrow.textContent = 'FILTRAR DUELOS';
+    filterBodyTournament.style.display = 'none';
+    filterBodyMatch.style.display = '';
+    filterDateInput.value = '';
+    filterMatchSearch.value = '';
+
+    var t = tournaments.find(function(t) { return t.id === currentTournamentId; });
+    var groups = new Set();
+    if (t) {
+      t.matches.forEach(function(m) {
+        var label = m.round_label || '';
+        var g = extractGroup(label);
+        if (g) groups.add(g);
+      });
+    }
+    if (groups.size > 0) {
+      filterGroupSection.style.display = '';
+      filterGroupPills.innerHTML = '<button type="button" data-filter="group" data-value="all" aria-pressed="true" class="comb-filter-pill"><span class="comb-filter-pill-label">TODOS</span></button>';
+      Array.from(groups).sort().forEach(function(g) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.dataset.filter = 'group';
+        btn.dataset.value = g;
+        btn.setAttribute('aria-pressed', 'false');
+        btn.className = 'comb-filter-pill';
+        btn.innerHTML = '<span class="comb-filter-pill-label">' + g + '</span>';
+        filterGroupPills.appendChild(btn);
+      });
+    } else {
+      filterGroupSection.style.display = 'none';
+    }
+  }
+
+  function showMatches(tid) {
+    currentTournamentId = tid;
+    var t = tournaments.find(function(t) { return t.id === tid; });
+    if (!t) return;
+
+    tournamentGrid.style.display = 'none';
+    matchGrids.forEach(function(g) { g.style.display = g.dataset.tgrid === tid ? '' : 'none'; });
+    activeMatchGrid = document.querySelector('[data-tgrid="' + tid + '"]') || null;
+    backWrap.style.display = '';
+    noResults.style.display = 'none';
+
+    descEl.textContent = t.matches.length + ' DUELOS \u00B7 ' + t.name;
+    showMatchFilters();
+  }
+
+  function showTournaments() {
+    currentTournamentId = null;
+    activeMatchGrid = null;
+    matchGrids.forEach(function(g) { g.style.display = 'none'; });
+    tournamentGrid.style.display = '';
+    backWrap.style.display = 'none';
+    showTournamentFilters();
+    descEl.textContent = tournaments.reduce(function(a, t) { return a + t.matches.length; }, 0) + ' DUELOS PROGRAMADOS';
+    filterTournaments();
+  }
+
+  // Remove old handlers to prevent duplicates
+  document.removeEventListener('input', window._combFilterInput);
+  document.removeEventListener('change', window._combFilterChange);
+  document.removeEventListener('click', window._combFilterClick);
+
+  // Input delegation
+  window._combFilterInput = function(e) {
+    if (e.target === filterSearch) filterTournaments();
+    if (e.target === filterMatchSearch) filterMatches();
+  };
+  document.addEventListener('input', window._combFilterInput);
+
+  // Change delegation
+  window._combFilterChange = function(e) {
+    if (e.target === filterFormat) filterTournaments();
+    if (e.target === filterDateInput) filterMatches();
+  };
+  document.addEventListener('change', window._combFilterChange);
+
+  // Click delegation
+  window._combFilterClick = function(e) {
+    if (e.target === filterReset) {
+      filterSearch.value = '';
+      filterFormat.value = 'all';
+      filterTournaments();
+      return;
+    }
+    if (e.target === filterMatchReset) {
+      filterMatchSearch.value = '';
+      filterDateInput.value = '';
+      filterGroupPills.querySelectorAll('[data-filter="group"]').forEach(function(b) {
+        b.setAttribute('aria-pressed', b.dataset.value === 'all' ? 'true' : 'false');
+      });
+      filterMatches();
+      return;
+    }
+    var groupBtn = e.target.closest('[data-filter="group"]');
+    if (groupBtn && filterGroupPills.contains(groupBtn)) {
+      filterGroupPills.querySelectorAll('[data-filter="group"]').forEach(function(b) { b.setAttribute('aria-pressed', 'false'); });
+      groupBtn.setAttribute('aria-pressed', 'true');
+      filterMatches();
+      return;
+    }
+    if (e.target.id === 'back-btn' || e.target.closest('#back-btn')) {
+      showTournaments();
+      return;
+    }
+    var card = e.target.closest('.tcard[data-tid]');
+    if (card) {
+      showMatches(card.dataset.tid);
+      return;
+    }
+  };
+  document.addEventListener('click', window._combFilterClick);
+
+  filterTournaments();
+}
+
+document.addEventListener('astro:page-load', initCombates);
+window.addEventListener('pageshow', function(e) { if (e.persisted) initCombates(); });
+</script>
 
 <style>
   .combates-root {
     position: relative;
-    min-height: 100vh;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
     background: radial-gradient(ellipse at 50% -10%, #0b2a1a 0%, #050d08 55%, #03080e 100%);
-    padding: 6rem 1.5rem 5rem;
+    padding: 5.5rem 1.5rem 1rem;
     overflow: hidden;
     isolation: isolate;
   }
@@ -70,20 +549,15 @@ const simulatedDetails: Record<string, { hour: string; date: string; venue: stri
   .combates-bg { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
 
   .combates-glow {
-    position: absolute;
-    border-radius: 50%;
-    filter: blur(80px);
-    opacity: 0.3;
+    position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.3;
   }
   .combates-glow--green {
-    width: 60vw; height: 50vh;
-    top: -10%; left: 20%;
+    width: 60vw; height: 50vh; top: -10%; left: 20%;
     background: radial-gradient(circle, #00ff88 0%, transparent 70%);
     animation: combGlow 8s ease-in-out infinite alternate;
   }
   .combates-glow--purple {
-    width: 40vw; height: 40vh;
-    bottom: 10%; right: -5%;
+    width: 40vw; height: 40vh; bottom: 10%; right: -5%;
     background: radial-gradient(circle, #7c3aed 0%, transparent 70%);
     opacity: 0.2;
     animation: combGlow 10s ease-in-out infinite alternate-reverse;
@@ -100,8 +574,13 @@ const simulatedDetails: Record<string, { hour: string; date: string; venue: stri
       radial-gradient(1px 1px at 30% 65%, #aaffcc, transparent),
       radial-gradient(2px 2px at 55% 15%, #a855f7, transparent),
       radial-gradient(1px 1px at 70% 80%, #fff, transparent),
-      radial-gradient(2px 2px at 85% 40%, #00ff88, transparent);
+      radial-gradient(2px 2px at 85% 40%, #00ff88, transparent),
+      radial-gradient(1px 1px at 20% 90%, #c084fc, transparent),
+      radial-gradient(1.5px 1.5px at 60% 55%, #fff, transparent),
+      radial-gradient(1px 1px at 45% 35%, #aaffcc, transparent),
+      radial-gradient(2px 2px at 92% 10%, #fff, transparent);
     background-size: 300px 300px;
+    background-repeat: repeat;
     opacity: 0.5;
     animation: combStars 7s ease-in-out infinite alternate;
   }
@@ -110,80 +589,380 @@ const simulatedDetails: Record<string, { hour: string; date: string; venue: stri
     100% { opacity: 0.6; }
   }
 
-  .combates-content {
-    position: relative;
-    z-index: 10;
-    max-width: 1200px;
-    margin: 0 auto;
+  .combates-main {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+  }
+  .combates-main::-webkit-scrollbar { width: 4px; }
+  .combates-main::-webkit-scrollbar-track { background: transparent; }
+  .combates-main::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--color-theme-gold) 30%, transparent); border-radius: 99px; }
+
+  .combates-layout {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
   }
 
-  .combates-header {
-    text-align: center;
-    margin-bottom: 3rem;
+  @media (max-width: 767px) {
+    .combates-root {
+      padding: 3.5rem 0.75rem 0.75rem;
+    }
+    .combates-header { margin-bottom: 0.5rem; }
+    .combates-ornament { margin-bottom: 0.4rem; gap: 0.3rem; }
+    .combates-orn-line { width: 2rem; }
+    .combates-h1 { margin-bottom: 0.15rem; font-size: clamp(1.8rem, 6vw, 2.5rem); }
+    .combates-desc { font-size: 0.5rem; }
+    .combates-layout {
+      flex-direction: column;
+      gap: 1.75rem;
+    }
+    .filter-panel {
+      width: 100%;
+      min-width: 0;
+      align-self: stretch;
+      padding: 0.45rem 0.65rem 0.55rem;
+      max-height: 40vh;
+      overflow-y: auto;
+    }
+    .filter-body { gap: 0.25rem; }
+    .filter-body.flex-col { gap: 0.2rem; }
+    .filter-group { min-width: 0; width: 100%; gap: 0.15rem; }
+    .filter-input { width: 100%; box-sizing: border-box; font-size: 0.5rem; padding: 0.35rem 0.5rem 0.35rem 1.6rem; }
+    .filter-select { width: 100%; box-sizing: border-box; font-size: 0.5rem; padding: 0.35rem 0.5rem; }
+    .filter-label { font-size: 0.42rem; }
+    .filter-header { margin-bottom: 0.3rem; gap: 0.25rem; }
+    .filter-eyebrow { font-size: 0.45rem; }
+    .filter-reset { font-size: 0.45rem; padding: 0.3rem 0.6rem; }
+    .back-btn { font-size: 0.42rem; padding: 0.3rem 0.5rem; }
+    .back-wrap { margin-top: 0.25rem; padding-top: 0.25rem; }
+    .combates-main {
+      flex: 1;
+      min-height: 0;
+      padding-right: 0;
+    }
   }
+
+  .combates-content {
+    position: relative; z-index: 10; max-width: 1200px; margin: 0 auto; width: 100%;
+  }
+
+  .combates-header { text-align: center; margin-bottom: 1rem; }
 
   .combates-ornament {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.6rem;
-    margin-bottom: 1.25rem;
+    display: flex; align-items: center; justify-content: center;
+    gap: 0.6rem; margin-bottom: 1.25rem;
   }
   .combates-orn-line {
-    display: block;
-    width: 6rem;
-    height: 1px;
+    display: block; width: 6rem; height: 1px;
     background: linear-gradient(90deg, transparent, var(--color-theme-gold), transparent);
   }
-  .combates-orn-diamond {
-    display: block;
-    transform: rotate(45deg);
-  }
+  .combates-orn-diamond { display: block; transform: rotate(45deg); }
   .combates-orn-diamond--gold {
-    width: 8px; height: 8px;
-    background: var(--color-theme-gold);
+    width: 8px; height: 8px; background: var(--color-theme-gold);
     box-shadow: 0 0 10px var(--color-theme-gold);
   }
   .combates-orn-diamond--sm { width: 5px; height: 5px; }
-  .combates-orn-diamond--purple {
-    background: #a855f7;
-    box-shadow: 0 0 8px #a855f7;
-  }
+  .combates-orn-diamond--purple { background: #a855f7; box-shadow: 0 0 8px #a855f7; }
 
   .combates-h1 {
     font-family: var(--font-cinzel), serif;
-    font-size: clamp(2.5rem, 7vw, 5rem);
-    font-weight: 900;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
+    font-size: clamp(2.5rem, 7vw, 5rem); font-weight: 900;
+    letter-spacing: 0.18em; text-transform: uppercase;
     background: linear-gradient(135deg, #fef3c7 0%, var(--color-theme-gold) 40%, #a855f7 75%, #c084fc 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+    -webkit-background-clip: text; background-clip: text; color: transparent;
     margin-bottom: 0.6rem;
     filter: drop-shadow(0 0 20px rgba(0,255,136,0.2));
   }
 
   .combates-desc {
-    font-family: var(--font-cinzel), serif;
-    font-size: 0.65rem;
+    font-family: var(--font-cinzel), serif; font-size: 0.65rem;
     letter-spacing: 0.3em;
     color: color-mix(in srgb, var(--color-theme-cream) 55%, transparent);
     text-transform: uppercase;
   }
 
+  /* ── FILTER PANEL ── */
+  .filter-panel {
+    position: relative;
+    border-radius: 10px;
+    border: 1px solid color-mix(in srgb, var(--color-theme-gold) 20%, transparent);
+    background: linear-gradient(135deg,
+      color-mix(in srgb, var(--color-theme-midnight) 88%, #00ff88) 0%,
+      var(--color-theme-midnight) 60%,
+      color-mix(in srgb, var(--color-theme-midnight) 92%, #7c3aed) 100%
+    );
+    padding: 0.6rem 0.9rem;
+    align-self: flex-start;
+    min-width: 200px;
+  }
+
+  .filter-corner {
+    position: absolute; width: 10px; height: 10px;
+    border-color: color-mix(in srgb, var(--color-theme-gold) 35%, transparent);
+    border-style: solid; pointer-events: none;
+  }
+  .filter-corner--tl { top: 6px; left: 6px;   border-width: 1.5px 0 0 1.5px; }
+  .filter-corner--tr { top: 6px; right: 6px;  border-width: 1.5px 1.5px 0 0; }
+  .filter-corner--bl { bottom: 6px; left: 6px;  border-width: 0 0 1.5px 1.5px; }
+  .filter-corner--br { bottom: 6px; right: 6px; border-width: 0 1.5px 1.5px 0; }
+
+  .filter-header {
+    display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0.5rem;
+  }
+  .filter-diamond {
+    display: inline-block; width: 5px; height: 5px;
+    background: var(--color-theme-gold); transform: rotate(45deg); flex-shrink: 0;
+  }
+  .filter-eyebrow {
+    font-family: var(--font-cinzel), serif; font-size: 0.55rem; font-weight: 700;
+    letter-spacing: 0.25em;
+    color: color-mix(in srgb, var(--color-theme-gold) 75%, transparent);
+    text-transform: uppercase; flex-shrink: 0;
+  }
+  .filter-line {
+    flex: 1; height: 1px;
+    background: linear-gradient(to right, color-mix(in srgb, var(--color-theme-gold) 30%, transparent), transparent);
+  }
+
+  .filter-body { display: flex; gap: 0.5rem; }
+  .filter-body.flex-col { flex-direction: column; gap: 0.35rem; }
+  .filter-group { display: flex; flex-direction: column; gap: 0.2rem; flex: 1; min-width: 140px; }
+
+  .filter-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, color-mix(in srgb, var(--color-theme-gold) 25%, transparent) 50%, transparent 100%);
+    margin: 0.1rem 0;
+  }
+
+  .filter-label-diamond {
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    background: var(--color-theme-gold);
+    transform: rotate(45deg);
+    box-shadow: 0 0 6px color-mix(in srgb, var(--color-theme-gold) 60%, transparent);
+    flex-shrink: 0;
+  }
+
+  .filter-label {
+    font-family: var(--font-cinzel), serif; font-size: 0.48rem; font-weight: 700;
+    letter-spacing: 0.2em;
+    color: color-mix(in srgb, var(--color-theme-cream) 45%, transparent);
+    text-transform: uppercase;
+    display: flex; align-items: center; gap: 0.4rem;
+  }
+
+  .filter-input-wrap { position: relative; display: flex; align-items: center; }
+  .filter-input-icon {
+    position: absolute; left: 10px; width: 14px; height: 14px;
+    color: color-mix(in srgb, var(--color-theme-cream) 30%, transparent);
+    pointer-events: none;
+  }
+  .filter-input {
+    width: 100%; padding: 0.5rem 0.75rem 0.5rem 2rem; border-radius: 8px;
+    border: 1px solid color-mix(in srgb, var(--color-theme-gold) 18%, transparent);
+    background: color-mix(in srgb, var(--color-theme-midnight) 70%, transparent);
+    color: var(--color-theme-cream);
+    font-family: var(--font-cinzel), serif; font-size: 0.7rem; letter-spacing: 0.05em;
+    outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .filter-input:focus { border-color: rgba(0,255,136,0.4); box-shadow: 0 0 0 1px rgba(0,255,136,0.2); }
+  .filter-date-input { color-scheme: dark; }
+  .filter-input::placeholder {
+    color: color-mix(in srgb, var(--color-theme-cream) 20%, transparent);
+    font-size: 0.58rem; letter-spacing: 0.08em;
+  }
+
+  .filter-select {
+    width: 100%; padding: 0.5rem 0.75rem; border-radius: 8px;
+    border: 1px solid color-mix(in srgb, var(--color-theme-gold) 18%, transparent);
+    background: color-mix(in srgb, var(--color-theme-midnight) 70%, transparent);
+    color: var(--color-theme-cream);
+    font-family: var(--font-cinzel), serif; font-size: 0.65rem; letter-spacing: 0.08em;
+    outline: none; cursor: pointer; transition: border-color 0.2s, box-shadow 0.2s;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23c7a86b' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 10px center; padding-right: 2rem;
+  }
+  .filter-select:focus { border-color: rgba(0,255,136,0.4); box-shadow: 0 0 0 1px rgba(0,255,136,0.2); }
+  .filter-select option { background: #0a1024; color: var(--color-theme-cream); }
+
+  .filter-reset {
+    padding: 0.5rem 1.25rem; border-radius: 8px;
+    border: 1px solid color-mix(in srgb, var(--color-theme-gold) 25%, transparent);
+    background: transparent;
+    color: color-mix(in srgb, var(--color-theme-gold) 70%, transparent);
+    font-family: var(--font-cinzel), serif; font-size: 0.55rem; font-weight: 700;
+    letter-spacing: 0.15em; cursor: pointer; text-transform: uppercase; white-space: nowrap;
+    transition: border-color 0.2s, color 0.2s, background 0.2s;
+  }
+  .filter-reset:hover { border-color: rgba(0,255,136,0.4); color: #00ff88; background: rgba(0,255,136,0.06); }
+
+  /* ── TOURNAMENT CARDS ── */
   .combates-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 1.5rem;
-    justify-items: center;
+    display: grid; grid-template-columns: 1fr; gap: 1.25rem; justify-items: center;
+  }
+  @media (min-width: 640px) { .combates-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 1024px) { .combates-grid { grid-template-columns: repeat(3, 1fr); } }
+
+  .tcard {
+    position: relative; display: flex; flex-direction: column; width: 100%;
+    border-radius: 14px;
+    border: 1px solid color-mix(in srgb, var(--color-theme-gold) 22%, transparent);
+    background: linear-gradient(160deg,
+      color-mix(in srgb, var(--color-theme-midnight) 90%, #00ff88) 0%,
+      var(--color-theme-midnight) 100%
+    );
+    backdrop-filter: blur(10px); overflow: hidden; cursor: pointer; text-align: left;
+    padding: 0; opacity: 0; animation: tcardIn 0.5s ease-out forwards;
+    transition: border-color 0.3s, box-shadow 0.3s, transform 0.2s;
+    color: inherit; font-family: inherit;
+  }
+  .tcard:hover {
+    transform: translateY(-3px);
+    border-color: rgba(0,255,136,0.35);
+    box-shadow: 0 0 0 1px rgba(0,255,136,0.15), 0 8px 25px rgba(0,0,0,0.3);
+  }
+  @keyframes tcardIn {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .tcard-corner {
+    position: absolute; width: 12px; height: 12px;
+    border-color: color-mix(in srgb, var(--color-theme-gold) 35%, transparent);
+    border-style: solid; transition: border-color 0.3s, width 0.3s, height 0.3s;
+    z-index: 2; pointer-events: none;
+  }
+  .tcard-corner--tl { top: 7px; left: 7px;   border-width: 1.5px 0 0 1.5px; }
+  .tcard-corner--tr { top: 7px; right: 7px;  border-width: 1.5px 1.5px 0 0; }
+  .tcard-corner--bl { bottom: 7px; left: 7px;  border-width: 0 0 1.5px 1.5px; }
+  .tcard-corner--br { bottom: 7px; right: 7px; border-width: 0 1.5px 1.5px 0; }
+  .tcard:hover .tcard-corner { width: 16px; height: 16px; border-color: #00ff88; }
+
+  .tcard-glow {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 50% 0%, rgba(0,255,136,0.08) 0%, transparent 60%);
+    opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 0;
+  }
+  .tcard:hover .tcard-glow { opacity: 1; }
+
+  .tcard-logo-wrap {
+    display: flex; align-items: center; justify-content: center;
+    width: 100%; padding: 1.5rem 0 0.5rem;
+  }
+  .tcard-logo { width: 56px; height: 56px; object-fit: contain; border-radius: 12px; }
+  .tcard-logo-fallback { font-size: 2.5rem; line-height: 1; }
+
+  .tcard-body { position: relative; z-index: 1; padding: 0 1rem 1rem; display: flex; flex-direction: column; gap: 0.4rem; }
+  .tcard-name {
+    font-family: var(--font-cinzel), serif; font-size: 0.85rem; font-weight: 800;
+    letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-theme-cream); text-align: center;
+  }
+  .tcard-meta { display: flex; flex-direction: column; gap: 0.25rem; }
+  .tcard-meta-item {
+    display: flex; align-items: center; gap: 0.35rem;
+    font-family: var(--font-cinzel), serif; font-size: 0.55rem; letter-spacing: 0.08em;
+    color: color-mix(in srgb, var(--color-theme-cream) 55%, transparent); text-transform: uppercase;
+  }
+  .tcard-icon { width: 11px; height: 11px; flex-shrink: 0; color: color-mix(in srgb, var(--color-theme-gold) 50%, transparent); }
+  .tcard-format-badge {
+    align-self: flex-start;
+    font-family: var(--font-cinzel), serif; font-size: 0.45rem; font-weight: 700;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    padding: 2px 8px; border-radius: 99px;
+    background: rgba(0,255,136,0.1); color: rgba(0,255,136,0.7);
+    border: 1px solid rgba(0,255,136,0.2); margin-top: 0.15rem;
+  }
+
+  /* ── BACK BUTTON (inside filter panel) ── */
+  .back-wrap {
+    margin-top: 0.4rem;
+    padding-top: 0.4rem;
+    border-top: 1px solid color-mix(in srgb, var(--color-theme-gold) 18%, transparent);
+  }
+  .back-btn {
+    display: flex; align-items: center; justify-content: center; gap: 0.4rem;
+    width: 100%; padding: 0.45rem 0.75rem; border-radius: 4px;
+    border: 1px solid color-mix(in srgb, var(--color-theme-gold) 22%, transparent);
+    background: transparent;
+    color: color-mix(in srgb, var(--color-theme-gold) 65%, transparent);
+    font-family: var(--font-cinzel), serif; font-size: 0.5rem; font-weight: 700;
+    letter-spacing: 0.15em; cursor: pointer; text-transform: uppercase;
+    transition: border-color 0.2s, color 0.2s, background 0.2s;
+  }
+  .back-btn:hover { border-color: rgba(0,255,136,0.4); color: #00ff88; background: rgba(0,255,136,0.06); }
+
+  /* ── NO RESULTS ── */
+  .no-results {
+    display: flex; flex-direction: column; align-items: center; gap: 0.75rem;
+    padding: 3rem 1rem; text-align: center;
+  }
+  .no-results-icon { font-size: 2.5rem; }
+  .no-results-text {
+    font-family: var(--font-cinzel), serif; font-size: 0.7rem; letter-spacing: 0.08em;
+    color: color-mix(in srgb, var(--color-theme-cream) 40%, transparent);
+  }
+
+  @media (min-width: 480px) {
+    .tcard-logo-wrap { padding: 2rem 0 0.75rem; }
+    .tcard-logo { width: 64px; height: 64px; }
+    .tcard-logo-fallback { font-size: 3rem; }
   }
 
   @media (min-width: 640px) {
-    .combates-grid { grid-template-columns: repeat(2, 1fr); }
+    .filter-body { flex-wrap: nowrap; }
   }
 
-  @media (min-width: 1024px) {
-    .combates-grid { grid-template-columns: repeat(3, 1fr); }
+</style>
+
+<style is:global>
+  .comb-filter-pills {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    width: 100%;
+    max-height: 35vh;
+    overflow-y: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .comb-filter-pills::-webkit-scrollbar { display: none; }
+  .comb-filter-pill {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .8rem .75rem;
+    border-radius: 3px;
+    background: color-mix(in srgb,var(--color-theme-midnight) 78%,black);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb,var(--color-theme-gold) 22%,transparent);
+    color: color-mix(in srgb,var(--color-theme-cream) 86%,transparent);
+    font-size: .55rem;
+    font-weight: 600;
+    letter-spacing: .18em;
+    line-height: 1;
+    cursor: pointer;
+    transition: transform .25s ease,box-shadow .25s ease,background-color .25s ease,color .25s ease;
+    border: none;
+    font-family: inherit;
+    text-transform: uppercase;
+  }
+  .comb-filter-pill[aria-pressed="true"] {
+    background: linear-gradient(180deg,color-mix(in srgb,var(--color-theme-gold) 95%,white) 0%,var(--color-theme-gold) 65%,color-mix(in srgb,var(--color-theme-gold) 75%,black) 100%);
+    color: var(--color-theme-midnight);
+    box-shadow: inset 0 1px color-mix(in srgb,white 35%,transparent),inset 0 0 0 1px color-mix(in srgb,var(--color-theme-gold) 100%,white),0 8px 24px color-mix(in srgb,var(--color-theme-gold) 35%,transparent);
+    transform: translateY(0);
+  }
+  .comb-filter-pill-label {
+    font-family: inherit;
+  }
+
+  @media (max-width: 767px) {
+    .comb-filter-pills { max-height: 20vh; gap: 0.2rem; }
+    .comb-filter-pill { padding: .25rem .5rem; font-size: .48rem; gap: .35rem; }
+    .comb-filter-pill-label { font-size: inherit; }
   }
 </style>

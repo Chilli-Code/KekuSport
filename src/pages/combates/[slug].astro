@@ -1,0 +1,114 @@
+---
+import HeroEvent from '@/components/Heroevent.astro'
+import Layout from '@/layouts/Layout.astro'
+import { TEAMS } from '@/consts/teams'
+import { PLAYERS } from '@/consts/fighters'
+import Matchstats from '@/components/Matchstats.astro'
+import { getDb } from '../../../server/db'
+
+const { slug } = Astro.params
+
+function slugify(text: string): string {
+  return text.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+}
+
+function deslugify(text: string): string {
+  return text.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+}
+
+if (!slug) return Astro.redirect('/combates')
+
+const parts = slug.split('-vs-')
+if (parts.length !== 2) return Astro.redirect('/combates')
+
+const [team1Slug, team2Slug] = parts
+
+const slugToTeam = new Map(TEAMS.map(t => [slugify(t.name), t]))
+const team1FromConst = slugToTeam.get(team1Slug)
+const team2FromConst = slugToTeam.get(team2Slug)
+
+const team1Name = team1FromConst?.name ?? deslugify(team1Slug)
+const team2Name = team2FromConst?.name ?? deslugify(team2Slug)
+const team1Id = team1FromConst?.id ?? team1Slug
+const team2Id = team2FromConst?.id ?? team2Slug
+
+const team1Players = team1FromConst ? PLAYERS.filter(p => p.team === team1FromConst.id).map(p => ({ id: p.id, name: p.name })) : []
+const team2Players = team2FromConst ? PLAYERS.filter(p => p.team === team2FromConst.id).map(p => ({ id: p.id, name: p.name })) : []
+
+function formatDate(iso: string): string {
+  if (!iso) return ''
+  const d = new Date(iso.split('T')[0] + 'T12:00:00')
+  if (isNaN(d.getTime())) return ''
+  return d.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' }).toUpperCase().replace(/\./g, '')
+}
+
+// Fetch actual match data from DB
+let matchDate = ''
+let matchVenue = ''
+let matchTournament = ''
+let matchEdition = 'NO DEFINIDO'
+try {
+  const db = await getDb()
+  const result = await db.execute({
+    sql: `SELECT m.scheduled_date, m.venue, m.status, t.name as tournament_name
+          FROM matches m
+          JOIN tournaments t ON t.id = m.tournament_id
+          JOIN teams ht ON ht.id = m.home_team_id
+          JOIN teams at ON at.id = m.away_team_id
+          WHERE (LOWER(ht.name) = LOWER(?) AND LOWER(at.name) = LOWER(?))
+             OR (LOWER(ht.name) = LOWER(?) AND LOWER(at.name) = LOWER(?))
+          ORDER BY m.scheduled_date DESC
+          LIMIT 1`,
+    args: [team1Name, team2Name, team2Name, team1Name],
+  })
+  if (result.rows.length > 0) {
+    const row = result.rows[0] as any
+    matchDate = formatDate(row.scheduled_date || '')
+    matchVenue = (row.venue || '').toUpperCase()
+    matchTournament = (row.tournament_name || '').toUpperCase()
+    const status = (row.status || '').toLowerCase()
+    const sched = row.scheduled_date || ''
+    if (status === 'live') {
+      matchEdition = 'EN VIVO'
+    } else if (status === 'completed') {
+      matchEdition = 'FINALIZADO'
+    } else if (sched) {
+      const matchTime = new Date(sched).getTime()
+      matchEdition = isNaN(matchTime) ? 'NO DEFINIDO' : (matchTime > Date.now() ? 'PROGRAMADO' : 'FINALIZADO')
+    }
+  }
+} catch {}
+
+// Fallback: try COMBATS constant for mock data
+if (!matchTournament && team1FromConst && team2FromConst) {
+  matchDate = 'SÁB 12 JUL'
+  matchVenue = 'CANCHA LA 93'
+  matchTournament = 'TORNEO PES'
+  matchEdition = 'PROGRAMADO'
+}
+---
+<Layout>
+  <HeroEvent
+    teamA={{ id: team1Id, name: team1Name, players: team1Players }}
+    teamB={{ id: team2Id, name: team2Name, players: team2Players }}
+    date={matchDate || undefined}
+    venue={matchVenue || undefined}
+    eventName={matchTournament || undefined}
+    edition={matchEdition}
+    platform="KEKU SPORT"
+  />
+
+  <Matchstats
+    teamA={{ name: team1Name, color: '#00ff88', logo: '/images/logo-a.png' }}
+    teamB={{ name: team2Name, color: '#f59e0b', logo: '/images/logo-b.png' }}
+    score={[2, 1]}
+    minute={67}
+    isLive={true}
+    events={[
+      { minute: 12, team: 'A', type: 'goal',   player: 'Peereira' },
+      { minute: 23, team: 'B', type: 'yellow', player: 'Westcol'  },
+      { minute: 52, team: 'B', type: 'red',    player: 'T.Mazza'  },
+      { minute: 61, team: 'A', type: 'sub',    player: 'Perxitaa', player2: 'Andoni' },
+    ]}
+  />
+</Layout>

@@ -1,6 +1,6 @@
 ---
 export interface Props {
-  match: { id: string; home_score: number | null; away_score: number | null; scheduled_date: string | null; status: string }
+  match: { id: string; home_score: number | null; away_score: number | null; scheduled_date: string | null; status: string; round_label: string | null; venue: string | null }
   home: { name: string } | undefined
   away: { name: string } | undefined
   statusClass: string
@@ -9,30 +9,71 @@ export interface Props {
 const { match: m, home, away, statusClass, showTime } = Astro.props
 ---
 
-<div class="ms-match" data-match-id={m.id}>
-  <div class="ms-match-teams">
-    <span class="ms-team">{home?.name || '—'}</span>
-    <span class="ms-vs">vs</span>
-    <span class="ms-team">{away?.name || '—'}</span>
-  </div>
-  <div class="ms-match-mid">
-    {m.home_score != null && m.away_score != null ? (
-      <span class="ms-score">{m.home_score} — {m.away_score}</span>
-    ) : (
-      <span class="ms-date">
-        {m.scheduled_date
-          ? new Date(m.scheduled_date).toLocaleString('es-CO', {
-              day: '2-digit',
-              month: 'short',
-              ...(showTime ? { hour: '2-digit', minute: '2-digit' } : {}),
-            })
-          : 'Sin fecha'}
+<div class="duel-card group" data-match-id={m.id}>
+  <div class="duel-inner">
+    {m.round_label && <div class="duel-stage">{m.round_label}</div>}
+
+    <div class="duel-teams">
+      <div class="duel-side duel-side--left">
+        <div class="duel-avatar-wrap">
+          <div class="duel-avatar-bg"></div>
+          <img class="duel-avatar" src="/images/Logo_Default.png" alt={home?.name || 'Equipo'} loading="lazy" />
+        </div>
+        <span class="duel-name">{home?.name || '—'}</span>
+      </div>
+
+      <div class="duel-vs" aria-hidden="true">
+        <span class="duel-vs-circle">
+          <span class="duel-vs-text">VS</span>
+        </span>
+        <div class="duel-vs-line"></div>
+      </div>
+
+      <div class="duel-side duel-side--right">
+        <div class="duel-avatar-wrap">
+          <div class="duel-avatar-bg"></div>
+          <img class="duel-avatar" src="/images/Logo_Default.png" alt={away?.name || 'Equipo'} loading="lazy" />
+        </div>
+        <span class="duel-name">{away?.name || '—'}</span>
+      </div>
+    </div>
+
+    <div class="duel-meta">
+      {m.home_score != null && m.away_score != null ? (
+        <span class="duel-meta-item">
+          <svg class="duel-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+          {m.home_score} — {m.away_score}
+        </span>
+      ) : (
+        <span class="duel-meta-item">
+          <svg class="duel-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          {m.scheduled_date
+            ? new Date(m.scheduled_date).toLocaleString('es-CO', { day: '2-digit', month: 'short', ...(showTime ? { hour: '2-digit', minute: '2-digit' } : {}) })
+            : 'Sin fecha'}
+        </span>
+      )}
+      {m.venue && (
+        <span class="duel-meta-item">
+          <svg class="duel-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+          {m.venue}
+        </span>
+      )}
+      <span class="duel-meta-item">
+        <span class={statusClass}>
+          {m.status === 'scheduled' ? 'Programado' : m.status === 'live' ? 'En vivo' : m.status === 'finished' ? 'Finalizado' : m.status === 'cancelled' ? 'Cancelado' : m.status}
+        </span>
       </span>
-    )}
-  </div>
-  <div class="ms-match-right">
-    <span class={statusClass}>{m.status}</span>
-    <button class="ms-icon-btn" data-edit={m.id} title="Editar">✏️</button>
-    <button class="ms-icon-btn" data-delete={m.id} title="Eliminar">🗑️</button>
+    </div>
+
+    <div class="duel-meta">
+      <button class="boxer-detail-cta boxer-detail-cta-ghost" data-edit={m.id} title="Editar">✏️ EDITAR</button>
+      <button class="boxer-detail-cta boxer-detail-cta-ghost" data-delete={m.id} title="Eliminar">🗑️ ELIMINAR</button>
+    </div>
   </div>
 </div>
+
+<style>
+  .duel-stage{
+    font-size: 0.6rem;
+  }
+</style>

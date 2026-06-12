@@ -5,6 +5,8 @@ export interface Props {
   id: string
   team1Id: string
   team2Id: string
+  team1Name?: string
+  team2Name?: string
   title: string
   hour?: string
   date?: string
@@ -16,21 +18,30 @@ const {
   id,
   team1Id,
   team2Id,
-  hour = "20:00",
-  date = "SÁB 12 JUL",
-  venue = "CANCHA LA 93",
-  stage = "FASE DE GRUPOS",
+  team1Name,
+  team2Name,
+  hour,
+  date,
+  venue,
+  stage,
 } = Astro.props
 
-const t1 = TEAMS.find(t => t.id === team1Id)
-const t2 = TEAMS.find(t => t.id === team2Id)
+const t1 = team1Name ? { name: team1Name, id: team1Id } : TEAMS.find(t => t.id === team1Id)
+const t2 = team2Name ? { name: team2Name, id: team2Id } : TEAMS.find(t => t.id === team2Id)
+
+function slugify(text: string): string {
+  return text.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+}
+
+const team1Slug = t1?.name ? slugify(t1.name) : team1Id
+const team2Slug = t2?.name ? slugify(t2.name) : team2Id
 
 const teamLogo = '/images/Logo_Default.png'
 ---
 
 <div class="duel-card group">
   <div class="duel-inner">
-    <div class="duel-stage">{stage}</div>
+    <div class="duel-stage">{stage ?? 'SIN DEFINIR'}</div>
 
     <div class="duel-teams">
       <a href={`/jugadores/${t1?.id || '#'}`} class="duel-side duel-side--left">
@@ -72,7 +83,7 @@ const teamLogo = '/images/Logo_Default.png'
         <svg class="duel-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
-        {date} · {hour}
+        {date ?? 'NO DEFINIDO'} · {hour ?? 'NO DEFINIDO'}
       </span>
       <span class="duel-meta-item">
         <svg class="duel-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -85,7 +96,7 @@ const teamLogo = '/images/Logo_Default.png'
 
     <div class="duel-meta">
           <a
-      href={`/combate/${id}`}
+      href={`/combates/${team1Slug}-vs-${team2Slug}`}
       class="boxer-detail-cta boxer-detail-cta-ghost relative z-10 mt-1"
     >
       VER DUELO

@@ -25,6 +25,7 @@ async function migrateTables() {
   try { await db.execute("ALTER TABLE tournaments ADD COLUMN advancers_per_group INTEGER DEFAULT NULL") } catch {}
   try { await db.execute("ALTER TABLE tournaments ADD COLUMN single_final_match INTEGER DEFAULT 1") } catch {}
   try { await db.execute("ALTER TABLE team_requests ADD COLUMN type TEXT DEFAULT 'request'") } catch {}
+  try { await db.execute("ALTER TABLE matches ADD COLUMN round_label TEXT DEFAULT NULL") } catch {}
 
   const colResult = await db.execute("PRAGMA table_info('teams')")
   const colInfo = colResult.rows as unknown as { name: string; notnull: number }[]
@@ -178,6 +179,31 @@ async function initTables() {
       status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','accepted','rejected')),
       created_at TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE,
+      FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE
+    )
+  `)
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS match_referees (
+      id TEXT PRIMARY KEY,
+      match_id TEXT NOT NULL,
+      referee_id TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','accepted','rejected')),
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (match_id) REFERENCES matches(id) ON DELETE CASCADE,
+      FOREIGN KEY (referee_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `)
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS match_lineups (
+      id TEXT PRIMARY KEY,
+      match_id TEXT NOT NULL,
+      team_id TEXT NOT NULL,
+      formation TEXT NOT NULL DEFAULT '4-3-3',
+      lineup TEXT NOT NULL DEFAULT '{}',
+      subs TEXT NOT NULL DEFAULT '[]',
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (match_id) REFERENCES matches(id) ON DELETE CASCADE,
       FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE
     )
   `)
@@ -569,14 +595,15 @@ export interface Match {
   scheduled_date: string | null
   venue: string | null
   status: string
+  round_label: string | null
   created_at: string
 }
 
 export async function createMatch(m: Omit<Match, 'created_at'>): Promise<void> {
   const db = await getDb()
   await db.execute(
-    `INSERT INTO matches (id, tournament_id, round, home_team_id, away_team_id, home_score, away_score, scheduled_date, venue, status)
-     VALUES (@id, @tournament_id, @round, @home_team_id, @away_team_id, @home_score, @away_score, @scheduled_date, @venue, @status)`,
+    `INSERT INTO matches (id, tournament_id, round, home_team_id, away_team_id, home_score, away_score, scheduled_date, venue, status, round_label)
+     VALUES (@id, @tournament_id, @round, @home_team_id, @away_team_id, @home_score, @away_score, @scheduled_date, @venue, @status, @round_label)`,
     m as any,
   )
 }
@@ -591,6 +618,20 @@ export async function getAllTournaments(): Promise<Tournament[]> {
   const db = await getDb()
   const result = await db.execute({ sql: 'SELECT * FROM tournaments ORDER BY created_at DESC' })
   return result.rows as unknown as Tournament[]
+}
+
+export async function getActiveTournamentsWithMatches(): Promise<(Tournament & { matches: MatchWithTeams[] })[]> {
+  const db = await getDb()
+  const result = await db.execute({
+    sql: "SELECT * FROM tournaments ORDER BY start_date DESC",
+  })
+  const tournaments = result.rows as unknown as Tournament[]
+  const out: (Tournament & { matches: MatchWithTeams[] })[] = []
+  for (const t of tournaments) {
+    const matches = await getMatchesByTournamentWithTeams(t.id)
+    out.push({ ...t, matches })
+  }
+  return out
 }
 
 export interface MatchWithTournament extends Match {
@@ -627,6 +668,45 @@ export async function deleteMatch(id: string): Promise<void> {
   await db.execute({ sql: 'DELETE FROM matches WHERE id = ?', args: [id] })
 }
 
+export interface MatchLineup {
+  id: string
+  match_id: string
+  team_id: string
+  formation: string
+  lineup: string
+  subs: string
+  created_at: string
+  updated_at: string
+}
+
+export async function saveMatchLineup(matchId: string, teamId: string, formation: string, lineup: string, subs: string): Promise<void> {
+  const db = await getDb()
+  const existing = await db.execute({
+    sql: 'SELECT id FROM match_lineups WHERE match_id = ? AND team_id = ?',
+    args: [matchId, teamId],
+  })
+  if (existing.rows.length > 0) {
+    await db.execute({
+      sql: "UPDATE match_lineups SET formation = ?, lineup = ?, subs = ?, updated_at = datetime('now') WHERE match_id = ? AND team_id = ?",
+      args: [formation, lineup, subs, matchId, teamId],
+    })
+  } else {
+    await db.execute({
+      sql: 'INSERT INTO match_lineups (id, match_id, team_id, formation, lineup, subs) VALUES (?, ?, ?, ?, ?, ?)',
+      args: [crypto.randomUUID(), matchId, teamId, formation, lineup, subs],
+    })
+  }
+}
+
+export async function getMatchLineup(matchId: string, teamId: string): Promise<MatchLineup | undefined> {
+  const db = await getDb()
+  const result = await db.execute({
+    sql: 'SELECT * FROM match_lineups WHERE match_id = ? AND team_id = ?',
+    args: [matchId, teamId],
+  })
+  return result.rows[0] as unknown as MatchLineup | undefined
+}
+
 export interface TeamRequest {
   id: string
   player_id: string
@@ -642,6 +722,7 @@ export interface TeamRequestWithDetails extends TeamRequest {
   player_position: string
   player_age: number | null
   player_image: string | null
+  player_image_card: string | null
   team_name: string
   team_color: string | null
 }
@@ -676,7 +757,7 @@ export async function getTeamRequestsByPlayerWithTeam(playerId: string): Promise
 export async function getTeamRequestsByOwner(userId: string): Promise<TeamRequestWithDetails[]> {
   const db = await getDb()
   const result = await db.execute({
-    sql: `SELECT r.*, p.name as player_name, p.position as player_position, p.age as player_age, p.image_big as player_image,
+    sql: `SELECT r.*, p.name as player_name, p.position as player_position, p.age as player_age, p.image_big as player_image, p.image_card as player_image_card,
                  t.name as team_name, t.color as team_color
           FROM team_requests r
           JOIN teams t ON t.id = r.team_id
@@ -740,6 +821,83 @@ export interface Notification {
   created_at: string
 }
 
+export interface MatchReferee {
+  id: string
+  match_id: string
+  referee_id: string
+  status: 'pending' | 'accepted' | 'rejected'
+  created_at: string
+}
+
+export async function assignRefereeToMatch(matchId: string, refereeId: string): Promise<string> {
+  const db = await getDb()
+  const id = crypto.randomUUID()
+  await db.execute({
+    sql: "INSERT INTO match_referees (id, match_id, referee_id, status) VALUES (?, ?, ?, 'pending')",
+    args: [id, matchId, refereeId],
+  })
+  return id
+}
+
+export async function getMatchReferees(matchId: string): Promise<MatchReferee[]> {
+  const db = await getDb()
+  const result = await db.execute({ sql: 'SELECT * FROM match_referees WHERE match_id = ? ORDER BY created_at', args: [matchId] })
+  return result.rows as unknown as MatchReferee[]
+}
+
+export async function updateMatchRefereeStatus(id: string, status: 'accepted' | 'rejected'): Promise<void> {
+  const db = await getDb()
+  await db.execute({ sql: 'UPDATE match_referees SET status = ? WHERE id = ?', args: [status, id] })
+}
+
+export interface MatchWithRefereeData {
+  id: string
+  tournament_id: string
+  tournament_name: string
+  round: number
+  round_label: string | null
+  home_team_id: string | null
+  away_team_id: string | null
+  home_team_name: string | null
+  home_team_color: string | null
+  away_team_name: string | null
+  away_team_color: string | null
+  scheduled_date: string | null
+  venue: string | null
+  status: string
+  referee_id: string | null
+  referee_status: string | null
+  match_referee_id: string | null
+}
+
+export async function getMatchesByReferee(refereeId: string): Promise<MatchWithRefereeData[]> {
+  const db = await getDb()
+  const result = await db.execute({
+    sql: `SELECT m.*, t.name as tournament_name,
+          ht.name as home_team_name, ht.color as home_team_color,
+          at.name as away_team_name, at.color as away_team_color,
+          mr.id as match_referee_id, mr.status as referee_status
+          FROM matches m
+          JOIN tournaments t ON t.id = m.tournament_id
+          LEFT JOIN teams ht ON ht.id = m.home_team_id
+          LEFT JOIN teams at ON at.id = m.away_team_id
+          LEFT JOIN match_referees mr ON mr.match_id = m.id AND mr.referee_id = ?
+          WHERE mr.referee_id = ?
+          ORDER BY m.scheduled_date`,
+    args: [refereeId, refereeId],
+  })
+  return result.rows as unknown as MatchWithRefereeData[]
+}
+
+export async function searchReferees(query: string): Promise<{ id: string; name: string; email: string }[]> {
+  const db = await getDb()
+  const result = await db.execute({
+    sql: "SELECT id, name, email FROM users WHERE role = 'referee' AND (name LIKE ? OR email LIKE ?) ORDER BY name LIMIT 10",
+    args: [`%${query}%`, `%${query}%`],
+  })
+  return result.rows as unknown as { id: string; name: string; email: string }[]
+}
+
 export async function createNotification(n: Omit<Notification, 'created_at'>): Promise<void> {
   const db = await getDb()
   await db.execute(
@@ -780,7 +938,7 @@ export async function searchPlayers(query: string): Promise<DBPlayer[]> {
 export async function getTeamSquadByOwner(userId: string): Promise<(TeamRequestWithDetails & { user_id: string })[]> {
   const db = await getDb()
   const result = await db.execute({
-    sql: `SELECT r.*, p.name as player_name, p.position as player_position, p.age as player_age, p.image_big as player_image,
+    sql: `SELECT r.*, p.name as player_name, p.position as player_position, p.age as player_age, p.image_big as player_image, p.image_card as player_image_card,
                  p.user_id, t.name as team_name, t.color as team_color
           FROM team_requests r
           JOIN teams t ON t.id = r.team_id
@@ -795,7 +953,7 @@ export async function getTeamSquadByOwner(userId: string): Promise<(TeamRequestW
 export async function getTeamPendingInvitesByOwner(userId: string): Promise<(TeamRequestWithDetails & { user_id: string })[]> {
   const db = await getDb()
   const result = await db.execute({
-    sql: `SELECT r.*, p.name as player_name, p.position as player_position, p.age as player_age, p.image_big as player_image,
+    sql: `SELECT r.*, p.name as player_name, p.position as player_position, p.age as player_age, p.image_big as player_image, p.image_card as player_image_card,
                  p.user_id, t.name as team_name, t.color as team_color
           FROM team_requests r
           JOIN teams t ON t.id = r.team_id
@@ -807,10 +965,35 @@ export async function getTeamPendingInvitesByOwner(userId: string): Promise<(Tea
   return result.rows as unknown as (TeamRequestWithDetails & { user_id: string })[]
 }
 
+export interface MatchWithTeams extends Match {
+  home_team_name: string | null
+  home_team_logo: string | null
+  home_team_color: string | null
+  away_team_name: string | null
+  away_team_logo: string | null
+  away_team_color: string | null
+}
+
+export async function getMatchesByTournamentWithTeams(tournamentId: string): Promise<MatchWithTeams[]> {
+  const db = await getDb()
+  const result = await db.execute({
+    sql: `SELECT m.*,
+          ht.name as home_team_name, ht.logo as home_team_logo, ht.color as home_team_color,
+          at.name as away_team_name, at.logo as away_team_logo, at.color as away_team_color
+          FROM matches m
+          LEFT JOIN teams ht ON ht.id = m.home_team_id
+          LEFT JOIN teams at ON at.id = m.away_team_id
+          WHERE m.tournament_id = ?
+          ORDER BY m.scheduled_date, m.round, m.created_at`,
+    args: [tournamentId],
+  })
+  return result.rows as unknown as MatchWithTeams[]
+}
+
 export async function getTeamSquadByTeamId(teamId: string): Promise<(TeamRequestWithDetails & { user_id: string })[]> {
   const db = await getDb()
   const result = await db.execute({
-    sql: `SELECT r.*, p.name as player_name, p.position as player_position, p.age as player_age, p.image_big as player_image,
+    sql: `SELECT r.*, p.name as player_name, p.position as player_position, p.age as player_age, p.image_big as player_image, p.image_card as player_image_card,
                  p.user_id, t.name as team_name, t.color as team_color
           FROM team_requests r
           JOIN teams t ON t.id = r.team_id

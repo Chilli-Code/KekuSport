@@ -5,9 +5,9 @@ const PUBLIC_ROUTES = ['/', '/login', '/auth/register', '/api/auth/login', '/api
 const PUBLIC_PREFIXES = ['/jugadores', '/player/', '/combates', '/combate/', '/torneos', '/la-porra', '/api/players']
 
 const ROLE_ROUTES: Record<string, string[]> = {
-  admin: ['/admin', '/api/tournaments', '/api/teams', '/api/matches', '/api/invitations', '/api/players', '/api/team-requests', '/api/notifications'],
+  admin: ['/admin', '/api/tournaments', '/api/teams', '/api/matches', '/api/invitations', '/api/players', '/api/team-requests', '/api/notifications', '/api/referees', '/api/referee'],
   tecnico: ['/tecnico', '/api/teams', '/api/tournaments', '/api/invitations', '/api/team-requests', '/api/notifications'],
-  referee: ['/referee'],
+  referee: ['/referee', '/api/referee'],
   jugador: ['/jugador', '/api/players', '/api/teams', '/api/team-requests', '/api/notifications'],
 }
 

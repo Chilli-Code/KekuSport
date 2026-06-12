@@ -369,6 +369,19 @@ const COLORS = ['#00ff88','#f59e0b','#f87171','#a78bfa','#38bdf8','#e2ff5d','#ff
         return;
       }
       const squad = data.squad;
+
+      // Save mapped squad to localStorage for PartidoManager
+      const POS_EMOJI = {GK:'🧤',CB:'🛡️',LB:'🛡️',RB:'🛡️',LWB:'🛡️',RWB:'🛡️',CDM:'⚙️',CM:'⚙️',CAM:'🎯',LM:'⚡',RM:'⚡',LW:'⚡',RW:'⚡',CF:'🎯',ST:'⚔️'};
+      localStorage.setItem('tec_squad', JSON.stringify(squad.map(s => ({
+        id: s.id,
+        name: s.player_name,
+        pos: s.player_position || '—',
+        emoji: POS_EMOJI[s.player_position] || '👤',
+        player_id: s.player_id,
+        player_image: s.player_image || '',
+        player_image_card: s.player_image_card || '',
+      }))));
+
       $('squad-count').textContent = `${squad.length} / 20`;
       $('stat-players').textContent = squad.length;
       const pct = Math.min(squad.length / 20 * 100, 100);

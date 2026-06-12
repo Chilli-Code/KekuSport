@@ -117,12 +117,12 @@ const {
           <span class="tb-round-label">Grupo A</span>
           <div class="tb-group-card">
             {groupA.map((t, i) => (
-              <a href={`/player/${t.id}`} class="tb-group-row group">
+              <div class="tb-group-row">
                 <span class={`tb-pos ${i === 0 ? 'tb-pos--gold' : ''}`}>{i + 1}</span>
                 {t.logo && <div class="tb-avatar"><img src={t.logo} alt={t.name} loading="lazy" /></div>}
                 <span class="tb-team-name">{t.name}</span>
                 <span class="tb-pts">{t.points}</span>
-              </a>
+              </div>
             ))}
           </div>
         </div>
@@ -131,12 +131,12 @@ const {
           <span class="tb-round-label">Grupo B</span>
           <div class="tb-group-card">
             {groupB.map((t, i) => (
-              <a href={`/player/${t.id}`} class="tb-group-row group">
+              <div class="tb-group-row">
                 <span class={`tb-pos ${i === 0 ? 'tb-pos--gold' : ''}`}>{i + 1}</span>
                 {t.logo && <div class="tb-avatar"><img src={t.logo} alt={t.name} loading="lazy" /></div>}
                 <span class="tb-team-name">{t.name}</span>
                 <span class="tb-pts">{t.points}</span>
-              </a>
+              </div>
             ))}
           </div>
         </div>
@@ -159,7 +159,7 @@ const {
       <div class="flex flex-col gap-3 flex-shrink-0 self-center" style="width:158px">
         <span class="tb-round-label">Cuartos de Final</span>
         {leftQuarterFinals.map((m) => (
-          <a href={`/player/${m.winner === 'team1' ? m.team1.id : m.team2.id}`} class="tb-match">
+          <div class="tb-match">
             <div class={`tb-match-row ${m.winner === 'team1' ? 'tb-match-row--win' : ''}`}>
               <span class="tb-team-name">{m.team1.name}</span>
               <span class={`tb-score ${m.winner === 'team1' ? 'tb-score--win' : 'tb-score--loss'}`}>{m.score1}</span>
@@ -168,7 +168,7 @@ const {
               <span class="tb-team-name">{m.team2.name}</span>
               <span class={`tb-score ${m.winner === 'team2' ? 'tb-score--win' : 'tb-score--loss'}`}>{m.score2}</span>
             </div>
-          </a>
+          </div>
         ))}
       </div>
 
@@ -186,7 +186,7 @@ const {
       <!-- ══════════════ SEMI IZQ ══════════════ -->
       <div class="flex flex-col gap-1.5 flex-shrink-0 self-center" style="width:162px">
         <span class="tb-round-label">Semifinal</span>
-        <a href={`/player/${leftSemiFinal.winner === 'team1' ? leftSemiFinal.team1.id : leftSemiFinal.team2.id}`} class="tb-sf">
+        <div class="tb-sf">
           <div class={`tb-sf-row ${leftSemiFinal.winner === 'team1' ? 'tb-match-row--win' : ''}`}>
             <span class="tb-team-name">{leftSemiFinal.team1.name}</span>
             <span class={`tb-score ${leftSemiFinal.winner === 'team1' ? 'tb-score--win' : 'tb-score--loss'}`}>{leftSemiFinal.score1}</span>
@@ -195,7 +195,7 @@ const {
             <span class="tb-team-name">{leftSemiFinal.team2.name}</span>
             <span class={`tb-score ${leftSemiFinal.winner === 'team2' ? 'tb-score--win' : 'tb-score--loss'}`}>{leftSemiFinal.score2}</span>
           </div>
-        </a>
+        </div>
       </div>
 
       <!-- ══ CONECTOR semi izq → final ══ -->
@@ -208,7 +208,7 @@ const {
       <!-- ══════════════ FINAL ══════════════ -->
       <div class="flex flex-col gap-1.5 flex-shrink-0 self-center" style="width:182px">
         <span class="tb-round-label tb-round-label--final">★ Final ★</span>
-        <a href={`/player/${finalMatch.winner === 'team1' ? finalMatch.team1.id : finalMatch.team2.id}`} class="tb-final">
+        <div class="tb-final">
           <div class="tb-final-header">CAMPEÓN</div>
           <div class={`tb-final-row ${finalMatch.winner === 'team1' ? 'tb-match-row--win' : ''}`}>
             {finalMatch.team1.logo && (
@@ -229,7 +229,7 @@ const {
             <span class="tb-team-name">{finalMatch.team2.name}</span>
             <span class={`tb-score tb-score--xl ${finalMatch.winner === 'team2' ? 'tb-score--win' : 'tb-score--loss'}`}>{finalMatch.score2}</span>
           </div>
-        </a>
+        </div>
         <p class="tb-final-info">📍 {finalLocation} · {finalDate}</p>
       </div>
 
@@ -243,7 +243,7 @@ const {
       <!-- ══════════════ SEMI DER ══════════════ -->
       <div class="flex flex-col gap-1.5 flex-shrink-0 self-center" style="width:162px">
         <span class="tb-round-label">Semifinal</span>
-        <a href={`/player/${rightSemiFinal.winner === 'team1' ? rightSemiFinal.team1.id : rightSemiFinal.team2.id}`} class="tb-sf">
+        <div class="tb-sf">
           <div class={`tb-sf-row ${rightSemiFinal.winner === 'team1' ? 'tb-match-row--win' : ''}`}>
             <span class="tb-team-name">{rightSemiFinal.team1.name}</span>
             <span class={`tb-score ${rightSemiFinal.winner === 'team1' ? 'tb-score--win' : 'tb-score--loss'}`}>{rightSemiFinal.score1}</span>
@@ -252,7 +252,7 @@ const {
             <span class="tb-team-name">{rightSemiFinal.team2.name}</span>
             <span class={`tb-score ${rightSemiFinal.winner === 'team2' ? 'tb-score--win' : 'tb-score--loss'}`}>{rightSemiFinal.score2}</span>
           </div>
-        </a>
+        </div>
       </div>
 
       <!-- ══ CONECTOR semi der ← cuartos der ══ -->
@@ -270,7 +270,7 @@ const {
       <div class="flex flex-col gap-3 flex-shrink-0 self-center" style="width:158px">
         <span class="tb-round-label">Cuartos de Final</span>
         {rightQuarterFinals.map((m) => (
-          <a href={`/player/${m.winner === 'team1' ? m.team1.id : m.team2.id}`} class="tb-match">
+          <div class="tb-match">
             <div class={`tb-match-row ${m.winner === 'team1' ? 'tb-match-row--win' : ''}`}>
               <span class="tb-team-name">{m.team1.name}</span>
               <span class={`tb-score ${m.winner === 'team1' ? 'tb-score--win' : 'tb-score--loss'}`}>{m.score1}</span>
@@ -279,7 +279,7 @@ const {
               <span class="tb-team-name">{m.team2.name}</span>
               <span class={`tb-score ${m.winner === 'team2' ? 'tb-score--win' : 'tb-score--loss'}`}>{m.score2}</span>
             </div>
-          </a>
+          </div>
         ))}
       </div>
 
@@ -302,12 +302,12 @@ const {
           <span class="tb-round-label">Grupo C</span>
           <div class="tb-group-card">
             {groupC.map((t, i) => (
-              <a href={`/player/${t.id}`} class="tb-group-row group">
+              <div class="tb-group-row">
                 <span class={`tb-pos ${i === 0 ? 'tb-pos--gold' : ''}`}>{i + 1}</span>
                 {t.logo && <div class="tb-avatar"><img src={t.logo} alt={t.name} loading="lazy" /></div>}
                 <span class="tb-team-name">{t.name}</span>
                 <span class="tb-pts">{t.points}</span>
-              </a>
+              </div>
             ))}
           </div>
         </div>
@@ -316,12 +316,12 @@ const {
           <span class="tb-round-label">Grupo D</span>
           <div class="tb-group-card">
             {groupD.map((t, i) => (
-              <a href={`/player/${t.id}`} class="tb-group-row group">
+              <div class="tb-group-row">
                 <span class={`tb-pos ${i === 0 ? 'tb-pos--gold' : ''}`}>{i + 1}</span>
                 {t.logo && <div class="tb-avatar"><img src={t.logo} alt={t.name} loading="lazy" /></div>}
                 <span class="tb-team-name">{t.name}</span>
                 <span class="tb-pts">{t.points}</span>
-              </a>
+              </div>
             ))}
           </div>
         </div>
@@ -409,7 +409,6 @@ const {
     gap: 6px;
     padding: 6px 8px;
     border-bottom: 1px solid color-mix(in srgb, var(--color-theme-gold) 10%, transparent);
-    text-decoration: none;
     transition: background 0.15s;
   }
   .tb-group-row:last-child { border-bottom: none; }
@@ -423,7 +422,6 @@ const {
     background: color-mix(in srgb, var(--color-theme-midnight) 60%, transparent);
     backdrop-filter: blur(8px);
     overflow: hidden;
-    text-decoration: none;
     transition: border-color 0.2s, transform 0.2s;
   }
   .tb-match:hover {
@@ -452,7 +450,6 @@ const {
     );
     backdrop-filter: blur(8px);
     overflow: hidden;
-    text-decoration: none;
     transition: border-color 0.2s, transform 0.2s;
   }
   .tb-sf:hover {
@@ -480,7 +477,6 @@ const {
     );
     backdrop-filter: blur(8px);
     overflow: hidden;
-    text-decoration: none;
     transition: transform 0.25s, box-shadow 0.25s;
   }
   .tb-final:hover {

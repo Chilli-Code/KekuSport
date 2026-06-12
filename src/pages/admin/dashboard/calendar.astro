@@ -5,20 +5,7 @@ import { getAllTournaments, getAllMatchesWithTournament, getTeamsByTournament } 
 
 const user = Astro.locals.user
 const tournaments = await getAllTournaments()
-const allMatches = await getAllMatchesWithTournament()
-
-// Group matches by date
-const dateGroups = new Map<string, typeof allMatches>()
-for (const m of allMatches) {
-  const key = m.scheduled_date ? m.scheduled_date.slice(0, 10) : '__unscheduled__'
-  if (!dateGroups.has(key)) dateGroups.set(key, [])
-  dateGroups.get(key)!.push(m)
-}
-const sortedDates = Array.from(dateGroups.keys()).sort((a, b) => {
-  if (a === '__unscheduled__') return 1
-  if (b === '__unscheduled__') return -1
-  return a.localeCompare(b)
-})
+const allMatches = (await getAllMatchesWithTournament()).filter(m => m.scheduled_date)
 
 // Pre-load teams per tournament for edit modals
 const teamsByTournament: Record<string, { id: string; name: string }[]> = {}
@@ -29,230 +16,320 @@ for (const t of tournaments) {
 
 <Layout hideFooter={true}>
 <AdminLayout activePage="calendar">
-  <div class="cal">
+  <div class="p-0">
     <!-- Header -->
-    <div class="cal-header">
+    <div class="flex justify-between items-start mb-4">
       <div>
-        <h1 class="cal-title">📅 Calendario de partidos</h1>
-        <p class="cal-sub">{allMatches.length} partido{allMatches.length !== 1 ? 's' : ''} en {tournaments.length} torneo{tournaments.length !== 1 ? 's' : ''}</p>
+        <h1 class="font-[var(--font-cinzel)] text-[clamp(1.1rem,2.5vw,1.5rem)] font-black tracking-[.05em] uppercase text-[var(--text)] leading-none mb-1">📅 Calendario de partidos</h1>
+        <p class="text-[.5rem] text-[var(--text-3)]">{allMatches.length} partido{allMatches.length !== 1 ? 's' : ''} en {tournaments.length} torneo{tournaments.length !== 1 ? 's' : ''}</p>
       </div>
     </div>
 
     <!-- Filters -->
-    <div class="cal-filters">
-      <select id="cal-filter-tournament" class="cal-input cal-input--sm">
+    <div class="flex gap-2 items-center mb-4 flex-wrap">
+      <select id="cal-filter-tournament" class="px-[.45rem] py-[.45rem] rounded-lg border border-[var(--border)] bg-[rgba(255,255,255,.03)] text-[var(--text)] text-[.5rem] outline-none font-[var(--font-cinzel)] focus:border-[rgba(0,255,136,.38)] min-w-[160px] [&>option]:bg-[var(--midnight)]">
         <option value="">Todos los torneos</option>
         {tournaments.map(t => <option value={t.id}>{t.name}</option>)}
       </select>
-      <select id="cal-filter-status" class="cal-input cal-input--sm">
+      <select id="cal-filter-status" class="px-[.45rem] py-[.45rem] rounded-lg border border-[var(--border)] bg-[rgba(255,255,255,.03)] text-[var(--text)] text-[.5rem] outline-none font-[var(--font-cinzel)] focus:border-[rgba(0,255,136,.38)] min-w-[160px] [&>option]:bg-[var(--midnight)]">
         <option value="">Todos los estados</option>
         <option value="scheduled">Programado</option>
         <option value="live">En vivo</option>
         <option value="finished">Finalizado</option>
         <option value="cancelled">Cancelado</option>
       </select>
-      <button class="cal-btn cal-btn--ghost cal-btn--sm" id="cal-clear-filters">Limpiar filtros</button>
+      <button id="cal-clear-filters" class="inline-flex items-center gap-1 px-[.4rem] py-[.4rem] rounded-lg font-[var(--font-cinzel)] text-[.42rem] font-bold tracking-[.08em] uppercase cursor-pointer border border-[var(--border)] bg-transparent text-[var(--text-2)] hover:border-[var(--border-2)] hover:text-[var(--text)] transition-all no-underline">Limpiar filtros</button>
     </div>
 
     <!-- No matches -->
     {allMatches.length === 0 ? (
-      <div class="cal-empty">
-        <span class="cal-empty-icon">📅</span>
-        <p class="cal-empty-text">No hay partidos en ningún torneo. Crea un torneo y genera un fixture primero.</p>
-        <a href="/admin/dashboard/crear-torneo" class="cal-btn cal-btn--green">Crear torneo</a>
+      <div class="rounded-xl border border-dashed border-[var(--border)] p-10 text-center flex flex-col items-center gap-2">
+        <span class="text-[2.5rem]">📅</span>
+        <p class="text-[.52rem] text-[var(--text-3)] max-w-[320px]">No hay partidos en ningún torneo. Crea un torneo y genera un fixture primero.</p>
+        <a href="/admin/dashboard/crear-torneo" class="inline-flex items-center gap-1 px-[.85rem] py-[.45rem] rounded-lg font-[var(--font-cinzel)] text-[.46rem] font-bold tracking-[.08em] uppercase cursor-pointer border border-[rgba(0,255,136,.3)] bg-[rgba(0,255,136,.1)] text-[var(--green)] hover:bg-[rgba(0,255,136,.18)] transition-all no-underline">Crear torneo</a>
       </div>
     ) : (
       <>
-      <!-- Calendar view -->
-      <div class="cal-legend">
-        <span class="cal-legend-item"><span class="cal-dot cal-dot--scheduled"></span> Programado</span>
-        <span class="cal-legend-item"><span class="cal-dot cal-dot--live"></span> En vivo</span>
-        <span class="cal-legend-item"><span class="cal-dot cal-dot--finished"></span> Finalizado</span>
-        <span class="cal-legend-item"><span class="cal-dot cal-dot--cancelled"></span> Cancelado</span>
-      </div>
-
-      <div class="cal-days" id="cal-days">
-        {sortedDates.map(dateKey => {
-          const dayMatches = dateGroups.get(dateKey)!
-          const isUnscheduled = dateKey === '__unscheduled__'
-          const dateObj = isUnscheduled ? null : new Date(dateKey + 'T12:00')
-          return (
-            <div class="cal-day" data-date={dateKey}>
-              <div class="cal-day-header">
-                {isUnscheduled ? (
-                  <span class="cal-day-title">Sin fecha asignada</span>
-                ) : (
-                  <>
-                    <span class="cal-day-weekday">{dateObj!.toLocaleDateString('es-CO', { weekday: 'long' })}</span>
-                    <span class="cal-day-date">{dateObj!.toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
-                  </>
-                )}
-                <span class="cal-day-count">{dayMatches.length} partido{dayMatches.length !== 1 ? 's' : ''}</span>
-              </div>
-              <div class="cal-day-matches">
-                {dayMatches.map(m => {
-                  const homeTeam = teamsByTournament[m.tournament_id]?.find(t => t.id === m.home_team_id)
-                  const awayTeam = teamsByTournament[m.tournament_id]?.find(t => t.id === m.away_team_id)
-                  return (
-                    <div class="cal-match" data-match-id={m.id}>
-                      <div class="cal-match-left">
-                        <span class="cal-match-tournament">{m.tournament_name}</span>
-                        <div class="cal-match-teams">
-                          <span class="cal-match-team">{homeTeam?.name || '—'}</span>
-                          <span class="cal-match-vs">vs</span>
-                          <span class="cal-match-team">{awayTeam?.name || '—'}</span>
-                        </div>
-                      </div>
-                      <div class="cal-match-mid">
-                        {m.home_score != null && m.away_score != null ? (
-                          <span class="cal-match-score">{m.home_score} — {m.away_score}</span>
-                        ) : (
-                          <span class="cal-match-time">
-                            {!isUnscheduled && m.scheduled_date
-                              ? new Date(m.scheduled_date).toLocaleString('es-CO', { hour: '2-digit', minute: '2-digit' })
-                              : '—'}
-                          </span>
-                        )}
-                      </div>
-                      <div class="cal-match-right">
-                        <span class={`cal-status cal-status--${m.status}`}>{m.status}</span>
-                        <button class="cal-icon-btn cal-edit-btn" data-edit={m.id} data-tournament={m.tournament_id} title="Editar">✏️</button>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )
+      <!-- Legend -->
+      <div class="flex gap-3 mb-4 p-2 rounded-lg bg-[var(--surface)] border border-[var(--border)] flex-wrap">
+         {['scheduled','live','finished','cancelled'].map(s => {
+          const dotColors = { scheduled: 'bg-[var(--text-3)]', live: 'bg-[var(--green)]', finished: 'bg-[#60a5fa]', cancelled: 'bg-[#f87171]' } as const
+          const labels = { scheduled: 'Programado', live: 'En vivo', finished: 'Finalizado', cancelled: 'Cancelado' } as const
+          return <span class="flex items-center gap-1 text-[.44rem] text-[var(--text-3)]"><span class={`w-2 h-2 rounded-full inline-block ${dotColors[s]}`}></span> {labels[s]}</span>
         })}
       </div>
+
+      <!-- Month nav -->
+      <div class="flex items-center gap-3 mb-3 overflow-hidden overflow-x-scroll">
+        <button id="cal-prev" class="px-3 py-1.5 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[var(--text-2)] cursor-pointer hover:border-[var(--border-2)] hover:text-[var(--text)] transition-all text-sm leading-none">◀</button>
+        <span id="cal-month-title" class="font-[var(--font-cinzel)] text-[.6rem] font-bold tracking-[.1em] uppercase text-[var(--text)] min-w-[180px] text-center">Cargando...</span>
+        <button id="cal-next" class="px-3 py-1.5 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[var(--text-2)] cursor-pointer hover:border-[var(--border-2)] hover:text-[var(--text)] transition-all text-sm leading-none">▶</button>
+        <button id="cal-today" class="px-3 py-1.5 rounded-lg border border-[var(--border)] text-[var(--text-2)] cursor-pointer hover:border-[var(--border-2)] hover:text-[var(--text)] transition-all bg-transparent font-[var(--font-cinzel)] text-[.42rem] font-bold tracking-[.08em] uppercase ml-auto">Hoy</button>
+      </div>
+
+      <!-- Weekday headers -->
+      <div class="grid grid-cols-7 mb-1">
+        {['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'].map(d => (
+          <span class="text-center text-[.42rem] font-[var(--font-cinzel)] font-bold tracking-[.1em] uppercase text-[var(--text-3)] py-1.5">{d}</span>
+        ))}
+      </div>
+
+      <!-- Grid -->
+      <div id="cal-grid" class="grid grid-cols-7 border-l border-t border-[var(--border)] rounded-t-lg overflow-hidden"></div>
+
+      <!-- Selected day detail -->
+      <div id="cal-day-detail" class="hidden mt-5 mb-12 rounded-xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden">
+        <div class="flex items-center gap-2 px-4 py-3 bg-[rgba(255,255,255,.02)] border-b border-[var(--border)]">
+          <span id="cal-day-detail-title" class="text-[.52rem] font-bold text-[var(--text-2)] font-[var(--font-cinzel)] tracking-[.08em] uppercase"></span>
+          <span id="cal-day-detail-count" class="ml-auto text-[.44rem] text-[var(--text-3)] bg-[rgba(255,255,255,.05)] px-2 py-0.5 rounded-full">0</span>
+        </div>
+        <div id="cal-day-detail-list" class="divide-y divide-[rgba(255,255,255,.04)]"></div>
+      </div>
+
       </>
     )}
   </div>
-</AdminLayout>
-</Layout>
 
-<script type="application/json" id="cal-teams-json"><%- JSON.stringify(teamsByTournament) %></script>
+  <div id="cal-teams-json" hidden>{JSON.stringify(teamsByTournament).replace(/<\//g, '\\u003C/')}</div>
+  <div id="cal-matches-json" hidden>{JSON.stringify(allMatches).replace(/<\//g, '\\u003C/')}</div>
 
-<!-- ══ EDIT MODAL ══ -->
-<div class="cal-modal-overlay" id="cal-edit-overlay">
-  <div class="cal-modal">
-    <div class="cal-modal-header">
-      <h3 class="cal-modal-title">Editar Partido</h3>
-      <button class="cal-modal-close" id="cal-edit-close">✕</button>
+  <!-- ══ EDIT MODAL ══ -->
+  <div id="cal-edit-overlay" class="hidden fixed inset-0 z-[100] bg-[rgba(0,0,0,.6)] backdrop-blur items-center justify-center [&.cal-modal-overlay--open]:flex">
+  <div class="bg-[var(--surface)] border border-[var(--border)] rounded-2xl w-[90%] max-w-[480px] max-h-[85vh] overflow-y-auto">
+    <div class="flex justify-between items-center px-5 py-4 border-b border-[var(--border)]">
+      <h3 class="font-[var(--font-cinzel)] text-[.6rem] font-bold tracking-[.08em] uppercase text-[rgba(232,226,216,.8)]">Editar Partido</h3>
+      <button id="cal-edit-close" class="bg-none border-none text-[var(--text-3)] cursor-pointer text-sm hover:text-[var(--text)]">✕</button>
     </div>
-    <div class="cal-modal-body">
+    <div class="px-5 py-5 flex flex-col gap-4">
       <input type="hidden" id="cal-edit-id" />
       <input type="hidden" id="cal-edit-tournament" />
-      <div class="cal-grid2">
-        <div class="cal-field">
-          <label class="cal-label">Equipo local</label>
-          <select id="cal-edit-home" class="cal-input"></select>
+      <div class="grid grid-cols-2 gap-3">
+        <div class="flex flex-col">
+          <label class="text-[.48rem] font-bold tracking-[.12em] uppercase text-[rgba(232,226,216,.4)] mb-1">Equipo local</label>
+          <select id="cal-edit-home" class="w-full px-[.45rem] py-[.45rem] rounded-lg border border-[var(--border)] bg-[rgba(255,255,255,.03)] text-[var(--text)] text-[.5rem] outline-none font-[var(--font-cinzel)] focus:border-[rgba(0,255,136,.38)]"></select>
         </div>
-        <div class="cal-field">
-          <label class="cal-label">Equipo visitante</label>
-          <select id="cal-edit-away" class="cal-input"></select>
+        <div class="flex flex-col">
+          <label class="text-[.48rem] font-bold tracking-[.12em] uppercase text-[rgba(232,226,216,.4)] mb-1">Equipo visitante</label>
+          <select id="cal-edit-away" class="w-full px-[.45rem] py-[.45rem] rounded-lg border border-[var(--border)] bg-[rgba(255,255,255,.03)] text-[var(--text)] text-[.5rem] outline-none font-[var(--font-cinzel)] focus:border-[rgba(0,255,136,.38)]"></select>
         </div>
       </div>
-      <div class="cal-field">
-        <label class="cal-label">Estado</label>
-        <select id="cal-edit-status" class="cal-input">
+      <div class="flex flex-col">
+        <label class="text-[.48rem] font-bold tracking-[.12em] uppercase text-[rgba(232,226,216,.4)] mb-1">Estado</label>
+        <select id="cal-edit-status" class="w-full px-[.45rem] py-[.45rem] rounded-lg border border-[var(--border)] bg-[rgba(255,255,255,.03)] text-[var(--text)] text-[.5rem] outline-none font-[var(--font-cinzel)] focus:border-[rgba(0,255,136,.38)]">
           <option value="scheduled">Programado</option>
           <option value="live">En vivo</option>
           <option value="finished">Finalizado</option>
           <option value="cancelled">Cancelado</option>
         </select>
       </div>
-      <div class="cal-grid2">
-        <div class="cal-field">
-          <label class="cal-label">Marcador local</label>
-          <input type="number" id="cal-edit-home-score" min="0" class="cal-input" />
+      <div class="grid grid-cols-2 gap-3">
+        <div class="flex flex-col">
+          <label class="text-[.48rem] font-bold tracking-[.12em] uppercase text-[rgba(232,226,216,.4)] mb-1">Marcador local</label>
+          <input type="number" id="cal-edit-home-score" min="0" class="w-full px-[.45rem] py-[.45rem] rounded-lg border border-[var(--border)] bg-[rgba(255,255,255,.03)] text-[var(--text)] text-[.5rem] outline-none font-[var(--font-cinzel)] focus:border-[rgba(0,255,136,.38)]" />
         </div>
-        <div class="cal-field">
-          <label class="cal-label">Marcador visitante</label>
-          <input type="number" id="cal-edit-away-score" min="0" class="cal-input" />
+        <div class="flex flex-col">
+          <label class="text-[.48rem] font-bold tracking-[.12em] uppercase text-[rgba(232,226,216,.4)] mb-1">Marcador visitante</label>
+          <input type="number" id="cal-edit-away-score" min="0" class="w-full px-[.45rem] py-[.45rem] rounded-lg border border-[var(--border)] bg-[rgba(255,255,255,.03)] text-[var(--text)] text-[.5rem] outline-none font-[var(--font-cinzel)] focus:border-[rgba(0,255,136,.38)]" />
         </div>
       </div>
-      <div class="cal-grid2">
-        <div class="cal-field">
-          <label class="cal-label">Fecha</label>
-          <input type="date" id="cal-edit-date" class="cal-input" />
+      <div class="grid grid-cols-2 gap-3">
+        <div class="flex flex-col">
+          <label class="text-[.48rem] font-bold tracking-[.12em] uppercase text-[rgba(232,226,216,.4)] mb-1">Fecha</label>
+          <input type="date" id="cal-edit-date" class="w-full px-[.45rem] py-[.45rem] rounded-lg border border-[var(--border)] bg-[rgba(255,255,255,.03)] text-[var(--text)] text-[.5rem] outline-none font-[var(--font-cinzel)] focus:border-[rgba(0,255,136,.38)]" />
         </div>
-        <div class="cal-field">
-          <label class="cal-label">Hora</label>
-          <input type="time" id="cal-edit-time" class="cal-input" />
+        <div class="flex flex-col">
+          <label class="text-[.48rem] font-bold tracking-[.12em] uppercase text-[rgba(232,226,216,.4)] mb-1">Hora</label>
+          <input type="time" id="cal-edit-time" class="w-full px-[.45rem] py-[.45rem] rounded-lg border border-[var(--border)] bg-[rgba(255,255,255,.03)] text-[var(--text)] text-[.5rem] outline-none font-[var(--font-cinzel)] focus:border-[rgba(0,255,136,.38)]" />
         </div>
+      </div>
+      <div class="flex flex-col relative">
+        <label class="text-[.48rem] font-bold tracking-[.12em] uppercase text-[rgba(232,226,216,.4)] mb-1">Árbitro</label>
+        <input type="hidden" id="cal-edit-referee-id" />
+        <input type="text" id="cal-edit-referee" autocomplete="off" placeholder="Buscar árbitro por nombre..." class="w-full px-[.45rem] py-[.45rem] rounded-lg border border-[var(--border)] bg-[rgba(255,255,255,.03)] text-[var(--text)] text-[.5rem] outline-none font-[var(--font-cinzel)] focus:border-[rgba(0,255,136,.38)]" />
+        <div id="cal-edit-referee-results" class="hidden absolute top-full left-0 right-0 z-50 mt-1 rounded-lg border border-[var(--border)] bg-[var(--surface)] shadow-xl max-h-40 overflow-y-auto"></div>
       </div>
     </div>
-    <div class="cal-modal-footer">
-      <button class="cal-btn cal-btn--ghost" id="cal-edit-cancel">Cancelar</button>
-      <button class="cal-btn cal-btn--green" id="cal-edit-confirm">Guardar</button>
+    <div class="flex justify-end gap-2 px-5 py-4 border-t border-[var(--border)]">
+      <button id="cal-edit-cancel" class="inline-flex items-center gap-1 px-[.85rem] py-[.45rem] rounded-lg font-[var(--font-cinzel)] text-[.46rem] font-bold tracking-[.08em] uppercase cursor-pointer border border-[var(--border)] bg-transparent text-[var(--text-2)] hover:border-[var(--border-2)] hover:text-[var(--text)] transition-all">Cancelar</button>
+      <button id="cal-edit-confirm" class="inline-flex items-center gap-1 px-[.85rem] py-[.45rem] rounded-lg font-[var(--font-cinzel)] text-[.46rem] font-bold tracking-[.08em] uppercase cursor-pointer border border-[rgba(0,255,136,.3)] bg-[rgba(0,255,136,.1)] text-[var(--green)] hover:bg-[rgba(0,255,136,.18)] transition-all">Guardar</button>
     </div>
   </div>
 </div>
 
+</AdminLayout>
+</Layout>
+
 <script>
-// ── Filters ──
-const filterTournament = document.getElementById('cal-filter-tournament') as HTMLSelectElement
-const filterStatus = document.getElementById('cal-filter-status') as HTMLSelectElement
-const clearBtn = document.getElementById('cal-clear-filters') as HTMLButtonElement
+try {
+// ── Data ──
+const allMatches: any[] = JSON.parse(document.getElementById('cal-matches-json')!.textContent || '[]')
+const teamsByTournament: Record<string, { id: string; name: string }[]> = JSON.parse(document.getElementById('cal-teams-json')!.textContent || '{}')
 
-function applyFilters() {
-  const tourney = filterTournament.value
-  const status = filterStatus.value
-  document.querySelectorAll<HTMLElement>('.cal-day').forEach(day => {
-    let visible = true
-    day.querySelectorAll<HTMLElement>('.cal-match').forEach(match => {
-      const matchTournament = match.querySelector('.cal-match-tournament')?.textContent || ''
-      const tournamentId = document.querySelector<HTMLOptionElement>(`#cal-filter-tournament option[value="${tourney}"]`)?.textContent || ''
-      const matchStatus = match.querySelector('.cal-status')?.textContent || ''
-      let show = true
-      if (tourney && match.dataset.tournament !== tourney) show = false
-      if (status && matchStatus !== status) show = false
-      match.style.display = show ? '' : 'none'
-    })
-    const visibleMatches = day.querySelectorAll<HTMLElement>('.cal-match[style*="display: none"]')
-    const totalMatches = day.querySelectorAll<HTMLElement>('.cal-match').length
-    if (visibleMatches.length === totalMatches) {
-      day.style.display = 'none'
-    } else {
-      day.style.display = ''
-    }
-  })
-}
+const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 
-filterTournament.addEventListener('change', applyFilters)
-filterStatus.addEventListener('change', applyFilters)
-clearBtn.addEventListener('click', () => {
-  filterTournament.value = ''
-  filterStatus.value = ''
-  applyFilters()
-})
+let viewDate = new Date()
+let filterTournament = ''
+let filterStatus = ''
 
-// ── Teams cache ──
-const teamsJsonEl = document.getElementById('cal-teams-json')
-const teamsCache: Record<string, { id: string; name: string }[]> = teamsJsonEl ? JSON.parse(teamsJsonEl.textContent || '{}') : {}
+const STATUS_LABELS: Record<string,string> = { scheduled:'Programado', live:'En vivo', finished:'Finalizado', cancelled:'Cancelado' }
+const STATUS_DOTS: Record<string,string> = { scheduled:'bg-[var(--text-3)]', live:'bg-[var(--green)]', finished:'bg-[#60a5fa]', cancelled:'bg-[#f87171]' }
 
-async function loadTeamsForTournament(tournamentId: string): Promise<{ id: string; name: string }[]> {
-  if (teamsCache[tournamentId]) return teamsCache[tournamentId]
-  const res = await fetch('/api/teams/index', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'list', tournamentId }),
-  })
-  const data = await res.json()
-  if (data.success) {
-    teamsCache[tournamentId] = data.teams
-    return data.teams
+function esc(s: string) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') }
+
+function buildCalendar() {
+  const year = viewDate.getFullYear()
+  const month = viewDate.getMonth()
+
+  document.getElementById('cal-month-title')!.textContent = `${MONTHS[month]} ${year}`
+  document.getElementById('cal-day-detail')!.classList.add('hidden')
+
+  const firstDay = new Date(year, month, 1)
+  const lastDay = new Date(year, month + 1, 0)
+  const startPad = (firstDay.getDay() + 6) % 7
+  const totalDays = lastDay.getDate()
+  const totalCells = Math.ceil((startPad + totalDays) / 7) * 7
+
+  const matchesByDate = new Map<string, typeof allMatches>()
+  for (const m of allMatches) {
+    if (filterTournament && m.tournament_id !== filterTournament) continue
+    if (filterStatus && m.status !== filterStatus) continue
+    const key = m.scheduled_date.slice(0, 10)
+    if (!matchesByDate.has(key)) matchesByDate.set(key, [])
+    matchesByDate.get(key)!.push(m)
   }
-  return []
+
+  const grid = document.getElementById('cal-grid')!
+  grid.innerHTML = ''
+  for (let i = 0; i < totalCells; i++) {
+    const dayNum = i - startPad + 1
+    const isValid = dayNum >= 1 && dayNum <= totalDays
+    const cell = document.createElement('div')
+    cell.className = 'border-r border-b border-[var(--border)] bg-[var(--surface)] min-h-[90px] relative transition-all hover:bg-[rgba(255,255,255,.015)]'
+
+    if (isValid) {
+      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`
+      const dayMatches = matchesByDate.get(dateStr) || []
+      const isToday = dateStr === new Date().toISOString().slice(0, 10)
+
+      if (isToday) cell.classList.add('ring-1', 'ring-inset', 'ring-[var(--green)]')
+      if (dayMatches.length > 0) cell.classList.add('cursor-pointer')
+
+      cell.innerHTML = `<span class="block text-[.55rem] font-bold ${isToday ? 'text-[var(--green)]' : 'text-[var(--text-2)]'} p-1.5 pb-0.5">${dayNum}</span>`
+
+      if (dayMatches.length > 0) {
+        cell.style.background = 'linear-gradient(180deg, var(--surface) 0%, rgba(0,255,136,.02) 100%)'
+
+        const maxShow = Math.min(dayMatches.length, 3)
+        for (let mi = 0; mi < maxShow; mi++) {
+          const m = dayMatches[mi]
+          const homeTeam = teamsByTournament[m.tournament_id]?.find((t: any) => t.id === m.home_team_id)
+          const awayTeam = teamsByTournament[m.tournament_id]?.find((t: any) => t.id === m.away_team_id)
+          const shortHome = (homeTeam?.name || '—').length > 8 ? (homeTeam?.name || '—').slice(0, 7) + '…' : (homeTeam?.name || '—')
+          const shortAway = (awayTeam?.name || '—').length > 8 ? (awayTeam?.name || '—').slice(0, 7) + '…' : (awayTeam?.name || '—')
+          const timeStr = m.scheduled_date ? new Date(m.scheduled_date).toLocaleString('es-CO', { hour: '2-digit', minute: '2-digit' }) : ''
+
+          const mc = document.createElement('div')
+          mc.className = `mx-1 mb-0.5 px-1.5 py-1 rounded text-[.38rem] leading-tight border-l-2 ${m.status === 'live' ? 'border-l-[var(--green)] bg-[rgba(0,255,136,.06)]' : m.status === 'finished' ? 'border-l-[#60a5fa] bg-[rgba(96,165,250,.06)]' : 'border-l-[var(--border-2)] bg-[rgba(255,255,255,.03)]'}`
+          mc.innerHTML = `
+            <div class="flex items-center justify-between gap-1">
+              <span class="font-semibold text-[var(--text)] truncate">${esc(shortHome)}</span>
+              <span class="text-[.32rem] text-[var(--text-3)] shrink-0">vs</span>
+              <span class="font-semibold text-[var(--text)] truncate">${esc(shortAway)}</span>
+            </div>
+            <div class="flex items-center justify-between mt-0.5">
+              <span class="text-[var(--text-3)]">${timeStr}</span>
+              <button class="cal-cell-match-edit text-[var(--green)] hover:underline bg-none border-none p-0 cursor-pointer opacity-60 hover:opacity-100" data-edit="${m.id}" data-tournament="${m.tournament_id}">✎</button>
+            </div>
+          `
+          cell.appendChild(mc)
+        }
+
+        if (dayMatches.length > 3) {
+          const more = document.createElement('div')
+          more.className = 'text-center text-[.35rem] text-[var(--text-3)] py-0.5'
+          more.textContent = `+${dayMatches.length - 3} más`
+          cell.appendChild(more)
+        }
+
+        cell.dataset.date = dateStr
+        cell.addEventListener('click', (e) => {
+          if ((e.target as HTMLElement).closest('.cal-cell-match-edit')) return
+          document.querySelectorAll('#cal-grid > div').forEach(c => c.classList.remove('ring-2', 'ring-[var(--green)]', 'ring-inset'))
+          cell.classList.add('ring-2', 'ring-[var(--green)]', 'ring-inset')
+          renderDayDetail(dateStr, dayMatches)
+        })
+      } else {
+        cell.addEventListener('click', () => {
+          document.querySelectorAll('#cal-grid > div').forEach(c => c.classList.remove('ring-2', 'ring-[var(--green)]', 'ring-inset'))
+          document.getElementById('cal-day-detail')!.classList.add('hidden')
+        })
+      }
+    }
+
+    grid.appendChild(cell)
+  }
 }
 
-function populateTeamSelect(sel: HTMLSelectElement, teams: { id: string; name: string }[], selectedId?: string) {
-  sel.innerHTML = '<option value="">—</option>' + teams.map(t =>
-    `<option value="${t.id}" ${t.id === selectedId ? 'selected' : ''}>${t.name}</option>`
-  ).join('')
+// ── Day detail panel ──
+function renderDayDetail(dateStr: string, matches: typeof allMatches) {
+  const el = document.getElementById('cal-day-detail')!
+  const title = document.getElementById('cal-day-detail-title')!
+  const count = document.getElementById('cal-day-detail-count')!
+  const list = document.getElementById('cal-day-detail-list')!
+
+  const d = new Date(dateStr + 'T12:00:00')
+  title.textContent = `${d.getDate()} de ${MONTHS[d.getMonth()]} ${d.getFullYear()}`
+  count.textContent = String(matches.length)
+
+  list.innerHTML = ''
+  for (const m of matches) {
+    const homeTeam = teamsByTournament[m.tournament_id]?.find((t: any) => t.id === m.home_team_id)
+    const awayTeam = teamsByTournament[m.tournament_id]?.find((t: any) => t.id === m.away_team_id)
+    const timeStr = m.scheduled_date ? new Date(m.scheduled_date).toLocaleString('es-CO', { hour: '2-digit', minute: '2-digit' }) : ''
+
+    const mc = document.createElement('div')
+    mc.className = 'px-4 py-3 flex flex-row max-md:flex-col items-center gap-4 hover:bg-[rgba(255,255,255,.015)] transition-all'
+    mc.innerHTML = `
+      <div class="flex-1 min-w-0">
+        <div class="text-xs text-[var(--green)] font-semibold tracking-[.05em] uppercase opacity-70 mb-0.5">${esc(m.tournament_name)}</div>
+        <div class="flex items-center gap-2 text-[.5rem] font-semibold">
+          <span class="text-[var(--text)] truncate">${esc(homeTeam?.name || '—')}</span>
+          <span class="text-[var(--text-3)] shrink-0">vs</span>
+          <span class="text-[var(--text)] truncate">${esc(awayTeam?.name || '—')}</span>
+        </div>
+      </div>
+      <div class="flex flex-col md:flex-row items-start md:items-center gap-3 shrink-0">
+        <span class="text-xs text-[var(--text-3)] font-medium">${timeStr}</span>
+        <span class="flex items-center gap-1.5 shrink-0">
+          <span class="w-2 h-2 rounded-full inline-block ${STATUS_DOTS[m.status] || 'bg-[rgba(255,255,255,.15)]'}"></span>
+          <span class="text-xs font-bold tracking-[.06em] uppercase text-[var(--text-2)]">${STATUS_LABELS[m.status] || m.status}</span>
+        </span>
+        <button class="cal-cell-match-edit text-[.42rem] font-bold tracking-[.08em] uppercase text-[var(--green)] cursor-pointer hover:underline bg-none border-none p-0" data-edit="${m.id}" data-tournament="${m.tournament_id}">✏️ Editar</button>
+      </div>
+    `
+    list.appendChild(mc)
+  }
+
+  el.classList.remove('hidden')
 }
+
+// ── Navigation ──
+document.getElementById('cal-prev')!.addEventListener('click', () => { viewDate.setMonth(viewDate.getMonth() - 1); buildCalendar() })
+document.getElementById('cal-next')!.addEventListener('click', () => { viewDate.setMonth(viewDate.getMonth() + 1); buildCalendar() })
+document.getElementById('cal-today')!.addEventListener('click', () => { viewDate = new Date(); buildCalendar() })
+
+// ── Filters ──
+document.getElementById('cal-filter-tournament')!.addEventListener('change', (e) => {
+  filterTournament = (e.target as HTMLSelectElement).value; buildCalendar()
+})
+document.getElementById('cal-filter-status')!.addEventListener('change', (e) => {
+  filterStatus = (e.target as HTMLSelectElement).value; buildCalendar()
+})
+document.getElementById('cal-clear-filters')!.addEventListener('click', () => {
+  ;(document.getElementById('cal-filter-tournament') as HTMLSelectElement).value = ''
+  ;(document.getElementById('cal-filter-status') as HTMLSelectElement).value = ''
+  filterTournament = ''; filterStatus = ''; buildCalendar()
+})
 
 // ── Edit Modal ──
 const editOverlay = document.getElementById('cal-edit-overlay')!
@@ -265,272 +342,140 @@ const editHomeScore = document.getElementById('cal-edit-home-score') as HTMLInpu
 const editAwayScore = document.getElementById('cal-edit-away-score') as HTMLInputElement
 const editDate = document.getElementById('cal-edit-date') as HTMLInputElement
 const editTime = document.getElementById('cal-edit-time') as HTMLInputElement
+const editRefereeId = document.getElementById('cal-edit-referee-id') as HTMLInputElement
+const editReferee = document.getElementById('cal-edit-referee') as HTMLInputElement
+const editRefereeResults = document.getElementById('cal-edit-referee-results') as HTMLDivElement
 
-document.getElementById('cal-edit-close')?.addEventListener('click', () => editOverlay.classList.remove('cal-modal-overlay--open'))
-document.getElementById('cal-edit-cancel')?.addEventListener('click', () => editOverlay.classList.remove('cal-modal-overlay--open'))
+document.getElementById('cal-edit-close')!.addEventListener('click', () => editOverlay.classList.remove('cal-modal-overlay--open'))
+document.getElementById('cal-edit-cancel')!.addEventListener('click', () => editOverlay.classList.remove('cal-modal-overlay--open'))
 editOverlay.addEventListener('click', e => { if (e.target === editOverlay) editOverlay.classList.remove('cal-modal-overlay--open') })
 
-document.querySelectorAll<HTMLButtonElement>('.cal-edit-btn').forEach(btn => {
-  btn.addEventListener('click', async () => {
-    const matchId = btn.dataset.edit!
-    const tournamentId = btn.dataset.tournament!
-    const row = btn.closest('.cal-match') as HTMLElement
-    const teams = row.querySelectorAll('.cal-match-team')
-    const scoreEl = row.querySelector('.cal-match-score')
-    const statusEl = row.querySelector('.cal-status')
-    const tournamentName = row.querySelector('.cal-match-tournament')?.textContent || ''
+document.addEventListener('click', async (e) => {
+  const btn = (e.target as HTMLElement).closest('.cal-cell-match-edit') as HTMLButtonElement | null
+  if (!btn) return
+  const matchId = btn.dataset.edit!
+  const tournamentId = btn.dataset.tournament!
 
-    editId.value = matchId
-    editTournament.value = tournamentId
+  editId.value = matchId
+  editTournament.value = tournamentId
 
-    // Load teams for this tournament
-    const teamList = await loadTeamsForTournament(tournamentId)
-    const homeName = teams[0]?.textContent || ''
-    const awayName = teams[1]?.textContent || ''
-    const homeId = teamList.find(t => t.name === homeName)?.id || ''
-    const awayId = teamList.find(t => t.name === awayName)?.id || ''
-    populateTeamSelect(editHome, teamList, homeId)
-    populateTeamSelect(editAway, teamList, awayId)
+  const teamList = teamsByTournament[tournamentId] || await loadTeamsForTournament(tournamentId)
+  const row = btn.closest('[data-edit]')?.parentElement // heuristic
+  const teamsEl = btn.parentElement?.querySelector('.font-semibold.text-\\[var\\(--text\\)\\]')
+  const teamText = teamsEl?.textContent || '— vs —'
+  const teamNames = teamText.split(' vs ')
 
-    if (scoreEl) {
-      const scores = scoreEl.textContent?.split('—').map(s => s.trim()) || []
-      editHomeScore.value = scores[0] || ''
-      editAwayScore.value = scores[1] || ''
-    } else {
-      editHomeScore.value = ''
-      editAwayScore.value = ''
-    }
+  const homeId = teamList.find((t: any) => t.name === teamNames[0])?.id || ''
+  const awayId = teamList.find((t: any) => t.name === teamNames[1]?.trim())?.id || ''
+  populateTeamSelect(editHome, teamList, homeId)
+  populateTeamSelect(editAway, teamList, awayId)
 
-    editStatus.value = statusEl?.textContent?.trim() || 'scheduled'
+  editHomeScore.value = ''
+  editAwayScore.value = ''
+  editStatus.value = 'scheduled'
 
-    // Parse date/time from the match row
-    const timeEl = row.querySelector('.cal-match-time')
-    const dateDay = row.closest('.cal-day')?.dataset.date || ''
-    if (dateDay && dateDay !== '__unscheduled__') {
-      editDate.value = dateDay
-      const timeMatch = timeEl?.textContent?.trim()
-      editTime.value = timeMatch && timeMatch !== '—' ? timeMatch : '20:00'
-    } else {
-      editDate.value = ''
-      editTime.value = '20:00'
-    }
+  const match = allMatches.find((m: any) => m.id === matchId)
+  if (match?.scheduled_date) {
+    const d = new Date(match.scheduled_date)
+    editDate.value = d.toISOString().slice(0, 10)
+    editTime.value = d.toTimeString().slice(0, 5)
+  } else {
+    editDate.value = ''
+    editTime.value = '20:00'
+  }
 
-    editOverlay.classList.add('cal-modal-overlay--open')
-  })
+  editRefereeId.value = ''
+  editReferee.value = ''
+  editRefereeResults.classList.add('hidden')
+
+  editOverlay.classList.add('cal-modal-overlay--open')
 })
 
-document.getElementById('cal-edit-confirm')?.addEventListener('click', async () => {
-  const id = editId.value
-  const homeTeamId = editHome.value
-  const awayTeamId = editAway.value
-  const status = editStatus.value
-  const homeScore = editHomeScore.value
-  const awayScore = editAwayScore.value
-  const date = editDate.value
-  const time = editTime.value
+// ── Referee autocomplete ──
+let refereeSearchTimeout: number | null = null
+editReferee.addEventListener('input', () => {
+  if (refereeSearchTimeout) clearTimeout(refereeSearchTimeout)
+  editRefereeId.value = ''
+  const q = editReferee.value.trim()
+  if (q.length < 2) { editRefereeResults.classList.add('hidden'); return }
+  refereeSearchTimeout = window.setTimeout(async () => {
+    const res = await fetch(`/api/referees?q=${encodeURIComponent(q)}`)
+    const data = await res.json()
+    if (!data.success) return
+    const results = data.referees as { id: string; name: string; email: string }[]
+    if (results.length === 0) {
+      editRefereeResults.classList.add('hidden')
+      return
+    }
+    editRefereeResults.innerHTML = results.map(r =>
+      `<div class="referee-option px-3 py-2 cursor-pointer text-[.48rem] text-[var(--text)] hover:bg-[rgba(0,255,136,.08)] border-b border-[var(--border)] last:border-b-0 transition-all" data-id="${r.id}" data-name="${r.name}">${r.name} <span class="text-[var(--text-3)]">(${r.email})</span></div>`
+    ).join('')
+    editRefereeResults.classList.remove('hidden')
+  }, 250)
+})
 
-  const btn = document.getElementById('cal-edit-confirm') as HTMLButtonElement
-  btn.disabled = true
-  btn.textContent = 'Guardando...'
+editRefereeResults.addEventListener('click', (e) => {
+  const opt = (e.target as HTMLElement).closest('.referee-option') as HTMLDivElement | null
+  if (!opt) return
+  editRefereeId.value = opt.dataset.id!
+  editReferee.value = opt.dataset.name!
+  editRefereeResults.classList.add('hidden')
+})
 
-  try {
-    const updates: Record<string, unknown> = { action: 'update', id }
-    if (homeTeamId) updates.homeTeamId = homeTeamId
-    if (awayTeamId) updates.awayTeamId = awayTeamId
-    updates.status = status
-    if (homeScore !== '') updates.homeScore = Number(homeScore)
-    if (awayScore !== '') updates.awayScore = Number(awayScore)
-    if (date) updates.scheduledDate = `${date}T${time || '20:00'}:00`
-
-    const res = await fetch('/api/matches/index', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updates),
-    })
-    if (!res.ok) throw new Error('Error al actualizar')
-    editOverlay.classList.remove('cal-modal-overlay--open')
-    window.location.reload()
-  } catch {
-    alert('Error al guardar')
-    btn.disabled = false
-    btn.textContent = 'Guardar'
+document.addEventListener('click', (e) => {
+  if (!(e.target as HTMLElement).closest('#cal-edit-referee, #cal-edit-referee-results')) {
+    editRefereeResults.classList.add('hidden')
   }
 })
+
+async function loadTeamsForTournament(tournamentId: string): Promise<{ id: string; name: string }[]> {
+  if (teamsByTournament[tournamentId]) return teamsByTournament[tournamentId]
+  const res = await fetch('/api/teams', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'list', tournamentId }) })
+  const data = await res.json()
+  if (data.success) { teamsByTournament[tournamentId] = data.teams; return data.teams }
+  return []
+}
+
+function populateTeamSelect(sel: HTMLSelectElement, teams: { id: string; name: string }[], selectedId?: string) {
+  sel.innerHTML = '<option value="">—</option>' + teams.map(t => `<option value="${t.id}" ${t.id === selectedId ? 'selected' : ''}>${t.name}</option>`).join('')
+}
+
+document.getElementById('cal-edit-confirm')?.addEventListener('click', async () => {
+  const btn = document.getElementById('cal-edit-confirm') as HTMLButtonElement
+  btn.disabled = true; btn.textContent = 'Guardando...'
+  try {
+    const updates: Record<string, unknown> = { action: 'update', id: editId.value }
+    if (editHome.value) updates.homeTeamId = editHome.value
+    if (editAway.value) updates.awayTeamId = editAway.value
+    updates.status = editStatus.value
+    if (editHomeScore.value !== '') updates.homeScore = Number(editHomeScore.value)
+    if (editAwayScore.value !== '') updates.awayScore = Number(editAwayScore.value)
+    if (editDate.value) updates.scheduledDate = `${editDate.value}T${editTime.value || '20:00'}:00`
+    const res = await fetch('/api/matches', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updates) })
+    if (!res.ok) throw new Error('Error al actualizar')
+    if (editRefereeId.value) {
+      await fetch('/api/referee/matches', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'assign', matchId: editId.value, refereeId: editRefereeId.value }) })
+    }
+    editOverlay.classList.remove('cal-modal-overlay--open')
+    window.location.reload()
+  } catch { alert('Error al guardar'); btn.disabled = false; btn.textContent = 'Guardar' }
+})
+
+buildCalendar()
+} catch (e) {
+  console.error('Calendar error:', e)
+  const title = document.getElementById('cal-month-title')
+  if (title) title.textContent = 'Error al cargar'
+}
 </script>
 
 <style>
-  .cal { padding: 0; }
-  .cal-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; }
-  .cal-title {
-    font-family: var(--font-cinzel,'Cinzel'),serif;
-    font-size: clamp(1.1rem,2.5vw,1.5rem); font-weight: 900;
-    letter-spacing: .05em; text-transform: uppercase;
-    color: var(--text); line-height: 1; margin-bottom: .25rem;
-  }
-  .cal-sub { font-size: .5rem; color: var(--text-3); }
-
-  .cal-filters {
-    display: flex; gap: .5rem; align-items: center;
-    margin-bottom: 1rem; flex-wrap: wrap;
-  }
-  .cal-input {
-    padding: .45rem .65rem; border-radius: 8px;
-    border: 1px solid var(--border); background: rgba(255,255,255,.03);
-    color: var(--text); font-size: .5rem; outline: none;
-    font-family: var(--font-cinzel,'Cinzel'),serif;
-  }
-  .cal-input--sm { width: auto; min-width: 160px; }
-  .cal-input:focus { border-color: rgba(0,255,136,.38); }
-  .cal-input option { background: var(--midnight); }
-
-  .cal-btn {
-    display: inline-flex; align-items: center; gap: .3rem;
-    padding: .45rem .85rem; border-radius: 8px;
-    font-family: var(--font-cinzel,'Cinzel'),serif;
-    font-size: .46rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
-    cursor: pointer; border: 1px solid transparent; transition: all .2s; text-decoration: none;
-  }
-  .cal-btn--sm { padding: .4rem .65rem; font-size: .42rem; }
-  .cal-btn--green {
-    background: rgba(0,255,136,.1); color: var(--green);
-    border-color: rgba(0,255,136,.3);
-  }
-  .cal-btn--green:hover { background: rgba(0,255,136,.18); }
-  .cal-btn--ghost {
-    background: transparent; color: var(--text-2);
-    border-color: var(--border);
-  }
-  .cal-btn--ghost:hover { border-color: var(--border-2); color: var(--text); }
-
-  .cal-empty {
-    border-radius: 14px; border: 1px dashed var(--border);
-    padding: 2.5rem; text-align: center;
-    display: flex; flex-direction: column; align-items: center; gap: .5rem;
-  }
-  .cal-empty-icon { font-size: 2.5rem; }
-  .cal-empty-text { font-size: .52rem; color: var(--text-3); max-width: 320px; }
-
-  .cal-legend {
-    display: flex; gap: .75rem; margin-bottom: 1rem;
-    padding: .5rem .75rem;
-    border-radius: 8px; background: var(--surface); border: 1px solid var(--border);
-    flex-wrap: wrap;
-  }
-  .cal-legend-item { display: flex; align-items: center; gap: .3rem; font-size: .44rem; color: var(--text-3); }
-  .cal-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
-  .cal-dot--scheduled { background: var(--text-3); }
-  .cal-dot--live { background: var(--green); }
-  .cal-dot--finished { background: #60a5fa; }
-  .cal-dot--cancelled { background: #f87171; }
-
-  .cal-days { display: flex; flex-direction: column; gap: .85rem; }
-  .cal-day {
-    border-radius: 12px; border: 1px solid var(--border);
-    background: var(--surface); overflow: hidden;
-  }
-  .cal-day-header {
-    display: flex; align-items: center; gap: .5rem;
-    padding: .55rem .85rem;
-    background: rgba(255,255,255,.02);
-    border-bottom: 1px solid var(--border);
-  }
-  .cal-day-weekday {
-    font-family: var(--font-cinzel,'Cinzel'),serif;
-    font-size: .52rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
-    color: rgba(232,226,216,.65); text-transform: capitalize;
-  }
-  .cal-day-date { font-size: .48rem; color: var(--text-3); }
-  .cal-day-count {
-    margin-left: auto; font-size: .44rem; color: var(--text-3);
-  }
-
-  .cal-day-matches { display: flex; flex-direction: column; }
-  .cal-match {
-    display: flex; align-items: center; gap: .75rem;
-    padding: .55rem .85rem;
-    border-bottom: 1px solid rgba(255,255,255,.04);
-    transition: background .15s;
-  }
-  .cal-match:last-child { border-bottom: none; }
-  .cal-match:hover { background: rgba(255,255,255,.02); }
-  .cal-match-left { display: flex; flex-direction: column; gap: .1rem; min-width: 200px; }
-  .cal-match-tournament {
-    font-size: .38rem; color: var(--green); font-weight: 600;
-    letter-spacing: .05em; text-transform: uppercase;
-    opacity: .7;
-  }
-  .cal-match-teams { display: flex; align-items: center; gap: .35rem; }
-  .cal-match-team { font-size: .55rem; font-weight: 600; color: var(--text); }
-  .cal-match-vs { font-size: .4rem; color: var(--text-3); font-weight: 700; }
-  .cal-match-mid { flex: 1; text-align: center; }
-  .cal-match-score { font-size: .6rem; font-weight: 800; color: var(--green); letter-spacing: .05em; }
-  .cal-match-time { font-size: .48rem; color: var(--text-3); }
-  .cal-match-right { display: flex; align-items: center; gap: .35rem; }
-  .cal-status {
-    font-size: .4rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
-    padding: 2px 6px; border-radius: 99px;
-  }
-  .cal-status--scheduled { background: rgba(255,255,255,.05); color: var(--text-2); border: 1px solid var(--border); }
-  .cal-status--live { background: rgba(0,255,136,.1); color: var(--green); border: 1px solid rgba(0,255,136,.25); }
-  .cal-status--finished { background: rgba(59,130,246,.1); color: #60a5fa; border: 1px solid rgba(59,130,246,.25); }
-  .cal-status--cancelled { background: rgba(255,80,80,.1); color: #f87171; border: 1px solid rgba(255,80,80,.25); }
-
-  .cal-icon-btn {
-    background: none; border: none; cursor: pointer;
-    font-size: .65rem; padding: 2px; opacity: .4;
-    transition: opacity .15s;
-  }
-  .cal-icon-btn:hover { opacity: 1; }
-
-  /* ── Modal ── */
-  .cal-modal-overlay {
-    display: none;
-    position: fixed; inset: 0; z-index: 100;
-    background: rgba(0,0,0,.6); backdrop-filter: blur(4px);
-    align-items: center; justify-content: center;
-  }
-  .cal-modal-overlay--open { display: flex; }
-  .cal-modal {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    width: 90%; max-width: 480px;
-    max-height: 85vh; overflow-y: auto;
-  }
-  .cal-modal-header {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 1rem 1.2rem;
-    border-bottom: 1px solid var(--border);
-  }
-  .cal-modal-title {
-    font-family: var(--font-cinzel,'Cinzel'),serif;
-    font-size: .6rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
-    color: rgba(232,226,216,.8);
-  }
-  .cal-modal-close {
-    background: none; border: none; color: var(--text-3);
-    cursor: pointer; font-size: .85rem;
-  }
-  .cal-modal-close:hover { color: var(--text); }
-  .cal-modal-body { padding: 1.2rem; display: flex; flex-direction: column; gap: .85rem; }
-  .cal-modal-footer {
-    display: flex; justify-content: flex-end; gap: .5rem;
-    padding: 1rem 1.2rem;
-    border-top: 1px solid var(--border);
-  }
-  .cal-field { display: flex; flex-direction: column; }
-  .cal-label {
-    font-size: .48rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
-    color: rgba(232,226,216,.4); margin-bottom: 5px;
-  }
-  .cal-modal-body .cal-input { width: 100%; }
-  .cal-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
-
+  .cal-modal-overlay--open { display: flex !important; }
+  .cal-cell--open > .cal-cell--open\:block { display: block; }
   @media (max-width: 640px) {
-    .cal-filters { flex-direction: column; align-items: stretch; }
-    .cal-input--sm { width: 100%; }
-    .cal-match { flex-wrap: wrap; }
-    .cal-match-left { min-width: 0; }
-    .cal-grid2 { grid-template-columns: 1fr; }
+    #cal-grid { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+    #cal-grid > div { min-height: 60px; }
+    #cal-filter-tournament, #cal-filter-status { min-width: 0; width: 100%; }
+    .flex.gap-2.items-center.mb-4 { flex-direction: column; align-items: stretch; }
   }
 </style>

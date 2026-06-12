@@ -35,11 +35,16 @@
         <button id="mo-logout-btn" class="mo-logout-btn" title="Cerrar sesión">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
         </button>
-        <span class="mo-role-chip">Jornada 4</span>
+        <span class="mo-role-chip">Árbitro</span>
       </div>
     </header>
 
-    <p class="mo-section-label mt-6 mb-3">Partidos asignados · Jornada 4</p>
+    <div id="mo-pending-section" class="hidden">
+      <p class="mo-section-label mt-6 mb-3">Pendientes de aceptar</p>
+      <div class="flex flex-col gap-4" id="mo-pending-container"></div>
+    </div>
+
+    <p class="mo-section-label mt-6 mb-3">Mis partidos</p>
 
     <div class="flex flex-col gap-6" id="mo-cards-container"></div>
 
@@ -619,26 +624,45 @@
 (function () {
 
   /* ── DATOS ── */
-  const MATCHES = [
-    {
-      id:'m1',round:'Jornada 4 · Partido 1',status:'live',
-      role:'Árbitro principal',time:'14:00',field:'Cancha A',
-      teamA:{name:'Los Vikingos', color:'#00ff88',players:['Peereira7','Perxitaa','Abby','Andoni','Alana']},
-      teamB:{name:'Los Guerreros',color:'#f59e0b',players:['TheGrefg','Westcol','Viruzz','T.Mazza','Arigeli']},
-    },
-    {
-      id:'m2',round:'Jornada 4 · Partido 2',status:'upcoming',
-      role:'Plantillero',time:'16:30',field:'Cancha B',
-      teamA:{name:'Los Ángeles',color:'#a78bfa',players:['Rubius','AuronPlay','Ibai','Spreen','Coscu']},
-      teamB:{name:'Los Diablos', color:'#f87171',players:['Rivers','Luzu','Momo','Paracetamor','JuanSG']},
-    },
-    {
-      id:'m3',round:'Jornada 4 · Partido 3',status:'finished',
-      role:'Plantillero',time:'10:00',field:'Cancha A',
-      teamA:{name:'Equipo Norte',color:'#38bdf8',players:['A1','A2','A3','A4','A5']},
-      teamB:{name:'Equipo Sur',  color:'#e2ff5d',players:['B1','B2','B3','B4','B5']},
-    },
-  ];
+  let MATCHES = [];
+  let PENDING_MATCHES = [];
+
+  function mapAPIToCard(m) {
+    const statusMap = { scheduled:'upcoming', live:'live', finished:'finished' };
+    const d = m.scheduled_date ? new Date(m.scheduled_date) : null;
+    const time = d ? d.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}) : '—';
+    const round = m.round_label || (m.round ? `Jornada ${m.round}` : 'Partido');
+    return {
+      id: m.id,
+      round: `${m.tournament_name || ''} · ${round}`,
+      status: statusMap[m.status] || 'upcoming',
+      role: 'Árbitro',
+      time,
+      field: m.venue || 'Por definir',
+      tournament_name: m.tournament_name,
+      match_referee_id: m.match_referee_id,
+      teamA: { name: m.home_team_name || '—', color: m.home_team_color || '#888', players: [] },
+      teamB: { name: m.away_team_name || '—', color: m.away_team_color || '#888', players: [] },
+    };
+  }
+
+  async function loadMatches() {
+    try {
+      const res = await fetch('/api/referee/matches');
+      const data = await res.json();
+      if (!data.success) return;
+      const raw = data.matches;
+      const pending = raw.filter(m => m.referee_status === 'pending');
+      const accepted = raw.filter(m => m.referee_status !== 'pending');
+      PENDING_MATCHES = pending.map(mapAPIToCard);
+      MATCHES = accepted.map(mapAPIToCard);
+    } catch {
+      MATCHES = [];
+      PENDING_MATCHES = [];
+    }
+    renderPendingSection();
+    renderCards();
+  }
 
   const EVENT_META = {
     yellow:{label:'Amarilla',icon:'🟨',iconBg:'rgba(120,53,15,.6)',  iconColor:'#fbbf24',iconBorder:'rgba(251,191,36,.25)'},
@@ -779,6 +803,67 @@ transition-all duration-500 rounded-xl overflow-hidden transition-all duration-5
     })
   );
 }
+
+  /* ── PENDING SECTION ── */
+  function renderPendingSection() {
+    const section = $('mo-pending-section');
+    const container = $('mo-pending-container');
+    if (!PENDING_MATCHES.length) {
+      section.classList.add('hidden');
+      return;
+    }
+    section.classList.remove('hidden');
+    container.innerHTML = PENDING_MATCHES.map(m => `
+      <div class="mo-card group relative overflow-hidden rounded-xl border border-theme-gold/20 bg-theme-midnight/70 backdrop-blur-xs p-5">
+        <span class="hud-corner hud-corner--tl"></span>
+        <span class="hud-corner hud-corner--tr"></span>
+        <span class="hud-corner hud-corner--bl"></span>
+        <span class="hud-corner hud-corner--br"></span>
+        <div class="relative z-10">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-[0.52rem] font-semibold tracking-[0.08em] uppercase text-theme-cream/40">${m.round}</span>
+            <span class="text-[0.5rem] text-amber-400 font-bold tracking-[0.12em] uppercase px-2 py-1 rounded-full border border-amber-400/30 bg-amber-400/10">Pendiente</span>
+          </div>
+          <div class="flex items-center justify-between gap-3 mb-3">
+            <div class="flex-1 flex flex-col gap-1">
+              <div class="h-0.5 w-6 rounded-full" style="background:${m.teamA.color}"></div>
+              <span class="text-[0.7rem] font-bold tracking-[0.06em] uppercase text-theme-cream/90">${m.teamA.name}</span>
+            </div>
+            <span class="text-[0.55rem] font-black tracking-[0.15em] text-theme-gold/40">VS</span>
+            <div class="flex-1 flex flex-col items-end gap-1">
+              <div class="h-0.5 w-6 rounded-full" style="background:${m.teamB.color}"></div>
+              <span class="text-[0.7rem] font-bold tracking-[0.06em] uppercase text-theme-cream/90">${m.teamB.name}</span>
+            </div>
+          </div>
+          <div class="flex items-center justify-between pt-3 mt-2 border-t border-theme-gold/10">
+            <span class="text-[0.5rem] text-amber-200">${m.time} · ${m.field}</span>
+            <div class="flex gap-2">
+              <button class="mo-pending-reject px-3 py-1.5 rounded-lg text-[0.45rem] font-bold tracking-[0.1em] uppercase border border-red-400/30 text-red-400/80 bg-red-400/5 cursor-pointer hover:bg-red-400/10 transition-all" data-id="${m.match_referee_id}">Rechazar</button>
+              <button class="mo-pending-accept px-3 py-1.5 rounded-lg text-[0.45rem] font-bold tracking-[0.1em] uppercase border border-green-400/30 text-green-400/80 bg-green-400/5 cursor-pointer hover:bg-green-400/10 transition-all" data-id="${m.match_referee_id}">Aceptar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `).join('');
+
+    container.querySelectorAll('.mo-pending-accept').forEach(btn =>
+      btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        btn.textContent = 'Aceptando...';
+        await fetch('/api/referee/matches', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'accept', matchRefereeId: btn.dataset.id }) });
+        await loadMatches();
+      })
+    );
+
+    container.querySelectorAll('.mo-pending-reject').forEach(btn =>
+      btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        btn.textContent = 'Rechazando...';
+        await fetch('/api/referee/matches', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'reject', matchRefereeId: btn.dataset.id }) });
+        await loadMatches();
+      })
+    );
+  }
 
   /* ── OPEN MATCH ── */
   function openMatch(id){
@@ -1088,6 +1173,6 @@ $('mo-modal-handle')?.addEventListener('click', closeModal);
     window.location.href = '/login';
   });
 
-  renderCards();
+  loadMatches();
 })();
 </script>

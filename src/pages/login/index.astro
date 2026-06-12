@@ -1,5 +1,8 @@
 ---
 import Layout from "../../layouts/Layout.astro";
+
+const user = Astro.locals.user
+if (user) return Astro.redirect('/admin/dashboard')
 ---
 
 <Layout>
@@ -237,106 +240,139 @@ import Layout from "../../layouts/Layout.astro";
 </Layout>
 
 <script>
-  // ─── Datos de roles ───
-  const roles: Record<string, { icon: string; label: string; desc: string }> = {
+  const ROLES = {
     administrativo: { icon: '🏛️', label: 'Administrativo', desc: 'Crea y gestiona torneos' },
     arbitro:        { icon: '🟨',  label: 'Árbitro',        desc: 'Gestiona partidos'      },
     tecnico:        { icon: '📋',  label: 'Técnico',        desc: 'Diriges un equipo'      },
     jugador:        { icon: '⚽',  label: 'Jugador',        desc: 'Compites en torneos'    },
   }
 
-  let selectedRole: string | null = null
+  function bindLogin() {
+    const stepRole   = document.getElementById('step-role')
+    const stepForm   = document.getElementById('step-form')
+    const btnCont    = document.getElementById('btn-continue')
+    const btnBack    = document.getElementById('btn-back')
+    const pwInput    = document.getElementById('password')
+    const togglePw   = document.getElementById('toggle-pw')
+    const eyeOpen    = document.getElementById('eye-open')
+    const eyeClosed  = document.getElementById('eye-closed')
+    const form       = document.getElementById('login-form')
+    const btnSubmit  = document.getElementById('btn-submit')
+    const btnText    = document.getElementById('btn-submit-text')
+    const btnLoader  = document.getElementById('btn-submit-loader')
+    const errMsg     = document.getElementById('login-error')
+    const formRoleIcon  = document.getElementById('form-role-icon')
+    const formRoleLabel = document.getElementById('form-role-label')
+    const formRoleDesc  = document.getElementById('form-role-desc')
 
-  const stepRole   = document.getElementById('step-role')!
-  const stepForm   = document.getElementById('step-form')!
-  const btnCont    = document.getElementById('btn-continue') as HTMLButtonElement
-  const btnBack    = document.getElementById('btn-back')!
-  const roleBtns   = document.querySelectorAll<HTMLButtonElement>('.role-btn')
+    if (!stepRole) return
 
-  const formRoleIcon  = document.getElementById('form-role-icon')!
-  const formRoleLabel = document.getElementById('form-role-label')!
-  const formRoleDesc  = document.getElementById('form-role-desc')!
+    let selectedRole = null
 
-  // Selección de rol
-  roleBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      roleBtns.forEach(b => { b.dataset.active = 'false'; b.setAttribute('aria-pressed','false') })
-      btn.dataset.active = 'true'
-      btn.setAttribute('aria-pressed','true')
-      selectedRole = btn.dataset.role ?? null
-      btnCont.disabled = false
-      btnCont.classList.remove('opacity-40','cursor-not-allowed')
+    // Reset state
+    document.querySelectorAll('.role-btn').forEach(b => {
+      b.dataset.active = 'false'
+      b.setAttribute('aria-pressed', 'false')
     })
-  })
-
-  // Continuar → mostrar form
-  btnCont.addEventListener('click', () => {
-    if (!selectedRole) return
-    const r = roles[selectedRole]
-    formRoleIcon.textContent  = r.icon
-    formRoleLabel.textContent = r.label
-    formRoleDesc.textContent  = r.desc
-    stepRole.classList.add('hidden')
-    stepForm.classList.remove('hidden')
-  })
-
-  // Volver al paso de rol
-  btnBack.addEventListener('click', () => {
-    stepForm.classList.add('hidden')
     stepRole.classList.remove('hidden')
-  })
-
-  // Toggle contraseña
-  const pwInput   = document.getElementById('password') as HTMLInputElement
-  const togglePw  = document.getElementById('toggle-pw')!
-  const eyeOpen   = document.getElementById('eye-open')!
-  const eyeClosed = document.getElementById('eye-closed')!
-  togglePw.addEventListener('click', () => {
-    const show = pwInput.type === 'password'
-    pwInput.type = show ? 'text' : 'password'
-    eyeOpen.classList.toggle('hidden', show)
-    eyeClosed.classList.toggle('hidden', !show)
-  })
-
-  // Submit real al backend
-  const form       = document.getElementById('login-form') as HTMLFormElement
-  const btnSubmit  = document.getElementById('btn-submit') as HTMLButtonElement
-  const btnText    = document.getElementById('btn-submit-text')!
-  const btnLoader  = document.getElementById('btn-submit-loader')!
-  const errMsg     = document.getElementById('login-error')!
-
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault()
-    errMsg.classList.add('hidden')
-    btnText.classList.add('hidden')
-    btnLoader.classList.remove('hidden')
-    btnSubmit.disabled = true
-
-    const email    = (document.getElementById('email') as HTMLInputElement).value
-    const password = (document.getElementById('password') as HTMLInputElement).value
-
-    try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      })
-
-      const data = await res.json()
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Error al iniciar sesión')
-      }
-
-      window.location.href = data.redirect || '/'
-    } catch (err: any) {
-      errMsg.textContent = err.message || 'Credenciales inválidas. Intenta de nuevo.'
-      errMsg.classList.remove('hidden')
-      btnText.classList.remove('hidden')
-      btnLoader.classList.add('hidden')
-      btnSubmit.disabled = false
+    if (stepForm) stepForm.classList.add('hidden')
+    if (btnCont) {
+      btnCont.disabled = true
+      btnCont.classList.add('opacity-40', 'cursor-not-allowed')
     }
-  })
+    if (errMsg) errMsg.classList.add('hidden')
+
+    // ── Role selection via document delegation ──
+    document.removeEventListener('click', window._roleHandler)
+    window._roleHandler = (e) => {
+      const btn = e.target.closest('.role-btn')
+      if (!btn) return
+      document.querySelectorAll('.role-btn').forEach(b => {
+        b.dataset.active = 'false'
+        b.setAttribute('aria-pressed', 'false')
+      })
+      btn.dataset.active = 'true'
+      btn.setAttribute('aria-pressed', 'true')
+      selectedRole = btn.dataset.role ?? null
+      if (btnCont) {
+        btnCont.disabled = false
+        btnCont.classList.remove('opacity-40', 'cursor-not-allowed')
+      }
+    }
+    document.addEventListener('click', window._roleHandler)
+
+    // ── Continue ──
+    document.removeEventListener('click', window._continueHandler)
+    window._continueHandler = (e) => {
+      if (e.target.id !== 'btn-continue') return
+      if (!selectedRole || !btnCont || btnCont.disabled) return
+      const r = ROLES[selectedRole]
+      if (formRoleIcon) formRoleIcon.textContent = r.icon
+      if (formRoleLabel) formRoleLabel.textContent = r.label
+      if (formRoleDesc) formRoleDesc.textContent = r.desc
+      if (stepRole) stepRole.classList.add('hidden')
+      if (stepForm) stepForm.classList.remove('hidden')
+    }
+    document.addEventListener('click', window._continueHandler)
+
+    // ── Back ──
+    document.removeEventListener('click', window._backHandler)
+    window._backHandler = (e) => {
+      if (e.target.id !== 'btn-back' && !e.target.closest('#btn-back')) return
+      if (stepForm) stepForm.classList.add('hidden')
+      if (stepRole) stepRole.classList.remove('hidden')
+    }
+    document.addEventListener('click', window._backHandler)
+
+    // ── Toggle password ──
+    document.removeEventListener('click', window._pwHandler)
+    window._pwHandler = (e) => {
+      if (e.target.id !== 'toggle-pw' && !e.target.closest('#toggle-pw')) return
+      if (!pwInput || !eyeOpen || !eyeClosed) return
+      const show = pwInput.type === 'password'
+      pwInput.type = show ? 'text' : 'password'
+      eyeOpen.classList.toggle('hidden', show)
+      eyeClosed.classList.toggle('hidden', !show)
+    }
+    document.addEventListener('click', window._pwHandler)
+
+    // ── Submit ──
+    if (form) {
+      form.removeEventListener('submit', window._submitHandler)
+      window._submitHandler = async (e) => {
+        e.preventDefault()
+        if (!errMsg || !btnText || !btnLoader || !btnSubmit) return
+        errMsg.classList.add('hidden')
+        btnText.classList.add('hidden')
+        btnLoader.classList.remove('hidden')
+        btnSubmit.disabled = true
+
+        const email    = document.getElementById('email').value
+        const password = document.getElementById('password').value
+
+        try {
+          const res = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password }),
+          })
+          const data = await res.json()
+          if (!res.ok) throw new Error(data.error || 'Error al iniciar sesión')
+          window.location.href = data.redirect || '/'
+        } catch (err) {
+          errMsg.textContent = err.message || 'Credenciales inválidas. Intenta de nuevo.'
+          errMsg.classList.remove('hidden')
+          btnText.classList.remove('hidden')
+          btnLoader.classList.add('hidden')
+          btnSubmit.disabled = false
+        }
+      }
+      form.addEventListener('submit', window._submitHandler)
+    }
+  }
+
+  document.addEventListener('astro:page-load', bindLogin)
+  window.addEventListener('pageshow', (e) => { if (e.persisted) bindLogin() })
 </script>
 
 <style>

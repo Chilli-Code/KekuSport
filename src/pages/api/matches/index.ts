@@ -1,5 +1,21 @@
 import type { APIRoute } from 'astro'
-import { createMatch, updateMatch, deleteMatch } from '../../../../server/db'
+import { createMatch, updateMatch, deleteMatch, getMatchesByTournamentWithTeams } from '../../../../server/db'
+
+export const GET: APIRoute = async ({ request, locals }) => {
+  if (!locals.user) {
+    return new Response(JSON.stringify({ error: 'No autorizado' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
+  }
+
+  const url = new URL(request.url)
+  const tournamentId = url.searchParams.get('tournamentId')
+
+  if (!tournamentId) {
+    return new Response(JSON.stringify({ error: 'Se requiere tournamentId' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
+  }
+
+  const matches = await getMatchesByTournamentWithTeams(tournamentId)
+  return new Response(JSON.stringify({ success: true, matches }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+}
 
 export const POST: APIRoute = async ({ request, locals }) => {
   if (!locals.user) {
@@ -22,12 +38,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
       scheduled_date: data.scheduledDate || null,
       venue: data.venue || null,
       status: 'scheduled',
+      round_label: data.roundLabel || null,
     })
     return new Response(JSON.stringify({ success: true, id }), { status: 201, headers: { 'Content-Type': 'application/json' } })
   }
 
   if (action === 'update') {
-    await updateMatch(data.id, data)
+    const dbData: Record<string, unknown> = { id: data.id }
+    const map: Record<string, string> = { homeTeamId: 'home_team_id', awayTeamId: 'away_team_id', scheduledDate: 'scheduled_date', homeScore: 'home_score', awayScore: 'away_score' }
+    for (const [key, val] of Object.entries(data)) {
+      if (key === 'id') continue
+      dbData[map[key] || key] = val
+    }
+    await updateMatch(data.id, dbData)
     return new Response(JSON.stringify({ success: true }), { status: 200, headers: { 'Content-Type': 'application/json' } })
   }
 

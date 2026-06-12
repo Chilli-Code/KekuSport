@@ -1,37 +1,25 @@
 ---
 const { pathname } = Astro.url
+const user = Astro.locals.user
 
 const shouldShowLogo = pathname !== '/' && pathname !== '/jugadores' && pathname !== '/torneos'
 
-// Comprueba si la ruta actual está activa
 const isActive = (path: string) => pathname === path
+
+const NAV_ITEMS = [
+  { label: 'JUGADORES', href: '/jugadores', disabled: false },
+  { label: 'VER COMBATES', href: '/combates', disabled: false },
+  { label: 'APUESTAS', href: '#', disabled: true, note: 'PRÓXIMAMENTE' },
+] as const
 ---
 
-<div class="fixed top-8 right-8 z-[100] md:hidden">
-  <button
-    id="menuButton"
-    aria-expanded="false"
-    aria-controls="menuMobileContent"
-    class="hamburgerButton group relative flex h-[20px] w-6 cursor-pointer flex-col items-center justify-between transition duration-300 hover:scale-110 lg:hidden"
-    aria-label="Abrir menú de navegación"
-  >
-    <span
-      class="ease h-[2px] w-6 transform bg-gray-300 transition duration-300 group-[.open]:translate-y-2 group-[.open]:rotate-45"
-    ></span>
-    <span
-      class="ease h-[2px] w-6 transform bg-gray-300 transition duration-300 group-[.open]:opacity-0"
-    ></span>
-    <span
-      class="ease h-[2px] w-6 transform bg-gray-300 transition duration-300 group-[.open]:opacity-0"
-    ></span>
-    <span
-      class="ease h-[2px] w-6 transform bg-gray-300 transition duration-300 group-[.open]:-translate-y-[0.6rem] group-[.open]:-rotate-45"
-    ></span>
-  </button>
-</div>
-
-<header class="fixed top-0 z-50 mx-auto flex h-20 w-full items-center text-white">
-  <div class="flex justify-between px-6 py-4 md:w-full">
+<header
+  data-header
+  data-menu-open="false"
+  data-scrolled="false"
+  class="fixed inset-x-0 top-0 z-50 flex h-20 items-center border-b border-transparent bg-transparent backdrop-blur-[0px] transition-[background-color,backdrop-filter,border-color] duration-500 ease-out data-[scrolled=true]:border-white/5 data-[scrolled=true]:bg-theme-midnight/40 data-[scrolled=true]:backdrop-blur-md"
+>
+  <div class="flex justify-between px-6 py-4 md:w-full md:px-16 lg:px-24">
     <a href="/" class="cursor-pointer transition duration-300 hover:scale-110 md:hidden">
       <img src="/images/logobg.png" alt="logo" class="h-auto w-14" />
     </a>
@@ -47,56 +35,44 @@ const isActive = (path: string) => pathname === path
           shouldShowLogo ? 'md:w-1/3' : 'md:flex-grow',
         ]}
       >
-        {/* Enlace con animación de subrayado dividido en dos colores */}
         <a
-          href="/jugadores" 
-          class="group relative inline-block w-fit py-1 leading-relaxed tracking-wider"
+          href="/jugadores"
+          class="group relative inline-block w-fit py-1 font-cinzel text-sm font-bold leading-relaxed tracking-[0.2em] text-white/85 outline-none transition duration-300 hover:text-theme-cream focus-visible:text-theme-cream"
         >
-          <span class="text-theme-seashell">JUGADORES</span>
-          {/* Contenedor del subrayado con overflow hidden para la animación */}
+          JUGADORES
           <div class="relative mt-1 h-[2px] w-full overflow-hidden">
-            {/* Línea rosa que se anima desde la izquierda */}
             <div
               class:list={[
                 'absolute bottom-0 left-0 h-full bg-[color:var(--color-purple-500)] transition-all duration-250 ease-out',
                 isActive('/jugadores') ? 'w-[51%]' : 'w-0 group-hover:w-[51%]',
               ]}
-            >
-            </div>
-            {/* Línea turquesa que se anima desde la derecha */}
+            ></div>
             <div
               class:list={[
                 'absolute right-0 bottom-0 h-full bg-[color:var(--color-theme-gold)] transition-all duration-250 ease-out',
-                isActive('jugadores') ? 'w-[51%]' : 'w-0 group-hover:w-[51%]',
+                isActive('/jugadores') ? 'w-[51%]' : 'w-0 group-hover:w-[51%]',
               ]}
-            >
-            </div>
+            ></div>
           </div>
         </a>
-        {/* Segundo enlace con la misma animación */}
         <a
           href="/combates"
-          class="group relative inline-block w-fit py-1 leading-relaxed tracking-wider"
+          class="group relative inline-block w-fit py-1 font-cinzel text-sm font-bold leading-relaxed tracking-[0.2em] text-white/85 outline-none transition duration-300 hover:text-theme-cream focus-visible:text-theme-cream"
         >
-          <span class="text-theme-seashell">VER COMBATES</span>
-          {/* Contenedor del subrayado con overflow hidden para la animación */}
+          VER COMBATES
           <div class="relative mt-1 h-[2px] w-full overflow-hidden">
-            {/* Línea rosa que se anima desde la izquierda */}
             <div
               class:list={[
                 'absolute bottom-0 left-0 h-full bg-[color:var(--color-theme-gold)] transition-all duration-300 ease-out',
                 isActive('/combates') ? 'w-[51%]' : 'w-0 group-hover:w-[51%]',
               ]}
-            >
-            </div>
-            {/* Línea turquesa que se anima desde la derecha */}
+            ></div>
             <div
               class:list={[
                 'absolute right-0 bottom-0 h-full bg-[color:var(--color-purple-500)] transition-all duration-300 ease-out',
                 isActive('/combates') ? 'w-[51%]' : 'w-0 group-hover:w-[51%]',
               ]}
-            >
-            </div>
+            ></div>
           </div>
         </a>
       </div>
@@ -120,89 +96,248 @@ const isActive = (path: string) => pathname === path
 
       <div
         class:list={[
-          'flex flex-col justify-end items-center  md:flex-row md:gap-8 md:space-y-0 z-10',
+          'flex flex-col justify-end items-center md:flex-row md:gap-8 md:space-y-0 z-10',
           shouldShowLogo ? 'md:w-1/3' : 'md:flex-grow',
         ]}
       >
         <span
-          class="text-theme-seashell relative inline-block cursor-not-allowed py-1 leading-relaxed tracking-wider opacity-90"
-          >REALIZA TUS APUESTAS
-          <span
-            class="absolute inset-0 top-4 mt-1 text-center text-[10px] leading-normal tracking-wide text-yellow-500"
-            >PRÓXIMAMENTE</span
-          >
-        </span>
-        <a
-          href="/login"
-          class="group relative inline-block w-fit py-1 leading-relaxed tracking-wider"
+          class="relative inline-block cursor-not-allowed py-1 font-cinzel text-sm font-bold leading-relaxed tracking-[0.2em] text-white/40 opacity-90"
         >
-          <span class="text-theme-seashell">Iniciar Sesión</span>
-          {/* Contenedor del subrayado con overflow hidden para la animación */}
-          <div class="relative mt-1 h-[2px] w-full overflow-hidden">
-            {/* Línea rosa que se anima desde la izquierda */}
-            <div
-              class:list={[
-                'absolute bottom-0 left-0 h-full bg-[color:var(--color-theme-gold)] transition-all duration-300 ease-out',
-                isActive('/login') ? 'w-[51%]' : 'w-0 group-hover:w-[51%]',
-              ]}
+          APUESTAS
+          <span
+            class="absolute inset-0 top-4 mt-1 text-center text-[10px] leading-normal tracking-wide text-theme-gold/80"
+          >
+            PRÓXIMAMENTE
+          </span>
+        </span>
+        {
+          user ? (
+            <form method="POST" action="/api/auth/logout" class="inline" >
+              <button
+                type="submit"
+                class="group relative inline-block whitespace-nowrap py-1 font-cinzel text-sm font-bold leading-relaxed tracking-[0.15em] text-red-400/85 outline-none transition duration-300 hover:text-red-400 focus-visible:text-red-400"
+              >
+                CERRAR SESIÓN
+                <div class="relative mt-1 h-[2px] w-full overflow-hidden">
+                  <div class="absolute bottom-0 left-0 h-full w-0 bg-red-400 transition-all duration-300 ease-out group-hover:w-[51%]"></div>
+                  <div class="absolute right-0 bottom-0 h-full w-0 bg-red-400 transition-all duration-300 ease-out group-hover:w-[51%]"></div>
+                </div>
+              </button>
+            </form>
+          ) : (
+            <a
+              href="/login"
+              class="group relative inline-block w-fit py-1 font-cinzel text-sm font-bold leading-relaxed tracking-[0.2em] text-white/85 outline-none transition duration-300 hover:text-theme-cream focus-visible:text-theme-cream"
             >
-            </div>
-            {/* Línea turquesa que se anima desde la derecha */}
-            <div
-              class:list={[
-                'absolute right-0 bottom-0 h-full bg-[color:var(--color-purple-500)] transition-all duration-300 ease-out',
-                isActive('/login') ? 'w-[51%]' : 'w-0 group-hover:w-[51%]',
-              ]}
-            >
-            </div>
-          </div>
-        </a>
+              Iniciar Sesión
+              <div class="relative mt-1 h-[2px] w-full overflow-hidden">
+                <div
+                  class:list={[
+                    'absolute bottom-0 left-0 h-full bg-[color:var(--color-theme-gold)] transition-all duration-300 ease-out',
+                    isActive('/login') ? 'w-[51%]' : 'w-0 group-hover:w-[51%]',
+                  ]}
+                ></div>
+                <div
+                  class:list={[
+                    'absolute right-0 bottom-0 h-full bg-[color:var(--color-purple-500)] transition-all duration-300 ease-out',
+                    isActive('/login') ? 'w-[51%]' : 'w-0 group-hover:w-[51%]',
+                  ]}
+                ></div>
+              </div>
+            </a>
+          )
+        }
       </div>
+    </nav>
+
+  </div>
+
+  <div class="fixed top-8 right-8 z-[100] md:hidden">
+    <button
+      type="button"
+      data-mobile-menu-button
+      class="group relative inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-black/20 text-theme-cream shadow-[0_0_30px_rgba(255,255,255,0.06)] outline-none backdrop-blur-md transition duration-300 hover:border-theme-gold/50 hover:bg-theme-gold/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-theme-gold"
+      aria-controls="mobile-menu"
+      aria-expanded="false"
+      aria-label="Abrir menú"
+    >
+      <span class="sr-only">Abrir menú</span>
+      <span
+        aria-hidden="true"
+        class="absolute h-px w-5 -translate-y-1.5 bg-current transition duration-300 group-data-[open=true]:translate-y-0 group-data-[open=true]:rotate-45"
+      ></span>
+      <span
+        aria-hidden="true"
+        class="absolute h-px w-5 bg-current transition duration-300 group-data-[open=true]:opacity-0"
+      ></span>
+      <span
+        aria-hidden="true"
+        class="absolute h-px w-5 translate-y-1.5 bg-current transition duration-300 group-data-[open=true]:translate-y-0 group-data-[open=true]:-rotate-45"
+      ></span>
+    </button>
+  </div>
+
+  <div
+    id="mobile-menu"
+    data-mobile-menu
+    aria-hidden="true"
+    inert
+    class="fixed inset-0 z-40 flex min-h-dvh translate-y-[-8px] items-center justify-center overflow-y-auto bg-black/95 px-6 py-28 opacity-0 backdrop-blur-2xl transition duration-300 ease-out pointer-events-none data-[open=true]:translate-y-0 data-[open=true]:opacity-100 data-[open=true]:pointer-events-auto md:hidden"
+  >
+    <div
+      aria-hidden="true"
+      class="pointer-events-none absolute inset-x-0 top-0 h-64 bg-[radial-gradient(circle_at_50%_0%,rgba(201,164,107,0.22),transparent_62%)]"
+    ></div>
+    <nav aria-label="Menú principal móvil" class="relative w-full max-w-sm">
+      <ul class="flex flex-col items-center gap-6">
+        {
+          NAV_ITEMS.map((item) =>
+            item.disabled ? (
+              <li class="w-full">
+                <span
+                  role="link"
+                  aria-disabled="true"
+                  class="flex flex-col items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-5 text-center font-cinzel text-lg font-bold tracking-[0.28em] text-white/35"
+                  title="Próximamente"
+                >
+                  {item.label}
+                  <span class="rounded-full border border-theme-gold/35 bg-theme-gold/10 px-3 py-1 text-[0.55rem] font-semibold tracking-[0.24em] text-theme-gold/80">
+                    {item.note}
+                  </span>
+                </span>
+              </li>
+            ) : (
+              <li class="w-full">
+                <a
+                  href={item.href}
+                  data-mobile-menu-link
+                  class="group relative flex items-center justify-center rounded-2xl border border-theme-gold/35 bg-theme-gold/10 px-5 py-5 text-center font-cinzel text-lg font-bold tracking-[0.28em] text-theme-cream outline-none transition duration-300 hover:border-theme-gold hover:bg-theme-gold/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-theme-gold"
+                >
+                  <span
+                    aria-hidden="true"
+                    class="pointer-events-none absolute inset-x-6 bottom-3 h-px origin-center scale-x-0 bg-theme-gold transition-transform duration-300 group-hover:scale-x-100 group-focus-visible:scale-x-100"
+                  />
+                  {item.label}
+                </a>
+              </li>
+            )
+          )
+        }
+        {
+          user ? (
+            <li class="w-full">
+              <form method="POST" action="/api/auth/logout">
+                <button
+                  type="submit"
+                  class="group relative flex w-full items-center justify-center rounded-2xl border border-red-400/30 bg-red-400/5 px-5 py-4 text-center font-cinzel text-base font-bold tracking-[0.28em] text-red-400/80 outline-none transition duration-300 hover:border-red-400/50 hover:bg-red-400/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-red-400"
+                >
+                  CERRAR SESIÓN
+                </button>
+              </form>
+            </li>
+          ) : (
+            <li class="w-full">
+              <a
+                href="/login"
+                data-mobile-menu-link
+                class="group relative flex items-center justify-center rounded-2xl border border-white/15 bg-white/[0.03] px-5 py-4 text-center font-cinzel text-base font-bold tracking-[0.28em] text-theme-cream/70 outline-none transition duration-300 hover:border-theme-cream/30 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-theme-gold"
+              >
+                Iniciar Sesión
+              </a>
+            </li>
+          )
+        }
+      </ul>
     </nav>
   </div>
 </header>
 
 <style>
   header {
-    background: transparent;
-    animation: header-blur-scroll 0.3s linear both;
-    animation-timeline: scroll();
-    animation-range: 0 250px;
     border-bottom: 1px solid transparent;
-  }
-
-  @keyframes header-blur-scroll {
-    0% {
-      backdrop-filter: blur(0px);
-      background: transparent;
-    }
-
-    100% {
-      backdrop-filter: blur(10px);
-      background: rgba(0, 0, 0, 0.5);
-      padding-bottom: var(--spacing-6);
-      border-bottom-color: black;
-    }
   }
 </style>
 
 <script>
-  document.addEventListener('astro:page-load', () => {
-    function toggleMenu(
-      menuBtn: Element | null,
-      navContent: Element | null,
-      overlayMenu: Element | null,
-    ) {
-      menuBtn?.classList.toggle('open')
-      navContent?.classList.toggle('hidden')
-      overlayMenu?.classList.toggle('hidden')
+  import { $, $$ } from '@/lib/dom-selector'
+
+  const SCROLL_THRESHOLD = 24
+
+  let scrollAbortController = null
+  let menuAbortController = null
+
+  function setupHeaderScroll() {
+    const header = $('[data-header]')
+    if (!header) return
+
+    scrollAbortController?.abort()
+    scrollAbortController = new AbortController()
+
+    const update = () => {
+      const scrolled = window.scrollY > SCROLL_THRESHOLD
+      header.setAttribute('data-scrolled', String(scrolled))
     }
 
-    const navContent = document.querySelector('#navContent')
-    const menuButton = document.querySelector('#menuButton')
-    const overlayMenu = document.querySelector('#overlay-menu')
+    update()
 
-    menuButton?.addEventListener('click', () => toggleMenu(menuButton, navContent, overlayMenu))
-    overlayMenu?.addEventListener('click', () => toggleMenu(menuButton, navContent, overlayMenu))
+    window.addEventListener('scroll', update, {
+      passive: true,
+      signal: scrollAbortController.signal,
+    })
+  }
+
+  function setupMobileMenu() {
+    const header = $('[data-header]')
+    const menu = $('[data-mobile-menu]')
+    const button = $('[data-mobile-menu-button]')
+    const links = $$('[data-mobile-menu-link]')
+
+    if (!header || !menu || !button) return
+
+    menuAbortController?.abort()
+    menuAbortController = new AbortController()
+    const { signal } = menuAbortController
+
+    const setMenuOpen = (isOpen) => {
+      header.dataset.menuOpen = String(isOpen)
+      menu.dataset.open = String(isOpen)
+      button.dataset.open = String(isOpen)
+      menu.setAttribute('aria-hidden', String(!isOpen))
+      menu.inert = !isOpen
+      button.setAttribute('aria-expanded', String(isOpen))
+      button.setAttribute('aria-label', isOpen ? 'Cerrar menú' : 'Abrir menú')
+      const label = $('.sr-only', button)
+      if (label) label.textContent = isOpen ? 'Cerrar menú' : 'Abrir menú'
+      document.documentElement.classList.toggle('overflow-hidden', isOpen)
+    }
+
+    setMenuOpen(false)
+
+    button.addEventListener(
+      'click',
+      () => {
+        setMenuOpen(button.getAttribute('aria-expanded') !== 'true')
+      },
+      { signal }
+    )
+
+    links.forEach((link) => {
+      link.addEventListener('click', () => setMenuOpen(false), {
+        signal,
+      })
+    })
+
+    window.addEventListener(
+      'keydown',
+      (event) => {
+        if (event.key === 'Escape') setMenuOpen(false)
+      },
+      { signal }
+    )
+  }
+
+  document.addEventListener('astro:page-load', () => {
+    setupHeaderScroll()
+    setupMobileMenu()
   })
 </script>

@@ -6,25 +6,59 @@ export interface Props {
   tournamentId: string
   tournamentFormat: string
   tournamentVenue: string
+  tournamentTwoLegged: boolean
 }
 
-const { tournamentId, tournamentFormat, tournamentVenue } = Astro.props
+const { tournamentId, tournamentFormat, tournamentVenue, tournamentTwoLegged } = Astro.props
 const teams = await getTeamsByTournament(tournamentId)
 const matches = await getMatchesByTournament(tournamentId)
-const totalRounds = matches.length > 0 ? Math.max(...matches.map(m => m.round)) : 0
 
-// Group matches by date for calendar view
-const dateGroups = new Map<string, typeof matches>()
-for (const m of matches) {
-  const key = m.scheduled_date ? m.scheduled_date.slice(0, 10) : '__unscheduled__'
-  if (!dateGroups.has(key)) dateGroups.set(key, [])
-  dateGroups.get(key)!.push(m)
+function getGroupKey(label: string | null): string {
+  if (!label) return 'General'
+  const m = label.match(/^(Grupo\s[^-]+)/)
+  return m ? m[1].trim() : 'General'
 }
-const sortedDates = Array.from(dateGroups.keys()).sort((a, b) => {
-  if (a === '__unscheduled__') return 1
-  if (b === '__unscheduled__') return -1
-  return a.localeCompare(b)
-})
+
+const groupKeys = [...new Set(matches.map(m => getGroupKey(m.round_label)))]
+const matchesByGroup = new Map<string, typeof matches>()
+for (const gk of groupKeys) {
+  matchesByGroup.set(gk, matches.filter(m => getGroupKey(m.round_label) === gk))
+}
+
+// Extract team IDs per group from match labels
+const groupTeams = new Map<string, string[]>()
+for (const m of matches) {
+  if (!m.round_label) continue
+  const gk = getGroupKey(m.round_label)
+  if (gk === 'General') continue
+  if (!groupTeams.has(gk)) groupTeams.set(gk, [])
+  const ids = groupTeams.get(gk)!
+  if (m.home_team_id && !ids.includes(m.home_team_id)) ids.push(m.home_team_id)
+  if (m.away_team_id && !ids.includes(m.away_team_id)) ids.push(m.away_team_id)
+}
+for (const [, ids] of groupTeams) {
+  ids.sort((a, b) => {
+    const na = teams.find(t => t.id === a)?.name || ''
+    const nb = teams.find(t => t.id === b)?.name || ''
+    return na.localeCompare(nb)
+  })
+}
+
+const filterGroupOptions = groupKeys
+const filterLegOptions = ['ida']
+if (tournamentTwoLegged) filterLegOptions.push('vuelta')
+let maxJornada = 0
+for (const gk of groupKeys) {
+  const gm = matchesByGroup.get(gk)!
+  if (gm.length === 0) continue
+  const mn = Math.min(...gm.map(m => m.round))
+  const mx = Math.max(...gm.map(m => m.round))
+  const total = mx - mn + 1
+  const jc = tournamentTwoLegged ? Math.ceil(total / 2) : total
+  if (jc > maxJornada) maxJornada = jc
+}
+const filterJornadaOptions = Array.from({ length: maxJornada }, (_, i) => i + 1)
+
 ---
 
 <div class="ms" data-tournament-id={tournamentId} data-format={tournamentFormat} data-venue={tournamentVenue}>
@@ -32,91 +66,149 @@ const sortedDates = Array.from(dateGroups.keys()).sort((a, b) => {
   <div class="ms-toolbar">
     <div class="ms-toolbar-left">
       <span class="ms-count">{matches.length} partido{matches.length !== 1 ? 's' : ''}</span>
-      {totalRounds > 0 && <span class="ms-count-sep">·</span>}
-      {totalRounds > 0 && <span class="ms-count">{totalRounds} ronda{totalRounds !== 1 ? 's' : ''}</span>}
       <span class="ms-count-sep">·</span>
       <span class="ms-count">{teams.length} equipo{teams.length !== 1 ? 's' : ''}</span>
-    </div>
-    <div class="ms-view-toggle">
-      <button class="ms-view-btn ms-view-btn--active" data-view="rounds">Rondas</button>
-      <button class="ms-view-btn" data-view="calendar">Calendario</button>
+      <span class="ms-count-sep">·</span>
+      <span class="ms-count">{groupKeys.length} grupo{groupKeys.length !== 1 ? 's' : ''}</span>
     </div>
     <div class="ms-toolbar-right">
-      <button class="ms-btn ms-btn--ghost" id="ms-btn-add">➕ Añadir</button>
       <button class="ms-btn ms-btn--green" id="ms-btn-generate">⚡ Generar Fixture</button>
     </div>
   </div>
 
-  <!-- Rounds -->
   {matches.length === 0 ? (
     <div class="ms-empty">
       <span class="ms-empty-icon">🎲</span>
-      <p class="ms-empty-text">No hay partidos aún. Genera un fixture automático o añádelos manualmente.</p>
+      <p class="ms-empty-text">No hay partidos aún. Genera el sorteo automático o añádelos manualmente.</p>
       <div class="ms-empty-actions">
         <button class="ms-btn ms-btn--green" id="ms-btn-generate-empty">⚡ Generar Fixture</button>
-        <button class="ms-btn ms-btn--ghost" id="ms-btn-add-empty">➕ Añadir manual</button>
       </div>
     </div>
   ) : (
-    <>
-    <!-- ── Rounds view ── -->
-    <div class="ms-rounds" data-view-content="rounds">
-      {Array.from({ length: totalRounds }, (_, i) => i + 1).map(round => {
-        const roundMatches = matches.filter(m => m.round === round)
-        return (
-          <div class="ms-round">
-            <div class="ms-round-header">
-              <span class="ms-round-title">Ronda {round}</span>
-              <span class="ms-round-count">{roundMatches.length} partido{roundMatches.length !== 1 ? 's' : ''}</span>
-            </div>
-            <div class="ms-match-list">
-              {roundMatches.map(m => {
-                const home = teams.find(t => t.id === m.home_team_id)
-                const away = teams.find(t => t.id === m.away_team_id)
-                const statusClass = `ms-status ms-status--${m.status}`
-                return (
-                  <MatchRow match={m} home={home} away={away} statusClass={statusClass} />
-                )
-              })}
-            </div>
-          </div>
-        )
-      })}
-    </div>
+    <div class="ms-body">
 
-    <!-- ── Calendar view ── -->
-    <div class="ms-calendar ms-calendar--hidden" data-view-content="calendar">
-      {sortedDates.map(dateKey => {
-        const dayMatches = dateGroups.get(dateKey)!
-        const isUnscheduled = dateKey === '__unscheduled__'
-        return (
-          <div class="ms-cal-day">
-            <div class="ms-cal-day-header">
-              {isUnscheduled ? (
-                <span class="ms-cal-day-title">Sin fecha asignada</span>
-              ) : (
-                <>
-                  <span class="ms-cal-day-title">{new Date(dateKey + 'T12:00').toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
-                  <span class="ms-cal-day-dow">{new Date(dateKey + 'T12:00').toLocaleDateString('es-CO', { weekday: 'long' })}</span>
-                </>
-              )}
-              <span class="ms-round-count">{dayMatches.length} partido{dayMatches.length !== 1 ? 's' : ''}</span>
-            </div>
-            <div class="ms-match-list">
-              {dayMatches.map(m => {
-                const home = teams.find(t => t.id === m.home_team_id)
-                const away = teams.find(t => t.id === m.away_team_id)
-                const statusClass = `ms-status ms-status--${m.status}`
-                return (
-                  <MatchRow match={m} home={home} away={away} statusClass={statusClass} showTime={!isUnscheduled} />
-                )
-              })}
-            </div>
+
+      <section class="ms-section">
+        <h2 class="ms-section-title">📋 GRUPOS</h2>
+        <div class="ms-groups-grid">
+          {groupKeys.map(gk => {
+            const groupTeamIds = groupTeams.get(gk) || []
+            return (
+              <div class="ms-group-card">
+                <h3 class="ms-group-card-title">{gk}</h3>
+                <div class="ms-group-table">
+                  {groupTeamIds.map((tid, i) => {
+                    const t = teams.find(tt => tt.id === tid)
+                    if (!t) return null
+                    return (
+                      <div class="ms-group-row" data-search={t.name.toLowerCase()}>
+                        <span class={`ms-gpos ${i === 0 ? 'ms-gpos--gold' : ''}`}>{i + 1}</span>
+                        <div class="ms-gavatar">
+                          <img src={t.logo || '/images/Logo_Default.png'} alt={t.name} loading="lazy" />
+                        </div>
+                        <span class="ms-gname">{t.name}</span>
+                        <span class="mg-gpts">0</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </section>
+
+      <div class="ms-filter-bar" id="ms-filter-bar">
+        <div class="ms-filter-group">
+          <span class="ms-filter-label">Grupo</span>
+          <div class="ms-filter-pills">
+            <button class="ms-filter-pill ms-filter-pill--active" data-filter="group" data-value="all" aria-pressed="true">Todos</button>
+            {filterGroupOptions.map(g => (
+              <button class="ms-filter-pill" data-filter="group" data-value={g} aria-pressed="false">{g}</button>
+            ))}
           </div>
-        )
-      })}
+        </div>
+        <div class="ms-filter-group">
+          <span class="ms-filter-label">Leg</span>
+          <div class="ms-filter-pills">
+            <button class="ms-filter-pill ms-filter-pill--active" data-filter="leg" data-value="all" aria-pressed="true">Todos</button>
+            {filterLegOptions.map(l => (
+              <button class="ms-filter-pill" data-filter="leg" data-value={l} aria-pressed="false">{l === 'ida' ? 'Ida' : 'Vuelta'}</button>
+            ))}
+          </div>
+        </div>
+        <div class="ms-filter-group">
+          <span class="ms-filter-label">Jornada</span>
+          <div class="ms-filter-pills">
+            <button class="ms-filter-pill ms-filter-pill--active" data-filter="jornada" data-value="all" aria-pressed="true">Todos</button>
+            {filterJornadaOptions.map(j => (
+              <button class="ms-filter-pill" data-filter="jornada" data-value={String(j)} aria-pressed="false">{j}</button>
+            ))}
+          </div>
+        </div>
+        <div class="ms-filter-group ms-filter-search">
+          <span class="ms-filter-label">🔍</span>
+          <input type="text" class="ms-search-input" id="ms-team-search" placeholder="Equipo..." autocomplete="off" />
+        </div>
+      </div>
+
+
+
+      <section class="ms-section">
+        <h2 class="ms-section-title">⚔️ JORNADAS</h2>
+        {groupKeys.map(gk => {
+          const gMatches = matchesByGroup.get(gk)!
+          const gMaxRound = gMatches.length > 0 ? Math.max(...gMatches.map(m => m.round)) : 0
+          const gMinRound = gMatches.length > 0 ? Math.min(...gMatches.map(m => m.round)) : 0
+          return (
+            <div class="ms-group-jornadas">
+              <h3 class="ms-group-jornadas-title">{gk}</h3>
+              <div class="ms-jornadas-list">
+                {Array.from({ length: gMaxRound - gMinRound + 1 }, (_, i) => {
+                  const round = gMinRound + i
+                  const roundMatches = gMatches.filter(m => m.round === round)
+                  if (roundMatches.length === 0) return null
+                  const totalInGroup = gMaxRound - gMinRound + 1
+                  const midpoint = Math.floor(totalInGroup / 2)
+                  const isVuelta = tournamentTwoLegged && i >= midpoint
+                  const legLabel = isVuelta ? 'Vuelta' : 'Ida'
+                  const jornadaNum = isVuelta ? i - midpoint + 1 : i + 1
+                  const searchTeams = roundMatches.map(m => {
+                    const h = teams.find(t => t.id === m.home_team_id)
+                    const a = teams.find(t => t.id === m.away_team_id)
+                    return [h?.name, a?.name].filter(Boolean).join(' ')
+                  }).join(' ').toLowerCase()
+                  return (
+                    <div class="ms-jornada" data-group={gk} data-leg={isVuelta ? 'vuelta' : 'ida'} data-jornada={jornadaNum} data-search={searchTeams}>
+                      <div class="ms-jornada-header">
+                        <h4 class="ms-jornada-title">
+                          {tournamentTwoLegged ? `${legLabel} - Jornada ${jornadaNum}` : `Jornada ${jornadaNum}`}
+                        </h4>
+                        <span class="ms-jornada-count">{roundMatches.length} partido{roundMatches.length !== 1 ? 's' : ''}</span>
+                      </div>
+                      <div class="ms-match-grid">
+                        {roundMatches.map(m => {
+                          const home = teams.find(t => t.id === m.home_team_id)
+                          const away = teams.find(t => t.id === m.away_team_id)
+                          const statusClass = `ms-status ms-status--${m.status}`
+                          const matchSearch = [home?.name, away?.name].filter(Boolean).join(' ').toLowerCase()
+                          return (
+                            <div class="ms-match-item" data-search={matchSearch}>
+                              <MatchRow match={m} home={home} away={away} statusClass={statusClass} showTime={true} />
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )
+        })}
+      </section>
+
     </div>
-    </>
   )}
 </div>
 
@@ -128,82 +220,14 @@ const sortedDates = Array.from(dateGroups.keys()).sort((a, b) => {
       <button class="ms-modal-close" id="ms-modal-close">✕</button>
     </div>
     <div class="ms-modal-body">
-      <div class="ms-field">
-        <label class="ms-label">Modo</label>
-        <select id="ms-mode" class="ms-input">
-          <option value="auto">Automático (según formato del torneo)</option>
-        </select>
-      </div>
-      <div class="ms-field">
-        <label class="ms-label">Fecha del primer partido</label>
-        <input type="date" id="ms-start-date" class="ms-input" />
-      </div>
-      <div class="ms-grid2">
-        <div class="ms-field">
-          <label class="ms-label">Días entre rondas</label>
-          <input type="number" id="ms-days" value="7" min="1" class="ms-input" />
-        </div>
-        <div class="ms-field">
-          <label class="ms-label">Hora</label>
-          <input type="time" id="ms-time" value="20:00" class="ms-input" />
-        </div>
-      </div>
-      <div class="ms-field">
-        <label class="ms-checkbox">
-          <input type="checkbox" id="ms-double-round" />
-          <span>Doble vuelta (ida y vuelta)</span>
-        </label>
-      </div>
+      <p style="font-size:.5rem;color:color-mix(in srgb, var(--color-theme-cream) 50%, transparent);text-align:center">
+        Se generarán los duelos automáticamente según el formato del torneo
+        {tournamentTwoLegged ? 'con ida y vuelta' : ''}.
+      </p>
     </div>
     <div class="ms-modal-footer">
       <button class="ms-btn ms-btn--ghost" id="ms-modal-cancel">Cancelar</button>
       <button class="ms-btn ms-btn--green" id="ms-modal-confirm">Generar</button>
-    </div>
-  </div>
-</div>
-
-<!-- ══ MODAL AÑADIR ══ -->
-<div class="ms-modal-overlay" id="ms-add-overlay">
-  <div class="ms-modal">
-    <div class="ms-modal-header">
-      <h3 class="ms-modal-title">Añadir Partido</h3>
-      <button class="ms-modal-close" id="ms-add-close">✕</button>
-    </div>
-    <div class="ms-modal-body">
-      <div class="ms-grid2">
-        <div class="ms-field">
-          <label class="ms-label">Equipo local</label>
-          <select id="ms-add-home" class="ms-input">
-            <option value="">—</option>
-            {teams.map(t => <option value={t.id}>{t.name}</option>)}
-          </select>
-        </div>
-        <div class="ms-field">
-          <label class="ms-label">Equipo visitante</label>
-          <select id="ms-add-away" class="ms-input">
-            <option value="">—</option>
-            {teams.map(t => <option value={t.id}>{t.name}</option>)}
-          </select>
-        </div>
-      </div>
-      <div class="ms-field">
-        <label class="ms-label">Ronda</label>
-        <input type="number" id="ms-add-round" value="1" min="1" class="ms-input" />
-      </div>
-      <div class="ms-grid2">
-        <div class="ms-field">
-          <label class="ms-label">Fecha</label>
-          <input type="date" id="ms-add-date" class="ms-input" />
-        </div>
-        <div class="ms-field">
-          <label class="ms-label">Hora</label>
-          <input type="time" id="ms-add-time" value="20:00" class="ms-input" />
-        </div>
-      </div>
-    </div>
-    <div class="ms-modal-footer">
-      <button class="ms-btn ms-btn--ghost" id="ms-add-cancel">Cancelar</button>
-      <button class="ms-btn ms-btn--green" id="ms-add-confirm">Añadir</button>
     </div>
   </div>
 </div>
@@ -234,10 +258,6 @@ const sortedDates = Array.from(dateGroups.keys()).sort((a, b) => {
         </div>
       </div>
       <div class="ms-field">
-        <label class="ms-label">Ronda</label>
-        <input type="number" id="ms-edit-round" min="1" class="ms-input" />
-      </div>
-      <div class="ms-field">
         <label class="ms-label">Estado</label>
         <select id="ms-edit-status" class="ms-input">
           <option value="scheduled">Programado</option>
@@ -246,16 +266,18 @@ const sortedDates = Array.from(dateGroups.keys()).sort((a, b) => {
           <option value="cancelled">Cancelado</option>
         </select>
       </div>
-      <div class="ms-grid2">
-        <div class="ms-field">
-          <label class="ms-label">Marcador local</label>
-          <input type="number" id="ms-edit-home-score" min="0" class="ms-input" />
+      {tournamentTwoLegged && (
+        <div class="ms-grid2 ms-score-readonly">
+          <div class="ms-field">
+            <label class="ms-label">Marcador local</label>
+            <span class="ms-score-display" id="ms-edit-home-score-display">—</span>
+          </div>
+          <div class="ms-field">
+            <label class="ms-label">Marcador visitante</label>
+            <span class="ms-score-display" id="ms-edit-away-score-display">—</span>
+          </div>
         </div>
-        <div class="ms-field">
-          <label class="ms-label">Marcador visitante</label>
-          <input type="number" id="ms-edit-away-score" min="0" class="ms-input" />
-        </div>
-      </div>
+      )}
       <div class="ms-grid2">
         <div class="ms-field">
           <label class="ms-label">Fecha</label>
@@ -277,36 +299,18 @@ const sortedDates = Array.from(dateGroups.keys()).sort((a, b) => {
 <script>
   const tournamentId = document.querySelector<HTMLElement>('.ms')!.dataset.tournamentId
 
-  // ── View toggle ──
-  document.querySelectorAll<HTMLButtonElement>('.ms-view-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.ms-view-btn').forEach(b => b.classList.remove('ms-view-btn--active'))
-      btn.classList.add('ms-view-btn--active')
-      const view = btn.dataset.view
-      document.querySelectorAll<HTMLElement>('[data-view-content]').forEach(el => {
-        el.classList.toggle('ms-calendar--hidden', el.dataset.viewContent !== view)
-      })
-    })
-  })
-
   function getTeamsMap(): Record<string, string> {
     const map: Record<string, string> = {}
-    document.querySelectorAll<HTMLOptionElement>('#ms-add-home option, #ms-edit-home option').forEach(o => {
+    document.querySelectorAll<HTMLOptionElement>('#ms-edit-home option').forEach(o => {
       if (o.value) map[o.value] = o.textContent || o.value
     })
     return map
-  }
-
-  function getTeamName(id: string): string {
-    const opt = document.querySelector<HTMLOptionElement>(`#ms-add-home option[value="${id}"]`)
-    return opt?.textContent || id
   }
 
   function reloadPage() {
     window.location.reload()
   }
 
-  // ── Modal helpers ──
   function openModal(overlayId: string) {
     document.getElementById(overlayId)!.classList.add('ms-modal-overlay--open')
   }
@@ -324,11 +328,6 @@ const sortedDates = Array.from(dateGroups.keys()).sort((a, b) => {
   genOverlay.addEventListener('click', e => { if (e.target === genOverlay) closeAllModals() })
 
   document.getElementById('ms-modal-confirm')?.addEventListener('click', async () => {
-    const startDate = (document.getElementById('ms-start-date') as HTMLInputElement).value
-    const daysBetween = (document.getElementById('ms-days') as HTMLInputElement).value
-    const matchTime = (document.getElementById('ms-time') as HTMLInputElement).value
-    const doubleRound = (document.getElementById('ms-double-round') as HTMLInputElement).checked
-
     const btn = document.getElementById('ms-modal-confirm') as HTMLButtonElement
     btn.disabled = true
     btn.textContent = 'Generando...'
@@ -337,69 +336,18 @@ const sortedDates = Array.from(dateGroups.keys()).sort((a, b) => {
       const res = await fetch('/api/matches/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tournamentId, mode: 'auto', startDate, daysBetween, matchTime, doubleRound }),
+        body: JSON.stringify({ tournamentId }),
       })
-      if (!res.ok) throw new Error('Error al generar')
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Error al generar')
+      }
       closeAllModals()
       reloadPage()
-    } catch {
-      alert('Error al generar el fixture')
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Error al generar el fixture')
       btn.disabled = false
       btn.textContent = 'Generar'
-    }
-  })
-
-  // ── Add Modal ──
-  const addOverlay = document.getElementById('ms-add-overlay')!
-  document.querySelectorAll('#ms-btn-add, #ms-btn-add-empty').forEach(btn => {
-    btn.addEventListener('click', () => openModal('ms-add-overlay'))
-  })
-  document.getElementById('ms-add-close')?.addEventListener('click', closeAllModals)
-  document.getElementById('ms-add-cancel')?.addEventListener('click', closeAllModals)
-  addOverlay.addEventListener('click', e => { if (e.target === addOverlay) closeAllModals() })
-
-  document.getElementById('ms-add-confirm')?.addEventListener('click', async () => {
-    const homeTeamId = (document.getElementById('ms-add-home') as HTMLSelectElement).value
-    const awayTeamId = (document.getElementById('ms-add-away') as HTMLSelectElement).value
-    const round = (document.getElementById('ms-add-round') as HTMLInputElement).value
-    const date = (document.getElementById('ms-add-date') as HTMLInputElement).value
-    const time = (document.getElementById('ms-add-time') as HTMLInputElement).value
-
-    if (!homeTeamId || !awayTeamId) {
-      alert('Selecciona ambos equipos')
-      return
-    }
-    if (homeTeamId === awayTeamId) {
-      alert('Los equipos deben ser diferentes')
-      return
-    }
-
-    const btn = document.getElementById('ms-add-confirm') as HTMLButtonElement
-    btn.disabled = true
-    btn.textContent = 'Añadiendo...'
-
-    try {
-      const scheduledDate = date ? `${date}T${time || '20:00'}:00` : null
-      const res = await fetch('/api/matches/index', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'create',
-          tournamentId,
-          homeTeamId,
-          awayTeamId,
-          round: Number(round) || 1,
-          scheduledDate,
-          venue: document.querySelector<HTMLElement>('.ms')!.dataset.venue || null,
-        }),
-      })
-      if (!res.ok) throw new Error('Error al crear')
-      closeAllModals()
-      reloadPage()
-    } catch {
-      alert('Error al crear el partido')
-      btn.disabled = false
-      btn.textContent = 'Añadir'
     }
   })
 
@@ -412,33 +360,30 @@ const sortedDates = Array.from(dateGroups.keys()).sort((a, b) => {
   document.querySelectorAll<HTMLButtonElement>('[data-edit]').forEach(btn => {
     btn.addEventListener('click', () => {
       const id = btn.dataset.edit
-      const row = btn.closest('.ms-match') as HTMLElement
-      const teams = row.querySelectorAll('.ms-team')
-      const dateEl = row.querySelector('.ms-date')
-      const scoreEl = row.querySelector('.ms-score')
-      const statusEl = row.querySelector('.ms-status')
+      const row = btn.closest('.duel-card') as HTMLElement
+      const nameEls = row?.querySelectorAll('.duel-name')
+      const scoreEl = row?.querySelector('.duel-meta-item')
+      const statusEl = row?.querySelector('.ms-status')
 
-      // Load current data into edit modal
-      const teamNames = Array.from(teams).map(el => el.textContent || '')
       const teamsMap = getTeamsMap()
+      const teamNames = Array.from(nameEls || []).map(el => el.textContent || '')
       const homeId = Object.keys(teamsMap).find(k => teamsMap[k] === teamNames[0]) || ''
-      const awayId = Object.keys(teamsMap).find(k => teamsMap[k] === teamNames[2]) || ''
+      const awayId = Object.keys(teamsMap).find(k => teamsMap[k] === teamNames[1]) || ''
 
-      ;(document.getElementById('ms-edit-id') as HTMLInputElement).value = id
+      ;(document.getElementById('ms-edit-id') as HTMLInputElement).value = id || ''
       ;(document.getElementById('ms-edit-home') as HTMLSelectElement).value = homeId
       ;(document.getElementById('ms-edit-away') as HTMLSelectElement).value = awayId
 
-      if (scoreEl) {
+      const homeDisplay = document.getElementById('ms-edit-home-score-display')
+      const awayDisplay = document.getElementById('ms-edit-away-score-display')
+      if (homeDisplay && awayDisplay && scoreEl) {
         const scores = scoreEl.textContent?.split('—').map(s => s.trim()) || []
-        ;(document.getElementById('ms-edit-home-score') as HTMLInputElement).value = scores[0] || ''
-        ;(document.getElementById('ms-edit-away-score') as HTMLInputElement).value = scores[1] || ''
-      } else {
-        ;(document.getElementById('ms-edit-home-score') as HTMLInputElement).value = ''
-        ;(document.getElementById('ms-edit-away-score') as HTMLInputElement).value = ''
+        homeDisplay.textContent = scores[0] || '—'
+        awayDisplay.textContent = scores[1] || '—'
       }
 
       if (statusEl) {
-        const status = statusEl.textContent?.trim() || 'scheduled'
+        const status = statusEl.textContent?.trim().toLowerCase() || 'scheduled'
         ;(document.getElementById('ms-edit-status') as HTMLSelectElement).value = status
       }
 
@@ -450,10 +395,7 @@ const sortedDates = Array.from(dateGroups.keys()).sort((a, b) => {
     const id = (document.getElementById('ms-edit-id') as HTMLInputElement).value
     const homeTeamId = (document.getElementById('ms-edit-home') as HTMLSelectElement).value
     const awayTeamId = (document.getElementById('ms-edit-away') as HTMLSelectElement).value
-    const round = (document.getElementById('ms-edit-round') as HTMLInputElement).value
     const status = (document.getElementById('ms-edit-status') as HTMLSelectElement).value
-    const homeScore = (document.getElementById('ms-edit-home-score') as HTMLInputElement).value
-    const awayScore = (document.getElementById('ms-edit-away-score') as HTMLInputElement).value
     const date = (document.getElementById('ms-edit-date') as HTMLInputElement).value
     const time = (document.getElementById('ms-edit-time') as HTMLInputElement).value
 
@@ -465,13 +407,10 @@ const sortedDates = Array.from(dateGroups.keys()).sort((a, b) => {
       const updates: Record<string, unknown> = { action: 'update', id }
       if (homeTeamId) updates.homeTeamId = homeTeamId
       if (awayTeamId) updates.awayTeamId = awayTeamId
-      if (round) updates.round = Number(round)
       updates.status = status
-      if (homeScore !== '') updates.homeScore = Number(homeScore)
-      if (awayScore !== '') updates.awayScore = Number(awayScore)
       if (date) updates.scheduledDate = `${date}T${time || '20:00'}:00`
 
-      const res = await fetch('/api/matches/index', {
+      const res = await fetch('/api/matches', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updates),
@@ -492,7 +431,7 @@ const sortedDates = Array.from(dateGroups.keys()).sort((a, b) => {
       if (!confirm('¿Eliminar este partido?')) return
       const id = btn.dataset.delete
       try {
-        const res = await fetch('/api/matches/index', {
+        const res = await fetch('/api/matches', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'delete', id }),
@@ -504,38 +443,151 @@ const sortedDates = Array.from(dateGroups.keys()).sort((a, b) => {
       }
     })
   })
+
+  // ── Filter pills ──
+  function updateFilterCounts() {
+    const jornadas = document.querySelectorAll<HTMLElement>('.ms-jornada')
+    const all = jornadas.length
+    const groupCounts = new Map<string, number>()
+    const legCounts = new Map<string, number>()
+    const jornadaCounts = new Map<string, number>()
+    jornadas.forEach(j => {
+      const g = j.dataset.group || ''
+      const l = j.dataset.leg || ''
+      const jn = j.dataset.jornada || ''
+      groupCounts.set(g, (groupCounts.get(g) || 0) + 1)
+      legCounts.set(l, (legCounts.get(l) || 0) + 1)
+      jornadaCounts.set(jn, (jornadaCounts.get(jn) || 0) + 1)
+    })
+    document.querySelectorAll<HTMLButtonElement>('.ms-filter-pill[data-filter="group"]').forEach(p => {
+      const v = p.dataset.value
+      const c = v === 'all' ? all : (groupCounts.get(v || '') || 0)
+      let badge = p.querySelector('.ms-filter-count')
+      if (c > 0) {
+        if (!badge) { badge = document.createElement('span'); badge.className = 'ms-filter-count'; p.appendChild(badge) }
+        badge.textContent = String(c)
+      } else {
+        if (badge) badge.remove()
+      }
+    })
+    document.querySelectorAll<HTMLButtonElement>('.ms-filter-pill[data-filter="leg"]').forEach(p => {
+      const v = p.dataset.value
+      const c = v === 'all' ? all : (legCounts.get(v || '') || 0)
+      let badge = p.querySelector('.ms-filter-count')
+      if (c > 0) {
+        if (!badge) { badge = document.createElement('span'); badge.className = 'ms-filter-count'; p.appendChild(badge) }
+        badge.textContent = String(c)
+      } else {
+        if (badge) badge.remove()
+      }
+    })
+    document.querySelectorAll<HTMLButtonElement>('.ms-filter-pill[data-filter="jornada"]').forEach(p => {
+      const v = p.dataset.value
+      const c = v === 'all' ? all : (jornadaCounts.get(v || '') || 0)
+      let badge = p.querySelector('.ms-filter-count')
+      if (c > 0) {
+        if (!badge) { badge = document.createElement('span'); badge.className = 'ms-filter-count'; p.appendChild(badge) }
+        badge.textContent = String(c)
+      } else {
+        if (badge) badge.remove()
+      }
+    })
+  }
+
+  function applyTeamSearch() {
+    const input = document.getElementById('ms-team-search') as HTMLInputElement
+    if (!input) return
+    const q = input.value.trim().toLowerCase()
+    const rows = document.querySelectorAll<HTMLElement>('.ms-group-row')
+    rows.forEach(row => {
+      const s = (row.dataset.search || '').toLowerCase()
+      row.style.display = !q || s.includes(q) ? '' : 'none'
+    })
+    document.querySelectorAll<HTMLElement>('.ms-group-card').forEach(card => {
+      const visible = Array.from(card.querySelectorAll<HTMLElement>('.ms-group-row')).some(r => r.style.display !== 'none')
+      card.style.display = visible ? '' : 'none'
+    })
+  }
+
+  function applyMatchSearch() {
+    const q = (document.getElementById('ms-team-search') as HTMLInputElement)?.value.trim().toLowerCase() || ''
+    document.querySelectorAll<HTMLElement>('.ms-match-item').forEach(item => {
+      const s = (item.dataset.search || '').toLowerCase()
+      item.style.display = !q || s.includes(q) ? '' : 'none'
+    })
+  }
+
+  function hideEmptyJornadaBlocks() {
+    document.querySelectorAll<HTMLElement>('.ms-jornada').forEach(j => {
+      const visibleItems = Array.from(j.querySelectorAll<HTMLElement>('.ms-match-item')).some(item => item.style.display !== 'none')
+      if (j.style.display !== 'none' && !visibleItems) j.style.display = 'none'
+    })
+    document.querySelectorAll<HTMLElement>('.ms-group-jornadas').forEach(gj => {
+      const visible = Array.from(gj.querySelectorAll<HTMLElement>('.ms-jornada')).some(j => j.style.display !== 'none')
+      gj.style.display = visible ? '' : 'none'
+    })
+  }
+
+  function applyFilters() {
+    const activeGroup = document.querySelector<HTMLButtonElement>('.ms-filter-pill--active[data-filter="group"]')?.dataset.value || 'all'
+    const activeLeg = document.querySelector<HTMLButtonElement>('.ms-filter-pill--active[data-filter="leg"]')?.dataset.value || 'all'
+    const activeJornada = document.querySelector<HTMLButtonElement>('.ms-filter-pill--active[data-filter="jornada"]')?.dataset.value || 'all'
+
+    document.querySelectorAll<HTMLElement>('.ms-jornada').forEach(j => {
+      const mg = activeGroup === 'all' || j.dataset.group === activeGroup
+      const ml = activeLeg === 'all' || j.dataset.leg === activeLeg
+      const mj = activeJornada === 'all' || j.dataset.jornada === activeJornada
+      j.style.display = (mg && ml && mj) ? '' : 'none'
+    })
+
+    applyMatchSearch()
+    hideEmptyJornadaBlocks()
+  }
+
+  function onSearchInput() {
+    applyTeamSearch()
+    applyFilters()
+  }
+
+  document.querySelectorAll<HTMLButtonElement>('.ms-filter-pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      const group = pill.closest('.ms-filter-group')
+      if (!group) return
+      group.querySelectorAll<HTMLButtonElement>('.ms-filter-pill').forEach(p => {
+        p.classList.remove('ms-filter-pill--active')
+        p.setAttribute('aria-pressed', 'false')
+      })
+      pill.classList.add('ms-filter-pill--active')
+      pill.setAttribute('aria-pressed', 'true')
+      applyFilters()
+    })
+  })
+
+  document.getElementById('ms-team-search')?.addEventListener('input', onSearchInput)
+
+  updateFilterCounts()
 </script>
 
 <style>
+  /* ══════════════════════════════════════════
+     SORTEO — Match Scheduler
+     ══════════════════════════════════════════ */
   .ms { display: flex; flex-direction: column; gap: 1rem; }
 
+  /* ── Toolbar ── */
   .ms-toolbar {
     display: flex; align-items: center; justify-content: space-between;
     padding: .65rem 1rem;
     border-radius: 12px;
-    background: var(--surface);
-    border: 1px solid var(--border);
+    background: color-mix(in srgb, var(--color-theme-midnight) 60%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-theme-gold) 15%, transparent);
+    backdrop-filter: blur(8px);
   }
   .ms-toolbar-left { display: flex; align-items: center; gap: .35rem; }
   .ms-toolbar-right { display: flex; gap: .5rem; }
 
-  .ms-view-toggle {
-    display: flex; gap: 2px;
-    background: rgba(255,255,255,.04);
-    border-radius: 8px; padding: 2px;
-    margin-left: 1rem;
-  }
-  .ms-view-btn {
-    padding: .3rem .6rem; border-radius: 6px;
-    border: none; background: none;
-    font-family: var(--font-cinzel,'Cinzel'),serif;
-    font-size: .42rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
-    color: var(--text-3); cursor: pointer; transition: all .2s;
-  }
-  .ms-view-btn:hover { color: var(--text-2); }
-  .ms-view-btn--active { background: var(--surface); color: var(--green); }
-  .ms-count { font-size: .48rem; color: var(--text-3); }
-  .ms-count-sep { font-size: .48rem; color: var(--border-2); }
+  .ms-count { font-size: .48rem; color: color-mix(in srgb, var(--color-theme-cream) 50%, transparent); }
+  .ms-count-sep { font-size: .48rem; color: color-mix(in srgb, var(--color-theme-gold) 30%, transparent); }
 
   .ms-btn {
     display: inline-flex; align-items: center; gap: .3rem;
@@ -545,104 +597,223 @@ const sortedDates = Array.from(dateGroups.keys()).sort((a, b) => {
     cursor: pointer; border: 1px solid transparent; transition: all .2s;
   }
   .ms-btn--green {
-    background: rgba(0,255,136,.1); color: var(--green);
+    background: rgba(0,255,136,.1); color: #00ff88;
     border-color: rgba(0,255,136,.3);
   }
   .ms-btn--green:hover { background: rgba(0,255,136,.18); }
   .ms-btn--ghost {
-    background: transparent; color: var(--text-2);
-    border-color: var(--border);
+    background: transparent; color: color-mix(in srgb, var(--color-theme-cream) 60%, transparent);
+    border-color: color-mix(in srgb, var(--color-theme-gold) 20%, transparent);
   }
-  .ms-btn--ghost:hover { border-color: var(--border-2); color: var(--text); }
+  .ms-btn--ghost:hover { border-color: color-mix(in srgb, var(--color-theme-gold) 50%, transparent); color: var(--color-theme-cream); }
 
+  /* ── Empty state ── */
   .ms-empty {
-    border-radius: 14px; border: 1px dashed var(--border);
+    border-radius: 14px;
+    border: 1px dashed color-mix(in srgb, var(--color-theme-gold) 20%, transparent);
     padding: 2.5rem; text-align: center;
     display: flex; flex-direction: column; align-items: center; gap: .5rem;
+    background: color-mix(in srgb, var(--color-theme-midnight) 40%, transparent);
+    backdrop-filter: blur(8px);
   }
   .ms-empty-icon { font-size: 2.5rem; }
-  .ms-empty-text { font-size: .52rem; color: var(--text-3); max-width: 320px; }
+  .ms-empty-text { font-size: .52rem; color: color-mix(in srgb, var(--color-theme-cream) 50%, transparent); max-width: 320px; }
   .ms-empty-actions { display: flex; gap: .5rem; margin-top: .5rem; }
 
-  .ms-rounds { display: flex; flex-direction: column; gap: 1rem; }
+  /* ── Body ── */
+  .ms-body { display: flex; flex-direction: column; gap: 2.5rem; }
 
-  .ms-calendar { display: flex; flex-direction: column; gap: 1rem; }
-  .ms-calendar--hidden { display: none; }
-  .ms-cal-day {
-    border-radius: 12px; border: 1px solid var(--border);
-    background: var(--surface); overflow: hidden;
-  }
-  .ms-cal-day-header {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: .6rem .85rem;
-    background: rgba(255,255,255,.03);
-    border-bottom: 1px solid var(--border);
-  }
-  .ms-cal-day-title {
+  /* ── Section ── */
+  .ms-section { display: flex; flex-direction: column; gap: 1rem; }
+
+  .ms-section-title {
     font-family: var(--font-cinzel,'Cinzel'),serif;
-    font-size: .55rem; font-weight: 800; letter-spacing: .05em;
-    color: rgba(232,226,216,.7); text-transform: capitalize;
+    font-size: .7rem;
+    font-weight: 900;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    color: color-mix(in srgb, var(--color-theme-gold) 80%, transparent);
+    margin: 0;
+    padding-bottom: .5rem;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-theme-gold) 15%, transparent);
   }
-  .ms-cal-day-dow { display: none; }
 
-  .ms-round {
-    border-radius: 12px; border: 1px solid var(--border);
-    background: var(--surface); overflow: hidden;
+  /* ══════════════════════════════════════════
+     GROUP CARDS
+     ══════════════════════════════════════════ */
+  .ms-groups-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1rem;
   }
-  .ms-round-header {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: .6rem .85rem;
-    background: rgba(255,255,255,.02);
-    border-bottom: 1px solid var(--border);
+
+  .ms-group-card {
+    border-radius: 12px;
+    border: 1px solid color-mix(in srgb, var(--color-theme-gold) 20%, transparent);
+    background: color-mix(in srgb, var(--color-theme-midnight) 60%, transparent);
+    backdrop-filter: blur(8px);
+    overflow: hidden;
   }
-  .ms-round-title {
+
+  .ms-group-card-title {
     font-family: var(--font-cinzel,'Cinzel'),serif;
-    font-size: .52rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
-    color: rgba(232,226,216,.6);
+    font-size: .55rem;
+    font-weight: 800;
+    letter-spacing: .15em;
+    text-transform: uppercase;
+    color: color-mix(in srgb, var(--color-theme-gold) 85%, transparent);
+    margin: 0;
+    padding: .6rem .75rem;
+    background: color-mix(in srgb, var(--color-theme-gold) 8%, transparent);
+    border-bottom: 1px solid color-mix(in srgb, var(--color-theme-gold) 12%, transparent);
   }
-  .ms-round-count { font-size: .44rem; color: var(--text-3); }
 
-  .ms-match-list { display: flex; flex-direction: column; }
-  .ms-match {
-    display: flex; align-items: center; gap: .75rem;
-    padding: .6rem .85rem;
-    border-bottom: 1px solid rgba(255,255,255,.04);
-    transition: background .15s;
+  .ms-group-table {
+    display: flex;
+    flex-direction: column;
   }
-  .ms-match:last-child { border-bottom: none; }
-  .ms-match:hover { background: rgba(255,255,255,.02); }
-  .ms-match-teams {
-    display: flex; align-items: center; gap: .4rem;
-    min-width: 200px;
+
+  .ms-group-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-theme-gold) 8%, transparent);
+    text-decoration: none;
+    transition: background 0.15s;
   }
-  .ms-team {
-    font-size: .55rem; font-weight: 600; color: var(--text);
-    max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  .ms-group-row:last-child { border-bottom: none; }
+  .ms-group-row:hover { background: color-mix(in srgb, var(--color-theme-gold) 5%, transparent); }
+
+  .ms-gpos {
+    width: 16px;
+    font-family: var(--font-cinzel,'Cinzel'),serif;
+    font-size: .55rem;
+    font-weight: 700;
+    color: color-mix(in srgb, var(--color-theme-cream) 50%, transparent);
+    flex-shrink: 0;
+    text-align: center;
   }
-  .ms-vs { font-size: .44rem; color: var(--text-3); font-weight: 700; }
-  .ms-match-mid { flex: 1; text-align: center; }
-  .ms-score { font-size: .6rem; font-weight: 800; color: var(--green); letter-spacing: .05em; }
-  .ms-date { font-size: .48rem; color: var(--text-3); }
-  .ms-match-right { display: flex; align-items: center; gap: .35rem; }
+  .ms-gpos--gold { color: var(--color-theme-gold); }
+
+  .ms-gavatar {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
+    border: 1px solid color-mix(in srgb, var(--color-theme-gold) 30%, transparent);
+    background: var(--color-theme-midnight);
+  }
+  .ms-gavatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+  .ms-gname {
+    flex: 1;
+    font-family: var(--font-cinzel,'Cinzel'),serif;
+    font-size: .52rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--color-theme-cream);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .mg-gpts {
+    font-family: monospace;
+    font-size: .6rem;
+    font-weight: 700;
+    color: var(--color-theme-gold);
+    min-width: 18px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  /* ══════════════════════════════════════════
+     JORNADAS
+     ══════════════════════════════════════════ */
+  .ms-group-jornadas {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1rem;
+    border-radius: 14px;
+    border: 1px solid color-mix(in srgb, var(--color-theme-gold) 15%, transparent);
+    /* background: color-mix(in srgb, var(--color-theme-midnight) 40%, transparent); */
+  }
+
+  .ms-group-jornadas-title {
+    font-family: var(--font-cinzel,'Cinzel'),serif;
+    font-size: .6rem;
+    font-weight: 900;
+    letter-spacing: .15em;
+    text-transform: uppercase;
+    color: color-mix(in srgb, var(--color-theme-gold) 80%, transparent);
+    margin: 0;
+    padding-bottom: .5rem;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-theme-gold) 12%, transparent);
+  }
+
+  .ms-jornadas-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .ms-jornada {
+    border-radius: 14px;
+    border: 1px solid color-mix(in srgb, var(--color-theme-gold) 18%, transparent);
+    background: color-mix(in srgb, var(--color-theme-midnight) 50%, transparent);
+    backdrop-filter: blur(8px);
+    overflow: hidden;
+  }
+
+  .ms-jornada-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: .7rem 1rem;
+    background: color-mix(in srgb, var(--color-theme-gold) 6%, transparent);
+    border-bottom: 1px solid color-mix(in srgb, var(--color-theme-gold) 12%, transparent);
+  }
+
+  .ms-jornada-title {
+    font-family: var(--font-cinzel,'Cinzel'),serif;
+    font-size: .58rem;
+    font-weight: 800;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: color-mix(in srgb, var(--color-theme-gold) 75%, transparent);
+    margin: 0;
+  }
+
+  .ms-jornada-count {
+    font-size: .44rem;
+    color: color-mix(in srgb, var(--color-theme-cream) 45%, transparent);
+  }
+
+  .ms-match-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: .75rem;
+    padding: .75rem;
+  }
+
+  /* ── Status badges ── */
   .ms-status {
     font-size: .4rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
     padding: 2px 6px; border-radius: 99px;
   }
-  .ms-status--scheduled { background: rgba(255,255,255,.05); color: var(--text-2); border: 1px solid var(--border); }
-  .ms-status--live { background: rgba(0,255,136,.1); color: var(--green); border: 1px solid rgba(0,255,136,.25); animation: msPulse 1.5s infinite; }
+  .ms-status--scheduled { background: color-mix(in srgb, var(--color-theme-gold) 8%, transparent); color: color-mix(in srgb, var(--color-theme-gold) 60%, transparent); border: 1px solid color-mix(in srgb, var(--color-theme-gold) 20%, transparent); }
+  .ms-status--live { background: rgba(0,255,136,.1); color: #00ff88; border: 1px solid rgba(0,255,136,.25); animation: msPulse 1.5s infinite; }
   .ms-status--finished { background: rgba(59,130,246,.1); color: #60a5fa; border: 1px solid rgba(59,130,246,.25); }
   .ms-status--cancelled { background: rgba(255,80,80,.1); color: #f87171; border: 1px solid rgba(255,80,80,.25); }
 
   @keyframes msPulse { 0%,100%{opacity:1}50%{opacity:.6} }
 
-  .ms-icon-btn {
-    background: none; border: none; cursor: pointer;
-    font-size: .65rem; padding: 2px; opacity: .4;
-    transition: opacity .15s;
-  }
-  .ms-icon-btn:hover { opacity: 1; }
-
-  /* ── Modal ── */
+  /* ══════════════════════════════════════════
+     MODAL
+     ══════════════════════════════════════════ */
   .ms-modal-overlay {
     display: none;
     position: fixed; inset: 0; z-index: 100;
@@ -651,70 +822,157 @@ const sortedDates = Array.from(dateGroups.keys()).sort((a, b) => {
   }
   .ms-modal-overlay--open { display: flex; }
   .ms-modal {
-    background: var(--surface);
-    border: 1px solid var(--border);
+    background: color-mix(in srgb, var(--color-theme-midnight) 80%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-theme-gold) 20%, transparent);
     border-radius: 16px;
     width: 90%; max-width: 480px;
     max-height: 85vh; overflow-y: auto;
+    backdrop-filter: blur(12px);
   }
   .ms-modal-header {
     display: flex; justify-content: space-between; align-items: center;
     padding: 1rem 1.2rem;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid color-mix(in srgb, var(--color-theme-gold) 15%, transparent);
   }
   .ms-modal-title {
     font-family: var(--font-cinzel,'Cinzel'),serif;
     font-size: .6rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
-    color: rgba(232,226,216,.8);
+    color: color-mix(in srgb, var(--color-theme-cream) 80%, transparent);
   }
   .ms-modal-close {
-    background: none; border: none; color: var(--text-3);
+    background: none; border: none; color: color-mix(in srgb, var(--color-theme-cream) 40%, transparent);
     cursor: pointer; font-size: .85rem;
   }
-  .ms-modal-close:hover { color: var(--text); }
+  .ms-modal-close:hover { color: var(--color-theme-cream); }
   .ms-modal-body { padding: 1.2rem; display: flex; flex-direction: column; gap: .85rem; }
   .ms-modal-footer {
     display: flex; justify-content: flex-end; gap: .5rem;
     padding: 1rem 1.2rem;
-    border-top: 1px solid var(--border);
+    border-top: 1px solid color-mix(in srgb, var(--color-theme-gold) 15%, transparent);
   }
 
   .ms-field { display: flex; flex-direction: column; }
   .ms-label {
     font-size: .48rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
-    color: rgba(232,226,216,.4); margin-bottom: 5px;
+    color: color-mix(in srgb, var(--color-theme-gold) 50%, transparent); margin-bottom: 5px;
   }
   .ms-input {
     width: 100%;
     padding: .55rem .7rem;
     border-radius: 8px;
-    border: 1px solid var(--border);
-    background: rgba(255,255,255,.03);
-    color: var(--text);
+    border: 1px solid color-mix(in srgb, var(--color-theme-gold) 15%, transparent);
+    background: color-mix(in srgb, var(--color-theme-midnight) 50%, transparent);
+    color: var(--color-theme-cream);
     font-family: var(--font-cinzel,'Cinzel'),serif;
     font-size: .55rem;
     outline: none;
     transition: border-color .2s;
   }
-  .ms-input:focus { border-color: rgba(0,255,136,.38); }
-  .ms-input::placeholder { color: rgba(232,226,216,.18); }
+  .ms-input:focus { border-color: color-mix(in srgb, var(--color-theme-gold) 50%, transparent); }
+  .ms-input::placeholder { color: color-mix(in srgb, var(--color-theme-cream) 20%, transparent); }
   select.ms-input { cursor: pointer; }
-  select.ms-input option { background: var(--midnight); }
+  select.ms-input option { background: var(--color-theme-midnight); }
 
   .ms-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
-
-  .ms-checkbox {
-    display: flex; align-items: center; gap: .5rem;
-    font-size: .5rem; color: var(--text-2); cursor: pointer;
+  .ms-score-readonly { margin-bottom: .5rem; }
+  .ms-score-display {
+    display: block;
+    padding: .55rem .7rem;
+    border-radius: 8px;
+    border: 1px solid color-mix(in srgb, var(--color-theme-gold) 12%, transparent);
+    background: color-mix(in srgb, var(--color-theme-midnight) 30%, transparent);
+    color: var(--color-theme-gold);
+    font-family: monospace;
+    font-size: .7rem;
+    font-weight: 700;
+    text-align: center;
   }
-  .ms-checkbox input { accent-color: var(--green); }
+
+  /* ══════════════════════════════════════════
+     FILTER BAR
+     ══════════════════════════════════════════ */
+  .ms-filter-bar {
+    display: flex; flex-wrap: wrap; gap: .5rem 1rem;
+    padding: .65rem 1rem;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--color-theme-midnight) 60%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-theme-gold) 15%, transparent);
+    backdrop-filter: blur(8px);
+    align-items: center;
+  }
+  .ms-filter-group {
+    display: flex; align-items: center; gap: .35rem;
+  }
+  .ms-filter-label {
+    font-family: var(--font-cinzel,'Cinzel'),serif;
+    font-size: .44rem; font-weight: 700;
+    letter-spacing: .1em; text-transform: uppercase;
+    color: color-mix(in srgb, var(--color-theme-gold) 50%, transparent);
+    margin-right: .1rem;
+  }
+  .ms-filter-pills {
+    display: flex; flex-wrap: wrap; gap: .25rem;
+  }
+  .ms-filter-pill {
+    display: inline-flex; align-items: center; gap: .2rem;
+    padding: .24rem .5rem; border-radius: 99px;
+    border: 1px solid rgba(255,255,255,.09);
+    background: rgba(255,255,255,.025);
+    font-family: var(--font-cinzel,'Cinzel'),serif;
+    font-size: .44rem; font-weight: 700;
+    letter-spacing: .07em; text-transform: uppercase;
+    color: color-mix(in srgb, var(--color-theme-cream) 50%, transparent);
+    cursor: pointer; white-space: nowrap;
+    transition: border-color .2s, color .2s, background .2s;
+  }
+  .ms-filter-pill:hover {
+    border-color: color-mix(in srgb, var(--color-theme-gold) 40%, transparent);
+    color: var(--color-theme-cream);
+  }
+  .ms-filter-pill--active {
+    border-color: rgba(0,255,136,.4);
+    background: rgba(0,255,136,.09);
+    color: #00ff88;
+  }
+  .ms-filter-count {
+    font-size: .38rem; opacity: .6;
+    background: rgba(0,0,0,.25);
+    padding: 1px 5px; border-radius: 99px;
+  }
+
+  .ms-filter-search { margin-left: auto; }
+  .ms-search-input {
+    padding: .24rem .55rem;
+    border-radius: 99px;
+    border: 1px solid rgba(255,255,255,.09);
+    background: rgba(255,255,255,.025);
+    font-family: var(--font-cinzel,'Cinzel'),serif;
+    font-size: .44rem;
+    font-weight: 700;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--color-theme-cream);
+    outline: none;
+    width: 130px;
+    transition: border-color .2s;
+  }
+  .ms-search-input:focus {
+    border-color: color-mix(in srgb, var(--color-theme-gold) 40%, transparent);
+  }
+  .ms-search-input::placeholder {
+    color: color-mix(in srgb, var(--color-theme-cream) 25%, transparent);
+  }
 
   @media (max-width: 640px) {
     .ms-toolbar { flex-direction: column; gap: .5rem; align-items: stretch; }
     .ms-toolbar-right { justify-content: stretch; }
     .ms-toolbar-right .ms-btn { flex: 1; justify-content: center; }
-    .ms-match { flex-wrap: wrap; }
-    .ms-match-teams { min-width: 0; }
+    .ms-match-grid { grid-template-columns: 1fr; }
     .ms-grid2 { grid-template-columns: 1fr; }
+    .ms-groups-grid { grid-template-columns: 1fr; }
+    .ms-filter-bar { flex-direction: column; align-items: stretch; gap: .4rem; }
+    .ms-filter-group { flex-wrap: wrap; }
+    .ms-filter-search { margin-left: 0; }
+    .ms-search-input { width: 100%; }
   }
 </style>

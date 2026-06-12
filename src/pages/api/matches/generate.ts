@@ -1,11 +1,22 @@
 import type { APIRoute } from 'astro'
-import { getTournamentById, getTeamsByTournament, deleteAllMatches, createMatch, createTeam, deleteAllTeams } from '../../../../server/db'
+import { getTournamentById, getTeamsByTournament, deleteAllMatches, createMatch } from '../../../../server/db'
 
-function generateRoundRobin(teamIds: string[], doubleRound: boolean): Array<{ round: number; home: string; away: string }> {
+type Match = { round: number; home: string; away: string; label?: string }
+
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
+
+function generateRoundRobin(teamIds: string[], doubleRound: boolean, roundOffset = 0, groupLabel?: string): Match[] {
   const teams = [...teamIds]
-  if (teams.length % 2 !== 0) teams.push('') // bye
+  if (teams.length % 2 !== 0) teams.push('')
 
-  const rounds: Array<{ round: number; home: string; away: string }> = []
+  const matches: Match[] = []
   const n = teams.length
   const totalRounds = doubleRound ? (n - 1) * 2 : n - 1
 
@@ -17,46 +28,95 @@ function generateRoundRobin(teamIds: string[], doubleRound: boolean): Array<{ ro
       const home = teams[i]
       const away = teams[n - 1 - i]
       if (home && away) {
+        const legLabel = doubleRound ? (isSecondHalf ? 'Vuelta' : 'Ida') : null
+        const jornadaNum = isSecondHalf ? r - (n - 1) + 1 : r + 1
+        const label = groupLabel
+          ? legLabel
+            ? `${groupLabel} - ${legLabel} Jornada ${jornadaNum}`
+            : `${groupLabel} - Jornada ${jornadaNum}`
+          : undefined
         if (isSecondHalf || (!doubleRound && actualRound % 2 === 1)) {
-          rounds.push({ round: r + 1, home: away, away: home })
+          matches.push({ round: roundOffset + r + 1, home: away, away: home, label })
         } else {
-          rounds.push({ round: r + 1, home, away })
+          matches.push({ round: roundOffset + r + 1, home, away, label })
         }
       }
     }
 
-    // Rotate teams (keep first fixed)
     const last = teams.pop()!
     teams.splice(1, 0, last)
   }
 
-  return rounds
+  return matches
 }
 
-function generateBracket(teamIds: string[]): Array<{ round: number; home: string; away: string }> {
-  const matches: Array<{ round: number; home: string; away: string }> = []
-  const shuffled = [...teamIds].sort(() => Math.random() - 0.5)
+function generateBracket(teamIds: string[], playoffsTwoLegged: boolean, singleFinal: boolean, roundOffset = 0): Match[] {
+  const matches: Match[] = []
+  const shuffled = shuffle(teamIds)
   const size = Math.max(2, Math.pow(2, Math.floor(Math.log2(shuffled.length))))
-
   const participants = shuffled.slice(0, size)
   let round = 1
 
+  const roundNames: Record<number, string> = {}
+  if (size >= 8) roundNames[1] = 'Cuartos de final'
+  if (size >= 4) roundNames[size >= 8 ? 2 : 1] = 'Semifinal'
+  roundNames[size >= 4 ? (size >= 8 ? 3 : 2) : 1] = 'Final'
+
   for (let i = 0; i < participants.length; i += 2) {
+    const label = roundNames[1]
     if (participants[i + 1]) {
-      matches.push({ round, home: participants[i], away: participants[i + 1] })
+      matches.push({ round: roundOffset + round, home: participants[i], away: participants[i + 1], label })
     } else {
-      matches.push({ round, home: participants[i], away: '' })
+      matches.push({ round: roundOffset + round, home: participants[i], away: '', label })
     }
   }
 
   let remaining = matches.length
+
   while (remaining > 1) {
     round++
     const nextCount = Math.ceil(remaining / 2)
+    const label = roundNames[round] || undefined
+    const isFinal = remaining === 2
+    const twoLeg = playoffsTwoLegged && !(isFinal && singleFinal)
+
     for (let i = 0; i < nextCount; i++) {
-      matches.push({ round, home: '', away: '' })
+      if (twoLeg) {
+        matches.push({ round: roundOffset + round, home: '', away: '', label: `${label} - Ida` })
+        matches.push({ round: roundOffset + round, home: '', away: '', label: `${label} - Vuelta` })
+      } else {
+        matches.push({ round: roundOffset + round, home: '', away: '', label })
+      }
     }
     remaining = nextCount
+  }
+
+  return matches
+}
+
+function generateGroups(
+  teamIds: string[],
+  numGroups: number,
+  twoLegged: boolean,
+): Match[] {
+  const shuffled = shuffle(teamIds)
+  const groups: string[][] = Array.from({ length: numGroups }, () => [])
+  const groupLabels = 'ABCDEFGHIJ'
+
+  for (let i = 0; i < shuffled.length; i++) {
+    groups[i % numGroups].push(shuffled[i])
+  }
+
+  const matches: Match[] = []
+  let roundOffset = 0
+
+  for (let g = 0; g < groups.length; g++) {
+    const groupTeams = groups[g]
+    if (groupTeams.length < 2) continue
+    const groupLabel = `Grupo ${groupLabels[g] || (g + 1)}`
+    const groupMatches = generateRoundRobin(groupTeams, twoLegged, roundOffset, groupLabel)
+    matches.push(...groupMatches)
+    roundOffset += twoLegged ? (groupTeams.length - 1) * 2 : groupTeams.length - 1
   }
 
   return matches
@@ -69,7 +129,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   const body = await request.json()
-  const { tournamentId, mode, startDate, daysBetween, matchTime, doubleRound } = body
+  const { tournamentId } = body
 
   if (!tournamentId) {
     return new Response(JSON.stringify({ error: 'tournamentId requerido' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
@@ -80,52 +140,37 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return new Response(JSON.stringify({ error: 'Torneo no encontrado' }), { status: 404, headers: { 'Content-Type': 'application/json' } })
   }
 
-  let teams = await getTeamsByTournament(tournamentId)
-
-  // If no teams exist, create placeholder teams
-  if (teams.length === 0) {
-    for (let i = 1; i <= tournament.num_teams; i++) {
-      await createTeam({ id: crypto.randomUUID(), tournament_id: tournamentId, name: `Equipo ${i}`, logo: null, color: null, category: '', created_by: user.id })
-    }
-    teams = await getTeamsByTournament(tournamentId)
+  const teams = await getTeamsByTournament(tournamentId)
+  if (teams.length < 2) {
+    return new Response(JSON.stringify({ error: 'Se necesitan al menos 2 equipos en el torneo para generar el sorteo. Invitá equipos primero.' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
   }
 
-  // Delete existing matches
+  // Delete existing matches so we can regenerate
   await deleteAllMatches(tournamentId)
-
   const teamIds = teams.map(t => t.id)
-  let fixture: Array<{ round: number; home: string; away: string }> = []
 
-  if (mode === 'manual' || !mode) {
-    return new Response(JSON.stringify({ success: true, matches: [], message: 'Usa modo manual para añadir partidos uno por uno' }), { status: 200, headers: { 'Content-Type': 'application/json' } })
-  }
+  const twoLegged = tournament.two_legged === 1
+  const numGroups = tournament.num_groups || 2
+
+  let fixture: Match[] = []
 
   switch (tournament.format) {
     case 'liga':
-      fixture = generateRoundRobin(teamIds, doubleRound)
+      fixture = generateRoundRobin(teamIds, twoLegged)
       break
     case 'copa':
-      fixture = generateBracket(teamIds)
+      fixture = generateBracket(teamIds, tournament.playoffs_two_legged === 1, tournament.single_final_match === 1)
       break
     case 'grupos':
-      fixture = generateRoundRobin(teamIds, doubleRound)
+      fixture = generateGroups(teamIds, numGroups, twoLegged)
       break
     default:
-      fixture = generateRoundRobin(teamIds, doubleRound)
+      fixture = generateRoundRobin(teamIds, twoLegged)
   }
-
-  const baseDate = startDate ? new Date(startDate + 'T00:00') : new Date()
-  const daysGap = Number(daysBetween) || 7
-  const timeStr = matchTime || '20:00'
 
   const created: Array<{ id: string; round: number; home: string; away: string }> = []
 
   for (const m of fixture) {
-    const matchDate = new Date(baseDate)
-    matchDate.setDate(matchDate.getDate() + (m.round - 1) * daysGap)
-    const dateStr = matchDate.toISOString().split('T')[0]
-    const scheduledDate = `${dateStr}T${timeStr}:00`
-
     const id = crypto.randomUUID()
     await createMatch({
       id,
@@ -135,9 +180,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       away_team_id: m.away || null,
       home_score: null,
       away_score: null,
-      scheduled_date: scheduledDate,
+      scheduled_date: null,
       venue: tournament.venue,
       status: 'scheduled',
+      round_label: m.label || null,
     })
     created.push({ id, round: m.round, home: m.home, away: m.away })
   }

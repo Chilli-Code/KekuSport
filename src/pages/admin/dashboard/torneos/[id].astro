@@ -2,6 +2,7 @@
 import AdminLayout from "../../../../components/admin/AdminLayout.astro";
 import MatchScheduler from "../../../../components/admin/MatchScheduler.astro";
 import TeamManager from "../../../../components/admin/TeamManager.astro";
+import TournamentBracket from "../../../../components/TournamentBracket.astro";
 import Layout from "@/layouts/Layout.astro";
 import { getTournamentById, getCategoriesByTournament, getMatchesByTournament, getTeamsByTournament } from "../../../../../server/db";
 
@@ -24,9 +25,33 @@ const prizes = JSON.parse(tournament.prizes || '{}')
 const allMatches = await getMatchesByTournament(tournament.id)
 const allTeams = await getTeamsByTournament(tournament.id)
 
+// ── Expected total match calculation ──
+const teamsPerGroup = tournament.num_groups ? Math.ceil(tournament.num_teams / tournament.num_groups) : 0
+const pairingsPerGroup = teamsPerGroup > 1 ? (teamsPerGroup * (teamsPerGroup - 1)) / 2 : 0
+const groupMatches = tournament.num_groups ? pairingsPerGroup * tournament.num_groups * (tournament.two_legged ? 2 : 1) : 0
+const playoffTeams = tournament.num_groups && tournament.advancers_per_group ? tournament.num_groups * tournament.advancers_per_group : 0
+let knockoutMatches = 0
+if (playoffTeams >= 2) {
+  let roundTeams = playoffTeams
+  while (roundTeams > 1) {
+    const pairings = roundTeams / 2
+    const isFinal = roundTeams === 2
+    const legs = isFinal && tournament.single_final_match ? 1 : (tournament.playoffs_two_legged ? 2 : 1)
+    knockoutMatches += pairings * legs
+    roundTeams = pairings
+  }
+}
+const totalExpectedMatches = groupMatches + knockoutMatches
+
 const finishedMatches = allMatches.filter(m => m.status === 'finished')
 const liveMatches = allMatches.filter(m => m.status === 'live')
 const scheduledMatches = allMatches.filter(m => m.status === 'scheduled')
+
+const _phTeam = (i: number) => ({ id: `ph-${i}`, name: '—', points: 0 })
+const _phMatch = (id: string) => ({
+  id, team1: { id: '', name: '—', points: 0 }, team2: { id: '', name: '—', points: 0 },
+  score1: 0, score2: 0, winner: 'team1' as const,
+})
 
 interface TeamStats {
   id: string; name: string; pj: number; pg: number; pe: number; pp: number;
@@ -115,6 +140,15 @@ for (const m of finishedMatches) {
         <div class="tm-card">
           <h3 class="tm-card-title">Descripción</h3>
           <p class="tm-desc">{tournament.description || 'Sin descripción'}</p>
+          <div class="tm-desc tm-desc--dim mt-1">
+            <span>📍 {tournament.venue}{tournament.city ? `, ${tournament.city}` : ''}</span>
+          </div>
+          <div class="tm-desc tm-desc--dim mt-1 flex gap-3 flex-wrap">
+            <span>🏟️ <strong>{groupMatches}</strong> fase grupos{groupMatches > 0 ? ` · ${pairingsPerGroup} cruces × ${tournament.num_groups} grupo${tournament.num_groups > 1 ? 's' : ''}${tournament.two_legged ? ' × 2 vueltas' : ''}` : ''}</span>
+            {knockoutMatches > 0 && <span>🏆 <strong>{knockoutMatches}</strong> eliminatorias · {playoffTeams} equipos</span>}
+            <span>📊 <strong>{totalExpectedMatches}</strong> partidos totales</span>
+          </div>
+          {tournament.notes && <p class="tm-desc tm-desc--dim mt-1">{tournament.notes}</p>}
         </div>
         <div class="tm-card">
           <h3 class="tm-card-title">Reglas</h3>
@@ -123,6 +157,22 @@ for (const m of finishedMatches) {
               {rules.map(r => <span class="tm-tag">{r}</span>)}
             </div>
           )}
+          {tournament.requirements && <p class="tm-desc tm-desc--dim mt-1">📋 {tournament.requirements}</p>}
+        </div>
+        <div class="tm-card">
+          <h3 class="tm-card-title">Configuración</h3>
+          <div class="tm-info-rows">
+            <div class="tm-info-row"><span>Formato</span><span class="tm-badge tm-badge--mini">{tournament.format === 'liga' ? 'Liga' : 'Grupos'}</span></div>
+            {tournament.num_groups != null && <div class="tm-info-row"><span>Grupos</span><span>{tournament.num_groups}</span></div>}
+            {tournament.advancers_per_group != null && <div class="tm-info-row"><span>Avanzan por grupo</span><span>{tournament.advancers_per_group}</span></div>}
+            <div class="tm-info-row"><span>Equipos totales</span><span>{tournament.num_teams}</span></div>
+            <div class="tm-info-row"><span>Jugadores por equipo</span><span>{tournament.players_per_team}</span></div>
+            <div class="tm-info-row"><span>Ida/vuelta grupos</span><span>{tournament.two_legged ? '✅ Sí' : '❌ No'}</span></div>
+            <div class="tm-info-row"><span>Playoffs ida/vuelta</span><span>{tournament.playoffs_two_legged ? '✅ Sí' : '❌ No'}</span></div>
+            {tournament.single_final_match != null && <div class="tm-info-row"><span>Final única</span><span>{tournament.single_final_match ? '✅ Sí' : '❌ No'}</span></div>}
+            {tournament.match_duration != null && <div class="tm-info-row"><span>Duración partido</span><span>{tournament.match_duration} min</span></div>}
+            <div class="tm-info-row"><span>Puntos por victoria</span><span>{tournament.points_per_win}</span></div>
+          </div>
         </div>
         <div class="tm-card">
           <h3 class="tm-card-title">Inscripción</h3>
@@ -277,6 +327,25 @@ for (const m of finishedMatches) {
           </div>
         )}
       </div>
+
+      <!-- ── Playoff Bracket placeholder ── -->
+      <div class="tm-bracket-wrap">
+        <TournamentBracket
+          title="PLAYOFF"
+          subtitle={tournament.name}
+          finalDate="—"
+          finalLocation="—"
+          groupA={[_phTeam(0), _phTeam(1), _phTeam(2), _phTeam(3)]}
+          groupB={[_phTeam(4), _phTeam(5), _phTeam(6), _phTeam(7)]}
+          groupC={[_phTeam(8), _phTeam(9), _phTeam(10), _phTeam(11)]}
+          groupD={[_phTeam(12), _phTeam(13), _phTeam(14), _phTeam(15)]}
+          leftQuarterFinals={[_phMatch('lqf1'), _phMatch('lqf2')]}
+          rightQuarterFinals={[_phMatch('rqf1'), _phMatch('rqf2')]}
+          leftSemiFinal={_phMatch('lsf')}
+          rightSemiFinal={_phMatch('rsf')}
+          finalMatch={_phMatch('final')}
+        />
+      </div>
     </div>
 
     <!-- ── TAB: Equipos ── -->
@@ -309,7 +378,7 @@ for (const m of finishedMatches) {
 
     <!-- ── TAB: Sorteo ── -->
     <div class="tm-tab-content tm-tab-content--hidden" data-tab-content="sorteo">
-      <MatchScheduler tournamentId={tournament.id} tournamentFormat={tournament.format} tournamentVenue={tournament.venue} />
+      <MatchScheduler tournamentId={tournament.id} tournamentFormat={tournament.format} tournamentVenue={tournament.venue} tournamentTwoLegged={!!tournament.two_legged} />
     </div>
   </div>
 </AdminLayout>
@@ -412,6 +481,7 @@ for (const m of finishedMatches) {
   .tm-badge--active { background: rgba(0,255,136,.1); color: var(--green); border: 1px solid rgba(0,255,136,.25); }
   .tm-badge--draft { background: rgba(255,255,255,.05); color: var(--text-2); border: 1px solid var(--border); }
   .tm-badge--completed { background: rgba(59,130,246,.1); color: #60a5fa; border: 1px solid rgba(59,130,246,.25); }
+  .tm-badge--mini { font-size: .42rem; padding: 2px 8px; }
 
   .tm-strip {
     display: flex; flex-wrap: wrap; gap: .5rem 1.2rem;
@@ -614,6 +684,11 @@ for (const m of finishedMatches) {
   .tm-modal-text { font-size: .52rem; color: var(--text-2); line-height: 1.6; margin-bottom: .3rem; }
   .tm-modal-text--dim { color: var(--text-3); }
   .tm-modal-actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: 1rem; }
+
+  .tm-bracket-wrap {
+    margin-top: 2rem; padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+  }
 
   @media (max-width: 768px) {
     .tm-grid2 { grid-template-columns: 1fr; }
