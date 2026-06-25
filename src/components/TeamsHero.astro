@@ -2,11 +2,14 @@
 import { TEAMS } from '@/consts/teams'
 import FighterSelector from './FighterSelector.astro'
 
-const firstRow = TEAMS.slice(0, 4)
+const { teams } = Astro.props as { teams?: { id: string; name: string; logo?: string }[] }
+const activeTeams = teams && teams.length > 0 ? teams : TEAMS
+
+const firstRow = activeTeams.slice(0, 4)
 const leftRow = firstRow.slice(0, 2)
 const rightRow = firstRow.slice(2)
-const secondRow = TEAMS.slice(4, 8)
-const allTeams = TEAMS
+const secondRow = activeTeams.slice(4, 8)
+const allTeams = activeTeams
 
 const teamLogo = '/images/Logo_Default.png'
 ---
