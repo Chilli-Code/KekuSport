@@ -2,8 +2,8 @@
 import Layout from "../layouts/Layout.astro";
 import Sponsors from "../components/Sponsors.astro";
 import TeamsHero from "../components/TeamsHero.astro";
-import StandingsTable from "../components/StandingsTable.astro";
 import TournamentBracket from "../components/TournamentBracket.astro";
+import StandingsTable from "../components/StandingsTable.astro";
 import Video from "../components/Videos.astro";
 import { getAllTournaments, getTeamsByTournament, getMatchesByTournamentWithTeams } from "../../server/db";
 
@@ -16,24 +16,118 @@ const heroTeams = tournamentTeams.length > 0
   ? tournamentTeams.map(t => ({ id: t.id, name: t.name, logo: t.logo || '/images/Logo_Default.png' }))
   : undefined
 
-const standings = tournamentTeams.length > 0
-  ? tournamentTeams.map((t, i) => ({
-      position: i + 1,
-      team: {
-        id: t.id,
-        name: t.name,
-        logo: t.logo || '/images/Logo_Default.png',
-      },
-      played: 0,
-      wins: 0,
-      draws: 0,
-      losses: 0,
-      goalsFor: 0,
-      goalsAgainst: 0,
-      goalDifference: 0,
-      points: 0,
-    }))
-  : undefined
+// Extract groups from match data after sorteo
+const groupLabels = [...new Set(tournamentMatches.map(m => {
+  const match = m.round_label?.match(/^(Grupo\s[^-]+)/)
+  return match ? match[1].trim() : null
+}).filter(Boolean))]
+
+const groups = groupLabels.length > 0 ? groupLabels.map(label => {
+  const groupMatches = tournamentMatches.filter(m => m.round_label?.startsWith(label))
+  const teamIds = new Set<string>()
+  groupMatches.forEach(m => {
+    if (m.home_team_id) teamIds.add(m.home_team_id)
+    if (m.away_team_id) teamIds.add(m.away_team_id)
+  })
+  const teams = [...teamIds].map(id => {
+    const t = tournamentTeams.find(tt => tt.id === id)
+    return t ? { id: t.id, name: t.name, logo: t.logo || '/images/Logo_Default.png' } : null
+  }).filter(Boolean)
+  return { label: label.replace('Grupo ', ''), teams }
+}) : undefined
+
+const standings = groups
+  ? undefined
+  : tournamentTeams.length > 0
+    ? tournamentTeams.map((t, i) => ({
+        position: i + 1,
+        team: {
+          id: t.id,
+          name: t.name,
+          logo: t.logo || '/images/Logo_Default.png',
+        },
+        played: 0,
+        wins: 0,
+        draws: 0,
+        losses: 0,
+        goalsFor: 0,
+        goalsAgainst: 0,
+        goalDifference: 0,
+        points: 0,
+      }))
+    : undefined
+
+// Compute group standings for bracket with points from finished matches
+function computeGroupStandings(teams: Array<{ id: string; name: string; logo?: string }>, prefix: string) {
+  return teams.map(t => {
+    const teamMatches = tournamentMatches.filter(m =>
+      m.round_label?.startsWith(prefix) &&
+      (m.home_team_id === t.id || m.away_team_id === t.id)
+    )
+    const points = teamMatches.reduce((sum, m) => {
+      if (m.status === 'finished' && m.home_score != null && m.away_score != null) {
+        const isHome = m.home_team_id === t.id
+        const scored = isHome ? m.home_score : m.away_score
+        const conceded = isHome ? m.away_score : m.home_score
+        return sum + (scored > conceded ? 3 : scored === conceded ? 1 : 0)
+      }
+      return sum
+    }, 0)
+    return { id: t.id, name: t.name, logo: t.logo || '/images/Logo_Default.png', points }
+  }).sort((a, b) => b.points - a.points)
+}
+
+const bracketGroups = groups?.reduce((acc, g) => {
+  const prefix = `Grupo ${g.label}`
+  acc[`group${g.label}`] = computeGroupStandings(g.teams, prefix)
+  return acc
+}, {} as Record<string, Array<{ id: string; name: string; logo: string; points: number }>>)
+
+const groupA = bracketGroups?.groupA
+const groupB = bracketGroups?.groupB
+const groupC = bracketGroups?.groupC
+const groupD = bracketGroups?.groupD
+
+// Extract knockout matches from DB (those with Cuartos/Semifinal/Final labels)
+const knockoutLabels = ['Cuartos de final', 'Semifinal', 'Final']
+const knockoutMatches = tournamentMatches.filter(m =>
+  m.round_label && knockoutLabels.some(l => m.round_label!.startsWith(l))
+)
+
+function toBracketMatch(m: typeof tournamentMatches[0], team1Id: string | null | undefined, team1Name: string | null | undefined, team2Id: string | null | undefined, team2Name: string | null | undefined) {
+  const score1 = m.home_score ?? 0
+  const score2 = m.away_score ?? 0
+  let winner: 'team1' | 'team2' | undefined
+  if (m.status === 'finished' && score1 !== score2) {
+    winner = score1 > score2 ? 'team1' : 'team2'
+  }
+  return {
+    id: m.id,
+    team1: { id: team1Id || 'tbd', name: team1Name || 'Por definir', logo: '/images/Logo_Default.png', points: 0 },
+    team2: { id: team2Id || 'tbd', name: team2Name || 'Por definir', logo: '/images/Logo_Default.png', points: 0 },
+    score1,
+    score2,
+    winner,
+  }
+}
+
+const qfMatches = knockoutMatches.filter(m => m.round_label?.startsWith('Cuartos de final'))
+const sfMatches = knockoutMatches.filter(m => m.round_label?.startsWith('Semifinal'))
+const finalMatches = knockoutMatches.filter(m => m.round_label?.startsWith('Final'))
+
+const qfHalf = Math.ceil(qfMatches.length / 2)
+const leftQuarterFinals = qfMatches.slice(0, qfHalf).map(m =>
+  toBracketMatch(m, m.home_team_id, m.home_team_name, m.away_team_id, m.away_team_name)
+)
+const rightQuarterFinals = qfMatches.slice(qfHalf).map(m =>
+  toBracketMatch(m, m.home_team_id, m.home_team_name, m.away_team_id, m.away_team_name)
+)
+
+const sfHalf = Math.ceil(sfMatches.length / 2)
+const leftSemiFinal = sfMatches.length > 0 ? toBracketMatch(sfMatches[0], sfMatches[0].home_team_id, sfMatches[0].home_team_name, sfMatches[0].away_team_id, sfMatches[0].away_team_name) : undefined
+const rightSemiFinal = sfMatches.length > 1 ? toBracketMatch(sfMatches[1], sfMatches[1].home_team_id, sfMatches[1].home_team_name, sfMatches[1].away_team_id, sfMatches[1].away_team_name) : undefined
+
+const finalMatch = finalMatches.length > 0 ? toBracketMatch(finalMatches[0], finalMatches[0].home_team_id, finalMatches[0].home_team_name, finalMatches[0].away_team_id, finalMatches[0].away_team_name) : undefined
 
 function formatEndDate(d: string | null | undefined) {
   if (!d) return null
@@ -46,12 +140,22 @@ function formatEndDate(d: string | null | undefined) {
 
 <Layout>
   <TeamsHero teams={heroTeams} />
-  <StandingsTable title={copa ? copa.name : "TORNEO PES - TEMPORADA 1"} standings={standings} />
+  <StandingsTable title={copa ? copa.name : "TORNEO PES - TEMPORADA 1"} standings={standings} groups={groups} />
     <section class="py-12 px-4">
-    <TournamentBracket 
+    <TournamentBracket
       title="PLAYOFF"
+      subtitle={copa?.name?.toUpperCase() || "COPA CHONTADURO"}
       finalDate={formatEndDate(copa?.end_date) || "30 DE MAYO"}
       finalLocation={copa?.venue || "BUDAPEST"}
+      groupA={groupA}
+      groupB={groupB}
+      groupC={groupC}
+      groupD={groupD}
+      leftQuarterFinals={leftQuarterFinals}
+      rightQuarterFinals={rightQuarterFinals}
+      leftSemiFinal={leftSemiFinal}
+      rightSemiFinal={rightSemiFinal}
+      finalMatch={finalMatch}
     />
   </section>
   <!-- <Sponsors /> -->
