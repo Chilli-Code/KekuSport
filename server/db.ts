@@ -26,6 +26,7 @@ async function migrateTables() {
   try { await db.execute("ALTER TABLE tournaments ADD COLUMN single_final_match INTEGER DEFAULT 1") } catch {}
   try { await db.execute("ALTER TABLE team_requests ADD COLUMN type TEXT DEFAULT 'request'") } catch {}
   try { await db.execute("ALTER TABLE matches ADD COLUMN round_label TEXT DEFAULT NULL") } catch {}
+  try { await db.execute("ALTER TABLE matches ADD COLUMN elapsed_seconds INTEGER DEFAULT 0") } catch {}
 
   const colResult = await db.execute("PRAGMA table_info('teams')")
   const colInfo = colResult.rows as unknown as { name: string; notnull: number }[]
@@ -133,6 +134,7 @@ async function initTables() {
       scheduled_date TEXT,
       venue TEXT,
       status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','scheduled','live','finished','cancelled')),
+      elapsed_seconds INTEGER DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE,
       FOREIGN KEY (home_team_id) REFERENCES teams(id),
@@ -205,6 +207,20 @@ async function initTables() {
       updated_at TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (match_id) REFERENCES matches(id) ON DELETE CASCADE,
       FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE
+    )
+  `)
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS match_events (
+      id TEXT PRIMARY KEY,
+      match_id TEXT NOT NULL,
+      type TEXT NOT NULL,
+      team TEXT NOT NULL,
+      player TEXT,
+      player2 TEXT,
+      minute INTEGER,
+      detail TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (match_id) REFERENCES matches(id) ON DELETE CASCADE
     )
   `)
   await db.execute(`
@@ -596,6 +612,7 @@ export interface Match {
   venue: string | null
   status: string
   round_label: string | null
+  elapsed_seconds?: number
   created_at: string
 }
 
@@ -654,6 +671,27 @@ export async function deleteAllMatches(tournamentId: string): Promise<void> {
   await db.execute({ sql: 'DELETE FROM matches WHERE tournament_id = ?', args: [tournamentId] })
 }
 
+export async function getMatchByIdWithTeams(id: string): Promise<MatchWithTeams | undefined> {
+  const db = await getDb()
+  const result = await db.execute({
+    sql: `SELECT m.*,
+          ht.name as home_team_name, ht.logo as home_team_logo, ht.color as home_team_color,
+          at.name as away_team_name, at.logo as away_team_logo, at.color as away_team_color
+          FROM matches m
+          LEFT JOIN teams ht ON ht.id = m.home_team_id
+          LEFT JOIN teams at ON at.id = m.away_team_id
+          WHERE m.id = ?`,
+    args: [id],
+  })
+  return result.rows[0] as unknown as MatchWithTeams | undefined
+}
+
+export async function getMatchById(id: string): Promise<Match | undefined> {
+  const db = await getDb()
+  const result = await db.execute({ sql: 'SELECT * FROM matches WHERE id = ?', args: [id] })
+  return result.rows[0] as unknown as Match | undefined
+}
+
 export async function updateMatch(id: string, data: Partial<Match>): Promise<void> {
   const db = await getDb()
   const keys = Object.keys(data).filter(k => k !== 'id')
@@ -666,6 +704,47 @@ export async function updateMatch(id: string, data: Partial<Match>): Promise<voi
 export async function deleteMatch(id: string): Promise<void> {
   const db = await getDb()
   await db.execute({ sql: 'DELETE FROM matches WHERE id = ?', args: [id] })
+}
+
+export interface MatchEvent {
+  id: string
+  match_id: string
+  type: string
+  team: string
+  player: string
+  player2: string
+  minute: number
+  detail: string
+  created_at: string
+}
+
+export async function getMatchEvents(matchId: string): Promise<MatchEvent[]> {
+  const db = await getDb()
+  const result = await db.execute({
+    sql: 'SELECT * FROM match_events WHERE match_id = ? ORDER BY minute ASC',
+    args: [matchId],
+  })
+  return result.rows as unknown as MatchEvent[]
+}
+
+export async function createMatchEvent(data: { match_id: string; type: string; team: string; player: string; player2?: string; minute: number; detail?: string }): Promise<string> {
+  const db = await getDb()
+  const id = crypto.randomUUID()
+  await db.execute({
+    sql: 'INSERT INTO match_events (id, match_id, type, team, player, player2, minute, detail) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    args: [id, data.match_id, data.type, data.team, data.player, data.player2 || '', data.minute, data.detail || ''],
+  })
+  return id
+}
+
+export async function deleteMatchEvent(id: string): Promise<void> {
+  const db = await getDb()
+  await db.execute({ sql: 'DELETE FROM match_events WHERE id = ?', args: [id] })
+}
+
+export async function deleteAllMatchEvents(matchId: string): Promise<void> {
+  const db = await getDb()
+  await db.execute({ sql: 'DELETE FROM match_events WHERE match_id = ?', args: [matchId] })
 }
 
 export interface MatchLineup {

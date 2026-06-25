@@ -12,6 +12,7 @@ export interface Props {
   date?: string
   venue?: string
   stage?: string
+  status?: string
 }
 
 const {
@@ -24,6 +25,7 @@ const {
   date,
   venue,
   stage,
+  status,
 } = Astro.props
 
 const t1 = team1Name ? { name: team1Name, id: team1Id } : TEAMS.find(t => t.id === team1Id)
@@ -41,7 +43,13 @@ const teamLogo = '/images/Logo_Default.png'
 
 <div class="duel-card group">
   <div class="duel-inner">
-    <div class="duel-stage">{stage ?? 'SIN DEFINIR'}</div>
+    <div class="duel-stage-bar">
+      <span class="duel-stage">{stage ?? 'SIN DEFINIR'}</span>
+      {status === 'live' && <span class="duel-badge duel-badge--live">EN VIVO</span>}
+      {status === 'finished' && <span class="duel-badge duel-badge--finished">FINALIZADO</span>}
+      {status === 'cancelled' && <span class="duel-badge duel-badge--cancelled">CANCELADO</span>}
+      {status === 'scheduled' && <span class="duel-badge duel-badge--scheduled">PROGRAMADO</span>}
+    </div>
 
     <div class="duel-teams">
       <a href={`/jugadores/${t1?.id || '#'}`} class="duel-side duel-side--left">

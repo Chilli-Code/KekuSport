@@ -16,9 +16,10 @@ export interface StatRow {
 export interface MatchEvent {
   minute: number
   team: 'A' | 'B'
-  type: 'goal' | 'yellow' | 'red' | 'sub' | 'var'
+  type: 'goal' | 'yellow' | 'red' | 'sub' | 'var' | 'shot' | 'foul'
   player: string
-  player2?: string  // para sustituciones
+  player2?: string
+  detail?: string
 }
 
 export interface Props {
@@ -26,9 +27,10 @@ export interface Props {
   teamB: TeamStat
   score?: [number, number]
   minute?: number
+  matchDuration?: number
   isLive?: boolean
-  stats?: StatRow[]
   events?: MatchEvent[]
+  matchId?: string
 }
 
 const {
@@ -36,21 +38,8 @@ const {
   teamB = { name: 'LOS GUERREROS', color: '#f59e0b' },
   score = [2, 1],
   minute = 67,
+  matchDuration = 90,
   isLive = true,
-  stats = [
-    { label: 'Posesión',               valueA: '58%', valueB: '42%', type: 'bar',     highlight: true },
-    { label: 'Remates',                valueA: 14,    valueB: 8,     type: 'bar',     highlight: true },
-    { label: 'Remates al arco',        valueA: 6,     valueB: 3,     type: 'bar',     highlight: true },
-    { label: 'Pases',                  valueA: 312,   valueB: 224,   type: 'bar',     highlight: true },
-    { label: 'Precisión de pase',      valueA: '84%', valueB: '71%', type: 'bar',     highlight: true },
-    { label: 'Faltas cometidas',       valueA: 8,     valueB: 12,    type: 'bar',     highlight: false },
-    { label: 'Tarjetas amarillas',     valueA: 2,     valueB: 3,     type: 'cards' },
-    { label: 'Tarjetas rojas',         valueA: 0,     valueB: 1,     type: 'cards' },
-    { label: 'Fuera de juego',         valueA: 3,     valueB: 1,     type: 'number' },
-    { label: 'Tiros de esquina',       valueA: 5,     valueB: 4,     type: 'number' },
-    { label: 'Salvadas',               valueA: 2,     valueB: 4,     type: 'number' },
-    { label: 'Cambios realizados',     valueA: 2,     valueB: 3,     type: 'number' },
-  ],
   events = [
     { minute: 12, team: 'A', type: 'goal',   player: 'Peereira'  },
     { minute: 23, team: 'B', type: 'yellow', player: 'Westcol'   },
@@ -66,13 +55,11 @@ const {
 const cA = teamA.color ?? '#00ff88'
 const cB = teamB.color ?? '#f59e0b'
 
-// Para barras: convierte valor a número
 function toNum(v: number | string): number {
   if (typeof v === 'number') return v
-  return parseFloat(v.replace('%', ''))
+  return parseFloat(String(v).replace('%', ''))
 }
 
-// Porcentaje de barra para cada lado
 function barA(a: number | string, b: number | string): number {
   const na = toNum(a), nb = toNum(b)
   const total = na + nb
@@ -80,11 +67,20 @@ function barA(a: number | string, b: number | string): number {
 }
 
 const eventIcons: Record<string, string> = {
-  goal: '⚽', yellow: '🟨', red: '🟥', sub: '🔄', var: '📺'
+  goal: '⚽', yellow: '🟨', red: '🟥', sub: '🔄', var: '📺', shot: '🎯', foul: '⚠️'
 }
 
 const eventsA = events.filter(e => e.team === 'A')
 const eventsB = events.filter(e => e.team === 'B')
+
+const stats: StatRow[] = [
+  { label: 'Remates', valueA: eventsA.filter(e => e.type === 'shot').length, valueB: eventsB.filter(e => e.type === 'shot').length, type: 'bar', highlight: true },
+  { label: 'Remates al arco', valueA: eventsA.filter(e => e.type === 'shot' && e.detail?.toLowerCase() === 'al arco').length, valueB: eventsB.filter(e => e.type === 'shot' && e.detail?.toLowerCase() === 'al arco').length, type: 'bar', highlight: true },
+  { label: 'Faltas cometidas', valueA: eventsA.filter(e => e.type === 'foul').length, valueB: eventsB.filter(e => e.type === 'foul').length, type: 'bar', highlight: false },
+  { label: 'Tarjetas amarillas', valueA: eventsA.filter(e => e.type === 'yellow').length, valueB: eventsB.filter(e => e.type === 'yellow').length, type: 'cards' },
+  { label: 'Tarjetas rojas', valueA: eventsA.filter(e => e.type === 'red').length, valueB: eventsB.filter(e => e.type === 'red').length, type: 'cards' },
+  { label: 'Cambios realizados', valueA: eventsA.filter(e => e.type === 'sub').length, valueB: eventsB.filter(e => e.type === 'sub').length, type: 'number' },
+]
 ---
 
 <div class="ms-root !my-20 mx-2 sm:mx-6 lg:mx-10">
@@ -121,11 +117,11 @@ const eventsB = events.filter(e => e.team === 'B')
 
       <!-- Barra de tiempo -->
       <div class="ms-time-bar">
-        <div class="ms-time-fill" style={`width:${Math.min((minute/90)*100,100)}%`}></div>
-        <div class="ms-time-dot" style={`left:${Math.min((minute/90)*100,100)}%`}></div>
+        <div class="ms-time-fill" style={`width:${Math.min((minute/matchDuration)*100,100)}%`}></div>
+        <div class="ms-time-dot" style={`left:${Math.min((minute/matchDuration)*100,100)}%`}></div>
       </div>
       <div class="ms-time-labels">
-        <span>0'</span><span>45'</span><span>90'</span>
+        <span>0'</span><span>{Math.round(matchDuration/2)}'</span><span>{matchDuration}'</span>
       </div>
     </div>
 
@@ -144,41 +140,44 @@ const eventsB = events.filter(e => e.team === 'B')
       <!-- Línea central -->
       <div class="ms-timeline-line"></div>
 
-      {events.sort((a,b) => a.minute - b.minute).map(ev => (
-        <div class={`ms-event ms-event--${ev.team.toLowerCase()}`}>
-          <!-- Lado A -->
-          <div class="ms-event-side ms-event-side--a">
-            {ev.team === 'A' && (
-              <div class="ms-event-content ms-event-content--a">
-                <span class="ms-event-player">{ev.player}</span>
-                {ev.type === 'sub' && ev.player2 && (
-                  <span class="ms-event-sub">↑ {ev.player2}</span>
-                )}
+      <div class="ms-events-list">
+        {events.sort((a,b) => a.minute - b.minute).map(ev => (
+          <div class={`ms-event ms-event--${ev.team.toLowerCase()}`}>
+            <div class="ms-event-side ms-event-side--a">
+              {ev.team === 'A' && (
+                <div class="ms-event-content ms-event-content--a">
+                  <span class="ms-event-player">{ev.player}</span>
+                  {ev.type === 'sub' && ev.player2 && (
+                    <span class="ms-event-sub">↑ {ev.player2}</span>
+                  )}
+                  {ev.type === 'shot' && ev.detail && (
+                    <span class="ms-event-detail">{ev.detail}</span>
+                  )}
+                </div>
+              )}
+            </div>
+            <div class="ms-event-mid">
+              <span class="ms-event-min">{ev.minute}'</span>
+              <div class={`ms-event-icon ms-event-icon--${ev.type}`}>
+                {eventIcons[ev.type]}
               </div>
-            )}
-          </div>
-
-          <!-- Centro: minuto + icono -->
-          <div class="ms-event-mid">
-            <span class="ms-event-min">{ev.minute}'</span>
-            <div class={`ms-event-icon ms-event-icon--${ev.type}`}>
-              {eventIcons[ev.type]}
+            </div>
+            <div class="ms-event-side ms-event-side--b">
+              {ev.team === 'B' && (
+                <div class="ms-event-content ms-event-content--b">
+                  <span class="ms-event-player">{ev.player}</span>
+                  {ev.type === 'sub' && ev.player2 && (
+                    <span class="ms-event-sub">↑ {ev.player2}</span>
+                  )}
+                  {ev.type === 'shot' && ev.detail && (
+                    <span class="ms-event-detail">{ev.detail}</span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
-
-          <!-- Lado B -->
-          <div class="ms-event-side ms-event-side--b">
-            {ev.team === 'B' && (
-              <div class="ms-event-content ms-event-content--b">
-                <span class="ms-event-player">{ev.player}</span>
-                {ev.type === 'sub' && ev.player2 && (
-                  <span class="ms-event-sub">↑ {ev.player2}</span>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   </div>
 
@@ -199,8 +198,6 @@ const eventsB = events.filter(e => e.team === 'B')
 
         return (
           <div class={`ms-stat-row ${row.type === 'cards' ? 'ms-stat-row--cards' : ''}`}>
-
-            <!-- Valor A -->
             <div class="ms-stat-val ms-stat-val--a">
               {row.type === 'cards' ? (
                 <div class="ms-cards">
@@ -219,7 +216,6 @@ const eventsB = events.filter(e => e.team === 'B')
               )}
             </div>
 
-            <!-- Etiqueta + barra -->
             <div class="ms-stat-center">
               <span class="ms-stat-label">{row.label}</span>
               {row.type === 'bar' && (
@@ -236,7 +232,6 @@ const eventsB = events.filter(e => e.team === 'B')
               )}
             </div>
 
-            <!-- Valor B -->
             <div class="ms-stat-val ms-stat-val--b">
               {row.type === 'cards' ? (
                 <div class="ms-cards ms-cards--b">
@@ -254,7 +249,6 @@ const eventsB = events.filter(e => e.team === 'B')
                 </span>
               )}
             </div>
-
           </div>
         )
       })}
@@ -466,62 +460,7 @@ const eventsB = events.filter(e => e.team === 'B')
     pointer-events: none;
   }
 
-  .ms-event {
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
-    align-items: center;
-    gap: .4rem;
-    padding: .35rem 0;
-    border-bottom: 1px solid rgba(255,255,255,.04);
-    animation: eventIn .4s ease-out both;
-  }
-  .ms-event:last-child { border-bottom: none; }
-  @keyframes eventIn {
-    from { opacity:0; transform:translateY(6px); }
-    to   { opacity:1; transform:translateY(0); }
-  }
 
-  .ms-event-side { display: flex; min-width: 0; }
-  .ms-event-side--a { justify-content: flex-end; }
-  .ms-event-side--b { justify-content: flex-start; }
-
-  .ms-event-content {
-    display: flex; flex-direction: column;
-    max-width: 100%;
-  }
-  .ms-event-content--a { align-items: flex-end; }
-  .ms-event-content--b { align-items: flex-start; }
-
-  .ms-event-player {
-    font-size: .6rem; font-weight: 700; letter-spacing: .06em;
-    text-transform: uppercase;
-    color: var(--cream); white-space: nowrap;
-  }
-  .ms-event-sub {
-    font-size: .48rem; letter-spacing: .04em;
-    color: rgba(0,255,136,.7);
-  }
-
-  .ms-event-mid {
-    display: flex; flex-direction: column; align-items: center;
-    gap: .15rem; flex-shrink: 0;
-  }
-  .ms-event-min {
-    font-size: .45rem; font-weight: 600; letter-spacing: .05em;
-    color: rgba(232,220,200,.45);
-  }
-  .ms-event-icon {
-    width: 26px; height: 26px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: .85rem;
-    background: rgba(255,255,255,.05);
-    border: 1px solid rgba(255,255,255,.08);
-  }
-  .ms-event-icon--goal   { background:rgba(0,255,136,.12); border-color:rgba(0,255,136,.35); }
-  .ms-event-icon--yellow { background:rgba(234,179,8,.12);  border-color:rgba(234,179,8,.35); }
-  .ms-event-icon--red    { background:rgba(239,68,68,.12);  border-color:rgba(239,68,68,.35); }
-  .ms-event-icon--sub    { background:rgba(96,165,250,.12); border-color:rgba(96,165,250,.35); }
-  .ms-event-icon--var    { background:rgba(168,85,247,.12); border-color:rgba(168,85,247,.35); }
 
   /* ══ ESTADÍSTICAS ══ */
   .ms-stats-wrap {
@@ -572,7 +511,6 @@ const eventsB = events.filter(e => e.team === 'B')
     white-space: nowrap;
   }
 
-  /* Barra dual */
   .ms-bar {
     width: 100%;
     height: 5px;
@@ -590,7 +528,6 @@ const eventsB = events.filter(e => e.team === 'B')
     transition: width .6s ease, background .3s;
   }
 
-  /* Tarjetas */
   .ms-cards {
     display: flex; gap: .25rem; align-items: center;
   }
@@ -611,8 +548,77 @@ const eventsB = events.filter(e => e.team === 'B')
     .ms-team-logo { width: 28px; height: 28px; }
     .ms-score { font-size: 2rem; }
     .ms-events-timeline { padding: .25rem .75rem .5rem; }
-    .ms-stats-list { padding: 0 .75rem; }
     .ms-event-player { font-size: .52rem; }
+  }
+</style>
+
+<style is:global>
+  .ms-event {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: .4rem;
+    padding: .35rem 0;
+    border-bottom: 1px solid rgba(255,255,255,.04);
+    animation: eventIn .4s ease-out both;
+  }
+  .ms-event:last-child { border-bottom: none; }
+  @keyframes eventIn {
+    from { opacity:0; transform:translateY(6px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+
+  .ms-event-side { display: flex; min-width: 0; }
+  .ms-event-side--a { justify-content: flex-end; }
+  .ms-event-side--b { justify-content: flex-start; }
+
+  .ms-event-content {
+    display: flex; flex-direction: column;
+    max-width: 100%;
+  }
+  .ms-event-content--a { align-items: flex-end; }
+  .ms-event-content--b { align-items: flex-start; }
+
+  .ms-event-player {
+    font-size: .6rem; font-weight: 700; letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--cream); white-space: nowrap;
+  }
+  .ms-event-sub {
+    font-size: .48rem; letter-spacing: .04em;
+    color: rgba(0,255,136,.7);
+  }
+  .ms-event-detail {
+    font-size: .45rem; letter-spacing: .04em;
+    color: rgba(125,211,252,.8);
+  }
+
+  .ms-event-mid {
+    display: flex; flex-direction: column; align-items: center;
+    gap: .15rem; flex-shrink: 0;
+  }
+  .ms-event-min {
+    font-size: .8rem; font-weight: 600; letter-spacing: .05em;
+    color: rgba(232,220,200,.45);
+  }
+  .ms-event-icon {
+    width: 26px; height: 26px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .85rem;
+    background: rgba(255,255,255,.05);
+    border: 1px solid rgba(255,255,255,.08);
+  }
+  .ms-event-icon--goal   { background:rgba(0,255,136,.12); border-color:rgba(0,255,136,.35); }
+  .ms-event-icon--yellow { background:rgba(234,179,8,.12);  border-color:rgba(234,179,8,.35); }
+  .ms-event-icon--red    { background:rgba(239,68,68,.12);  border-color:rgba(239,68,68,.35); }
+  .ms-event-icon--sub    { background:rgba(96,165,250,.12); border-color:rgba(96,165,250,.35); }
+  .ms-event-icon--var    { background:rgba(168,85,247,.12); border-color:rgba(168,85,247,.35); }
+  .ms-event-icon--shot   { background:rgba(125,211,252,.12); border-color:rgba(125,211,252,.35); }
+  .ms-event-icon--foul   { background:rgba(161,161,170,.12); border-color:rgba(161,161,170,.35); }
+
+  @media (max-width: 480px) {
+    .ms-event-player { font-size: .52rem; }
+    .ms-stats-list { padding: 0 .75rem; }
     .ms-stat-label { white-space: normal; text-align: center; font-size: .4rem; }
   }
 </style>

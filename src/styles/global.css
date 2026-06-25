@@ -231,6 +231,49 @@ html {
     text-transform: uppercase;
   }
 
+  .duel-stage-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .duel-badge {
+    font-size: 0.4rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 0.15rem 0.5rem;
+    border-radius: 99px;
+    white-space: nowrap;
+  }
+  .duel-badge--live {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    animation: liveBlink 1.1s ease-in-out infinite;
+  }
+  @keyframes liveBlink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+  .duel-badge--finished {
+    background: rgba(168, 85, 247, 0.15);
+    color: #c4b5fd;
+    border: 1px solid rgba(168, 85, 247, 0.25);
+  }
+  .duel-badge--cancelled {
+    background: rgba(107, 114, 128, 0.15);
+    color: #9ca3af;
+    border: 1px solid rgba(107, 114, 128, 0.25);
+  }
+  .duel-badge--scheduled {
+    background: rgba(0, 255, 136, 0.1);
+    color: rgba(0, 255, 136, 0.7);
+    border: 1px solid rgba(0, 255, 136, 0.2);
+  }
+
   .duel-teams {
     display: flex;
     align-items: center;

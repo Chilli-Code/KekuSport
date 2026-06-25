@@ -8,7 +8,7 @@ const isActive = (path: string) => pathname === path
 
 const NAV_ITEMS = [
   { label: 'JUGADORES', href: '/jugadores', disabled: false },
-  { label: 'VER COMBATES', href: '/combates', disabled: false },
+  { label: 'COMBATES', href: '/combates', disabled: false },
   { label: 'APUESTAS', href: '#', disabled: true, note: 'PRÓXIMAMENTE' },
 ] as const
 ---
@@ -59,7 +59,7 @@ const NAV_ITEMS = [
           href="/combates"
           class="group relative inline-block w-fit py-1 font-cinzel text-sm font-bold leading-relaxed tracking-[0.2em] text-white/85 outline-none transition duration-300 hover:text-theme-cream focus-visible:text-theme-cream"
         >
-          VER COMBATES
+          COMBATES
           <div class="relative mt-1 h-[2px] w-full overflow-hidden">
             <div
               class:list={[

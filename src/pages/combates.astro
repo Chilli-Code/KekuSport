@@ -25,18 +25,18 @@ const fallbackTournament = {
     const teamA = TEAMS.find(t => t.id === c.fighters[0])
     const teamB = TEAMS.find(t => t.id === c.fighters[1])
     const simulated = ({
-      "1-thunder-vs-blaze": { hour: "18:00", date: "SÁB 12 JUL", scheduled_date: "2025-07-12", venue: "CANCHA LA 93", stage: "CUARTOS DE FINAL" },
-      "2-shadow-vs-frost":  { hour: "18:45", date: "SÁB 12 JUL", scheduled_date: "2025-07-12", venue: "CANCHA LA 93", stage: "CUARTOS DE FINAL" },
-      "3-iron-vs-storm":    { hour: "19:30", date: "SÁB 12 JUL", scheduled_date: "2025-07-12", venue: "CANCHA LA 93", stage: "CUARTOS DE FINAL" },
-      "4-night-vs-golden":  { hour: "20:15", date: "SÁB 12 JUL", scheduled_date: "2025-07-12", venue: "CANCHA LA 93", stage: "CUARTOS DE FINAL" },
-      "5-red-vs-dark":      { hour: "21:00", date: "DOM 13 JUL", scheduled_date: "2025-07-13", venue: "CANCHA LA 93", stage: "SEMIFINALES" },
-      "6-wild-vs-steel":    { hour: "21:45", date: "DOM 13 JUL", scheduled_date: "2025-07-13", venue: "CANCHA LA 93", stage: "SEMIFINALES" },
-    } as Record<string, { hour: string; date: string; scheduled_date: string; venue: string; stage: string }>)
+      "1-thunder-vs-blaze": { hour: "18:00", date: "SÁB 12 JUL", scheduled_date: "2025-07-12", venue: "CANCHA LA 93", stage: "CUARTOS DE FINAL", status: "live" },
+      "2-shadow-vs-frost":  { hour: "18:45", date: "SÁB 12 JUL", scheduled_date: "2025-07-12", venue: "CANCHA LA 93", stage: "CUARTOS DE FINAL", status: "finished" },
+      "3-iron-vs-storm":    { hour: "19:30", date: "SÁB 12 JUL", scheduled_date: "2025-07-12", venue: "CANCHA LA 93", stage: "CUARTOS DE FINAL", status: "cancelled" },
+      "4-night-vs-golden":  { hour: "20:15", date: "SÁB 12 JUL", scheduled_date: "2025-07-12", venue: "CANCHA LA 93", stage: "CUARTOS DE FINAL", status: "scheduled" },
+      "5-red-vs-dark":      { hour: "21:00", date: "DOM 13 JUL", scheduled_date: "2025-07-13", venue: "CANCHA LA 93", stage: "SEMIFINALES", status: "scheduled" },
+      "6-wild-vs-steel":    { hour: "21:45", date: "DOM 13 JUL", scheduled_date: "2025-07-13", venue: "CANCHA LA 93", stage: "SEMIFINALES", status: "scheduled" },
+    } as Record<string, { hour: string; date: string; scheduled_date: string; venue: string; stage: string; status: string }>)
     return {
       id: c.id, tournament_id: 'mock-tournament', round: 1,
       home_team_id: c.fighters[0], away_team_id: c.fighters[1],
       home_score: null, away_score: null,
-      scheduled_date: simulated[c.id]?.scheduled_date || null, venue: null, status: 'pending',
+      scheduled_date: simulated[c.id]?.scheduled_date || null, venue: null, status: simulated[c.id]?.status || 'pending',
       created_at: '', round_label: null,
       home_team_name: teamA?.name ?? null, home_team_logo: null, home_team_color: null,
       away_team_name: teamB?.name ?? null, away_team_logo: null, away_team_color: null,
@@ -87,6 +87,7 @@ type MatchInfo = {
   scheduled_date?: string | null
   venue?: string | null
   round_label?: string | null
+  status?: string
 }
 
 const tournamentsJson = JSON.stringify(typedTournaments.map((t: any) => ({
@@ -108,6 +109,7 @@ const tournamentsJson = JSON.stringify(typedTournaments.map((t: any) => ({
     _hour: m._hour,
     _date: m._date,
     _stage: m._stage,
+    status: m.status,
   }))
 })))
 ---
@@ -190,6 +192,27 @@ const tournamentsJson = JSON.stringify(typedTournaments.map((t: any) => ({
               FECHA
             </label>
             <input id="filter-date" class="filter-input filter-date-input" type="date" />
+          </div>
+          <div class="filter-divider"></div>
+          <div class="filter-group">
+            <label class="filter-label">
+              <span class="filter-label-diamond"></span>
+              ESTADO
+            </label>
+            <div id="filter-status-pills" class="comb-filter-pills" role="group" aria-label="Filtrar por estado">
+              <button type="button" data-filter="status" data-value="all" aria-pressed="true" class="comb-filter-pill">
+                <span class="comb-filter-pill-label">TODOS</span>
+              </button>
+              <button type="button" data-filter="status" data-value="live" aria-pressed="false" class="comb-filter-pill">
+                <span class="comb-filter-pill-label">EN VIVO</span>
+              </button>
+              <button type="button" data-filter="status" data-value="finished" aria-pressed="false" class="comb-filter-pill">
+                <span class="comb-filter-pill-label">FINALIZADOS</span>
+              </button>
+              <button type="button" data-filter="status" data-value="cancelled" aria-pressed="false" class="comb-filter-pill">
+                <span class="comb-filter-pill-label">CANCELADOS</span>
+              </button>
+            </div>
           </div>
           <div class="filter-divider"></div>
           <div id="filter-group-section" class="filter-group" style="display:none">
@@ -279,6 +302,7 @@ const tournamentsJson = JSON.stringify(typedTournaments.map((t: any) => ({
                         date={derivedDate}
                         venue={derivedVenue}
                         stage={derivedStage}
+                        status={m.status}
                       />
                     )
                   })}
@@ -319,6 +343,7 @@ function initCombates() {
   var filterGroupSection = document.getElementById('filter-group-section');
   var filterGroupPills = document.getElementById('filter-group-pills');
   var filterMatchReset = document.getElementById('filter-match-reset');
+  var filterStatusPills = document.getElementById('filter-status-pills');
 
   if (!tournamentGrid || !filterSearch) return;
 
@@ -374,6 +399,8 @@ function initCombates() {
     var selectedDisplay = dateToDisplay(selectedDate);
     var activeGroupPill = filterGroupPills.querySelector('[aria-pressed="true"]');
     var selectedGroup = activeGroupPill ? activeGroupPill.dataset.value : 'all';
+    var activeStatusPill = filterStatusPills.querySelector('[aria-pressed="true"]');
+    var selectedStatus = activeStatusPill ? activeStatusPill.dataset.value : 'all';
     if (!activeMatchGrid) return 0;
     var cards = activeMatchGrid.querySelectorAll('.duel-card');
     var t = tournaments.find(function(t) { return t.id === currentTournamentId; });
@@ -399,6 +426,11 @@ function initCombates() {
         var group = extractGroup(label);
         if (!group || group !== selectedGroup) show = false;
       }
+      if (selectedStatus !== 'all') {
+        var m = matchData[i];
+        var st = m ? (m.status || '').toLowerCase() : '';
+        if (st !== selectedStatus) show = false;
+      }
       card.setAttribute('style', show ? '' : 'display:none');
       if (show) visible++;
     });
@@ -418,6 +450,10 @@ function initCombates() {
     filterBodyMatch.style.display = '';
     filterDateInput.value = '';
     filterMatchSearch.value = '';
+
+    filterStatusPills.querySelectorAll('[data-filter="status"]').forEach(function(b) {
+      b.setAttribute('aria-pressed', b.dataset.value === 'all' ? 'true' : 'false');
+    });
 
     var t = tournaments.find(function(t) { return t.id === currentTournamentId; });
     var groups = new Set();
@@ -505,6 +541,9 @@ function initCombates() {
       filterGroupPills.querySelectorAll('[data-filter="group"]').forEach(function(b) {
         b.setAttribute('aria-pressed', b.dataset.value === 'all' ? 'true' : 'false');
       });
+      filterStatusPills.querySelectorAll('[data-filter="status"]').forEach(function(b) {
+        b.setAttribute('aria-pressed', b.dataset.value === 'all' ? 'true' : 'false');
+      });
       filterMatches();
       return;
     }
@@ -512,6 +551,13 @@ function initCombates() {
     if (groupBtn && filterGroupPills.contains(groupBtn)) {
       filterGroupPills.querySelectorAll('[data-filter="group"]').forEach(function(b) { b.setAttribute('aria-pressed', 'false'); });
       groupBtn.setAttribute('aria-pressed', 'true');
+      filterMatches();
+      return;
+    }
+    var statusBtn = e.target.closest('[data-filter="status"]');
+    if (statusBtn && filterStatusPills.contains(statusBtn)) {
+      filterStatusPills.querySelectorAll('[data-filter="status"]').forEach(function(b) { b.setAttribute('aria-pressed', 'false'); });
+      statusBtn.setAttribute('aria-pressed', 'true');
       filterMatches();
       return;
     }

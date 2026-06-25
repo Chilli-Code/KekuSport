@@ -47,10 +47,15 @@ let matchDate = ''
 let matchVenue = ''
 let matchTournament = ''
 let matchEdition = 'NO DEFINIDO'
+let matchId = ''
+let matchStatus = ''
+let matchDuration = 90
+let matchElapsedSeconds = 0
+let ssrEvents: any[] = []
 try {
   const db = await getDb()
   const result = await db.execute({
-    sql: `SELECT m.scheduled_date, m.venue, m.status, t.name as tournament_name
+    sql: `SELECT m.id, m.scheduled_date, m.venue, m.status, m.elapsed_seconds, t.name as tournament_name, t.match_duration
           FROM matches m
           JOIN tournaments t ON t.id = m.tournament_id
           JOIN teams ht ON ht.id = m.home_team_id
@@ -63,21 +68,45 @@ try {
   })
   if (result.rows.length > 0) {
     const row = result.rows[0] as any
+    matchId = row.id || ''
+    matchStatus = (row.status || '').toLowerCase()
     matchDate = formatDate(row.scheduled_date || '')
     matchVenue = (row.venue || '').toUpperCase()
     matchTournament = (row.tournament_name || '').toUpperCase()
-    const status = (row.status || '').toLowerCase()
+    matchDuration = row.match_duration || 90
+    matchElapsedSeconds = row.elapsed_seconds || 0
+    const status = matchStatus
     const sched = row.scheduled_date || ''
     if (status === 'live') {
       matchEdition = 'EN VIVO'
-    } else if (status === 'completed') {
-      matchEdition = 'FINALIZADO'
+    } else if (status === 'completed' || status === 'finished' || status === 'cancelled') {
+      matchEdition = status === 'cancelled' ? 'CANCELADO' : 'FINALIZADO'
+    } else if (status === 'scheduled' || status === 'pending') {
+      matchEdition = 'PROGRAMADO'
     } else if (sched) {
-      const matchTime = new Date(sched).getTime()
-      matchEdition = isNaN(matchTime) ? 'NO DEFINIDO' : (matchTime > Date.now() ? 'PROGRAMADO' : 'FINALIZADO')
+      matchEdition = 'PROGRAMADO'
+    }
+
+    // Fetch match events for SSR
+    if (matchId) {
+      const eventsResult = await db.execute({
+        sql: 'SELECT * FROM match_events WHERE match_id = ? ORDER BY minute ASC',
+        args: [matchId],
+      })
+      ssrEvents = (eventsResult.rows as any[]).map((e: any) => ({
+        minute: e.minute,
+        team: e.team.toUpperCase(),
+        type: e.type === 'change' ? 'sub' : e.type,
+        player: e.player || '',
+        player2: e.player2 || undefined,
+        detail: e.detail || undefined,
+      }))
     }
   }
 } catch {}
+
+const ssrScoreA = ssrEvents.filter(e => e.team === 'A' && e.type === 'goal').length
+const ssrScoreB = ssrEvents.filter(e => e.team === 'B' && e.type === 'goal').length
 
 // Fallback: try COMBATS constant for mock data
 if (!matchTournament && team1FromConst && team2FromConst) {
@@ -98,17 +127,100 @@ if (!matchTournament && team1FromConst && team2FromConst) {
     platform="KEKU SPORT"
   />
 
+  <div id="ms-poll-data"
+    data-match-id={matchId}
+    data-status={matchStatus}
+    data-match-duration={matchDuration}
+    data-elapsed-seconds={matchElapsedSeconds}
+  ></div>
+
   <Matchstats
     teamA={{ name: team1Name, color: '#00ff88', logo: '/images/logo-a.png' }}
     teamB={{ name: team2Name, color: '#f59e0b', logo: '/images/logo-b.png' }}
-    score={[2, 1]}
-    minute={67}
-    isLive={true}
-    events={[
-      { minute: 12, team: 'A', type: 'goal',   player: 'Peereira' },
-      { minute: 23, team: 'B', type: 'yellow', player: 'Westcol'  },
-      { minute: 52, team: 'B', type: 'red',    player: 'T.Mazza'  },
-      { minute: 61, team: 'A', type: 'sub',    player: 'Perxitaa', player2: 'Andoni' },
-    ]}
+    matchId={matchId}
+    matchDuration={matchDuration}
+    isLive={matchEdition === 'EN VIVO'}
+    minute={Math.floor(matchElapsedSeconds / 60)}
+    score={[ssrScoreA, ssrScoreB]}
+    events={ssrEvents}
   />
 </Layout>
+
+<script>
+(function() {
+  const el = document.getElementById('ms-poll-data');
+  if (!el) return;
+  const matchId = el.dataset.matchId;
+  const status = el.dataset.status;
+  const matchDuration = parseInt(el.dataset.matchDuration || '90', 10);
+  if (!matchId || status !== 'live') return;
+
+  const EVENT_ICONS = { goal:'⚽', yellow:'🟨', red:'🟥', sub:'🔄', var:'📺', shot:'🎯', foul:'⚠️' };
+
+  function updateTimeBar(minute) {
+    const minEl = document.querySelector('.ms-minute-num');
+    const fillEl = document.querySelector('.ms-time-fill');
+    const dotEl = document.querySelector('.ms-time-dot');
+    if (minEl) minEl.textContent = minute + "'";
+    if (fillEl) fillEl.style.width = Math.min((minute / matchDuration) * 100, 100) + '%';
+    if (dotEl) dotEl.style.left = Math.min((minute / matchDuration) * 100, 100) + '%';
+  }
+
+  async function poll() {
+    try {
+      const res = await fetch(`/api/matches/${matchId}/events`);
+      const data = await res.json();
+      if (!data.success) return;
+      const events = data.events || [];
+
+      if (data.elapsedSeconds !== undefined) {
+        const minute = Math.floor(data.elapsedSeconds / 60);
+        updateTimeBar(minute);
+      }
+
+      // Update score
+      const goalsA = events.filter(e => e.team.toUpperCase() === 'A' && e.type === 'goal').length;
+      const goalsB = events.filter(e => e.team.toUpperCase() === 'B' && e.type === 'goal').length;
+      const scoreEls = document.querySelectorAll('.ms-score');
+      if (scoreEls.length >= 2) {
+        scoreEls[0].textContent = goalsA;
+        scoreEls[1].textContent = goalsB;
+      }
+
+      const timeline = document.querySelector('.ms-events-wrap');
+      if (!timeline) return;
+      const timelineInner = timeline.querySelector('.ms-events-list');
+      if (!timelineInner) return;
+
+      timelineInner.innerHTML = events.map(e => {
+        const side = e.team.toUpperCase();
+        const type = e.type === 'change' ? 'sub' : e.type;
+        const icon = EVENT_ICONS[type] || '📌';
+        return `
+          <div class="ms-event ms-event--${side.toLowerCase()}">
+            <div class="ms-event-side ms-event-side--a">
+              ${side === 'A' ? `<div class="ms-event-content ms-event-content--a">
+                <span class="ms-event-player">${e.player || ''}</span>
+                ${type === 'sub' && e.player2 ? `<span class="ms-event-sub">↑ ${e.player2}</span>` : ''}
+                ${type === 'shot' && e.detail ? `<span class="ms-event-detail">${e.detail}</span>` : ''}
+              </div>` : ''}
+            </div>
+            <div class="ms-event-mid">
+              <span class="ms-event-min">${e.minute}'</span>
+              <div class="ms-event-icon ms-event-icon--${type}">${icon}</div>
+            </div>
+            <div class="ms-event-side ms-event-side--b">
+              ${side === 'B' ? `<div class="ms-event-content ms-event-content--b">
+                <span class="ms-event-player">${e.player || ''}</span>
+                ${type === 'sub' && e.player2 ? `<span class="ms-event-sub">↑ ${e.player2}</span>` : ''}
+                ${type === 'shot' && e.detail ? `<span class="ms-event-detail">${e.detail}</span>` : ''}
+              </div>` : ''}
+            </div>
+          </div>`;
+      }).join('');
+    } catch {}
+  }
+
+  setInterval(poll, 5000);
+})();
+</script>

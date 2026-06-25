@@ -11,6 +11,18 @@ function formatDate(d: string) {
   const p = d.split('T')[0].split('-')
   return p.length === 3 ? `${p[2]} ${months[parseInt(p[1])-1]||p[1]} ${p[0]}` : d
 }
+function parsePrizes(v: string | null) {
+  if (!v) return []
+  try { return Object.entries(JSON.parse(v)) } catch { return [] }
+}
+function parseAwards(v: string | null) {
+  if (!v) return []
+  try { return JSON.parse(v) } catch { return [] }
+}
+function parseRules(v: string | null) {
+  if (!v) return []
+  try { return JSON.parse(v) } catch { return [] }
+}
 ---
 
 <div id="tec-app" class="tec-root">
@@ -41,6 +53,9 @@ function formatDate(d: string) {
         {tournaments.map(t => {
           const startRaw = t.start_date?.split('T')[0] || t.start_date || ''
           const formattedDate = formatDate(startRaw)
+          const prizes = parsePrizes(t.prizes)
+          const awards = parseAwards(t.awards)
+          const rules = parseRules(t.rules)
           return (
           <div class="tec-tourney-card">
             <span class="hud-c hud-c--tl"></span><span class="hud-c hud-c--tr"></span>
@@ -63,6 +78,94 @@ function formatDate(d: string) {
                 Hasta {t.num_teams} equipos
               </span>
               <button class="tec-inscribir-btn" data-tourney={t.id} data-tourney-name={t.name}>INSCRIBIRSE</button>
+            </div>
+            <div class="tec-tourney-details hidden">
+              <div class="tec-td-grid">
+                <div class="tec-td-item">
+                  <span class="tec-td-label">DURACIÓN PARTIDO</span>
+                  <span class="tec-td-val">{t.match_duration ? t.match_duration + ' min' : '—'}</span>
+                </div>
+                <div class="tec-td-item">
+                  <span class="tec-td-label">PTS POR TRIUNFO</span>
+                  <span class="tec-td-val">{t.points_per_win ?? '—'}</span>
+                </div>
+                <div class="tec-td-item">
+                  <span class="tec-td-label">SEDE</span>
+                  <span class="tec-td-val">{t.venue || '—'}</span>
+                </div>
+                <div class="tec-td-item">
+                  <span class="tec-td-label">CIUDAD</span>
+                  <span class="tec-td-val">{t.city || '—'}</span>
+                </div>
+                <div class="tec-td-item">
+                  <span class="tec-td-label">COSTO INSCRIPCIÓN</span>
+                  <span class="tec-td-val">{t.registration_fee != null ? (t.registration_fee === 0 ? 'Gratis' : '$' + t.registration_fee) : '—'}</span>
+                </div>
+                <div class="tec-td-item">
+                  <span class="tec-td-label">EDADES</span>
+                  <span class="tec-td-val">{t.min_age || '—'} – {t.max_age || '—'}</span>
+                </div>
+                <div class="tec-td-item">
+                  <span class="tec-td-label">GRUPOS</span>
+                  <span class="tec-td-val">{t.num_groups ? t.num_groups : '—'}</span>
+                </div>
+                <div class="tec-td-item">
+                  <span class="tec-td-label">AVANZAN POR GRUPO</span>
+                  <span class="tec-td-val">{t.advancers_per_group ? t.advancers_per_group : '—'}</span>
+                </div>
+                <div class="tec-td-item">
+                  <span class="tec-td-label">IDA/VUELTA GRUPOS</span>
+                  <span class="tec-td-val">{t.two_legged ? 'Sí' : 'No'}</span>
+                </div>
+                <div class="tec-td-item">
+                  <span class="tec-td-label">IDA/VUELTA ELIMIN.</span>
+                  <span class="tec-td-val">{t.playoffs_two_legged ? 'Sí' : 'No'}</span>
+                </div>
+                <div class="tec-td-item">
+                  <span class="tec-td-label">FINAL ÚNICA</span>
+                  <span class="tec-td-val">{t.single_final_match ? 'Sí' : 'No'}</span>
+                </div>
+              </div>
+
+              {prizes.length ? (
+              <div class="tec-td-section">
+                <span class="tec-td-section-title">PREMIOS / GANANCIAS</span>
+                <div class="tec-td-prizes">
+                  {prizes.map(([k, v]) => (
+                    <div class="tec-td-prize-row"><span>{k}</span><span>{v}</span></div>
+                  ))}
+                </div>
+              </div>
+              ) : null}
+
+              {awards.length ? (
+              <div class="tec-td-section">
+                <span class="tec-td-section-title">RECONOCIMIENTOS</span>
+                <div class="flex flex-wrap gap-1">
+                  {awards.map(a => (
+                    <span class="tec-td-award">{a}</span>
+                  ))}
+                </div>
+              </div>
+              ) : null}
+
+              {rules.length ? (
+              <div class="tec-td-section">
+                <span class="tec-td-section-title">REGLAS</span>
+                <ul class="tec-td-rules">
+                  {rules.map(r => (
+                    <li>{r}</li>
+                  ))}
+                </ul>
+              </div>
+              ) : null}
+
+              {t.requirements ? (
+              <div class="tec-td-section">
+                <span class="tec-td-section-title">REQUISITOS</span>
+                <p class="tec-td-reqs">{t.requirements}</p>
+              </div>
+              ) : null}
             </div>
           </div>
           )
@@ -551,6 +654,121 @@ function formatDate(d: string) {
   .tec-inscribir-btn:hover {
     filter: brightness(1.1);
     transform: translateY(-1px);
+  }
+  .tec-tourney-card {
+    cursor: pointer;
+  }
+
+  /* ═══ TOURNAMENT DETAIL INSIDE CARD ═══ */
+  .tec-tourney-details {
+    margin-top: .75rem;
+    padding-top: .75rem;
+    border-top: 1px solid rgba(255,255,255,.05);
+    animation: tdFadeIn .25s ease;
+  }
+  @keyframes tdFadeIn {
+    from { opacity: 0; max-height: 0; }
+    to   { opacity: 1; max-height: 800px; }
+  }
+  .tec-td-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: .3rem;
+  }
+  .tec-td-item {
+    background: rgba(255,255,255,.02);
+    border: 1px solid rgba(255,255,255,.04);
+    border-radius: 8px;
+    padding: .3rem .4rem;
+  }
+  .tec-td-label {
+    display: block;
+    font-family: var(--font-display);
+    font-size: .5rem;
+    letter-spacing: .08em;
+    color: rgba(251,191,36,.35);
+    text-transform: uppercase;
+    margin-bottom: .05rem;
+  }
+  .tec-td-val {
+    display: block;
+    font-size: .5rem;
+    font-weight: 600;
+    color: var(--cream);
+    letter-spacing: .02em;
+  }
+  .tec-td-section {
+    margin-top: .5rem;
+  }
+  .tec-td-section-title {
+    display: block;
+    font-family: var(--font-display);
+    font-size: .45rem;
+    letter-spacing: .1em;
+    color: rgba(251,191,36,.4);
+    text-transform: uppercase;
+    margin-bottom: .25rem;
+  }
+  .tec-td-prizes {
+    display: flex;
+    flex-direction: column;
+    gap: .15rem;
+  }
+  .tec-td-prize-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255,255,255,.02);
+    border: 1px solid rgba(255,255,255,.04);
+    border-radius: 6px;
+    padding: .2rem .4rem;
+  }
+  .tec-td-prize-row span:first-child {
+    font-family: var(--font-display);
+    font-size: .7rem;
+    letter-spacing: .06em;
+    color: rgba(251,191,36,.45);
+    text-transform: uppercase;
+  }
+  .tec-td-prize-row span:last-child {
+    font-size: .5rem;
+    font-weight: 700;
+    color: var(--gold);
+  }
+  .tec-td-award {
+    display: inline-block;
+    background: rgba(251,191,36,.06);
+    border: 1px solid rgba(251,191,36,.1);
+    border-radius: 99px;
+    padding: .15rem .45rem;
+    font-size: .4rem;
+    font-family: var(--font-display);
+    letter-spacing: .05em;
+    color: rgba(251,191,36,.5);
+    text-transform: uppercase;
+  }
+  .tec-td-rules {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: .15rem;
+  }
+  .tec-td-rules li {
+    font-size: .42rem;
+    color: rgba(232,220,200,.4);
+    padding: .2rem .35rem;
+    background: rgba(255,255,255,.02);
+    border: 1px solid rgba(255,255,255,.04);
+    border-radius: 6px;
+    letter-spacing: .02em;
+    line-height: 1.35;
+  }
+  .tec-td-reqs {
+    font-size: .42rem;
+    color: rgba(232,220,200,.35);
+    line-height: 1.4;
   }
 
   /* ═══ TOGGLE ═══ */
@@ -1688,6 +1906,15 @@ function formatDate(d: string) {
         btn.disabled = false;
         alert('Error de red');
       }
+    });
+  });
+
+  // ── Tournament card click → toggle details ──
+  document.querySelectorAll('.tec-tourney-card').forEach(card => {
+    card.addEventListener('click', (e) => {
+      if (e.target.closest('.tec-inscribir-btn')) return;
+      const details = card.querySelector('.tec-tourney-details');
+      if (details) details.classList.toggle('hidden');
     });
   });
 

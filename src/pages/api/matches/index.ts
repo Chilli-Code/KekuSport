@@ -45,7 +45,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   if (action === 'update') {
     const dbData: Record<string, unknown> = { id: data.id }
-    const map: Record<string, string> = { homeTeamId: 'home_team_id', awayTeamId: 'away_team_id', scheduledDate: 'scheduled_date', homeScore: 'home_score', awayScore: 'away_score' }
+    const map: Record<string, string> = { homeTeamId: 'home_team_id', awayTeamId: 'away_team_id', scheduledDate: 'scheduled_date', homeScore: 'home_score', awayScore: 'away_score', elapsedSeconds: 'elapsed_seconds' }
     for (const [key, val] of Object.entries(data)) {
       if (key === 'id') continue
       dbData[map[key] || key] = val
