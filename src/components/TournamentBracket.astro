@@ -1,37 +1,44 @@
 ---
-// TournamentBracket.astro
-// Estructura horizontal: Grupos → Cuartos → Semis → Final ← Semis ← Cuartos ← Grupos
-
-export interface Team {
+interface TeamData {
   id: string
   name: string
   logo?: string
   points: number
 }
 
-export interface Match {
-  id: string
-  team1: Team
-  team2: Team
-  score1: number
-  score2: number
-  winner?: 'team1' | 'team2'
+interface GroupData {
+  label: string
+  teams: TeamData[]
 }
 
-export interface Props {
+interface BracketSlot {
+  label: string
+  isKnown: boolean
+}
+
+interface BracketMatch {
+  slots: [BracketSlot, BracketSlot]
+  roundName: string
+  isTwoLegged: boolean
+  leg?: 'ida' | 'vuelta'
+}
+
+interface BracketRound {
+  name: string
+  matches: BracketMatch[]
+  isTwoLegged: boolean
+}
+
+interface Props {
   title?: string
   subtitle?: string
   finalDate?: string
   finalLocation?: string
-  groupA?: Team[]
-  groupB?: Team[]
-  groupC?: Team[]
-  groupD?: Team[]
-  leftQuarterFinals?: Match[]
-  rightQuarterFinals?: Match[]
-  leftSemiFinal?: Match
-  rightSemiFinal?: Match
-  finalMatch?: Match
+  groups?: GroupData[]
+  numGroups: number
+  advancersPerGroup: number
+  playoffsTwoLegged: boolean
+  singleFinalMatch: boolean
 }
 
 const {
@@ -39,26 +46,217 @@ const {
   subtitle = "COPA CHONTADURO",
   finalDate = "30 DE MAYO",
   finalLocation = "BUDAPEST",
-
-  groupA = [],
-  groupB = [],
-  groupC = [],
-  groupD = [],
-
-  leftQuarterFinals,
-  rightQuarterFinals,
-  leftSemiFinal,
-  rightSemiFinal,
-  finalMatch,
+  groups = [],
+  numGroups,
+  advancersPerGroup,
+  playoffsTwoLegged,
+  singleFinalMatch,
 } = Astro.props
 
-const hasBracketData = finalMatch || leftSemiFinal || rightSemiFinal || leftQuarterFinals?.length || rightQuarterFinals?.length
-const hasGroups = groupA.length > 0 || groupB.length > 0 || groupC.length > 0 || groupD.length > 0
+function computeBracket(groups: GroupData[], advancersPerGroup: number, playoffsTwoLegged: boolean, singleFinalMatch: boolean) {
+  const totalAdvancers = groups.length * advancersPerGroup
+  if (totalAdvancers < 2) return null
+
+  const bracketSize = Math.pow(2, Math.ceil(Math.log2(totalAdvancers)))
+  const numRounds = Math.log2(bracketSize)
+
+  const groupLabels = groups.map(g => g.label)
+
+  const seeds: { label: string; groupIdx: number }[] = []
+  for (let pos = 0; pos < advancersPerGroup; pos++) {
+    for (let g = 0; g < groups.length; g++) {
+      const label = groupLabels[g]
+      seeds.push({ label: `${pos + 1}° ${label}`, groupIdx: g })
+    }
+  }
+
+  const bracket: ({ label: string; groupIdx: number } | null)[] = Array.from({ length: bracketSize }, (_, i) =>
+    seeds[i] ?? null
+  )
+
+  const roundNames: string[] = Array.from({ length: numRounds }, (_, r) => {
+    const fromEnd = numRounds - 1 - r
+    if (fromEnd === 0) return 'Final'
+    if (fromEnd === 1) return 'Semifinal'
+    if (fromEnd === 2) return 'Cuartos de Final'
+    if (fromEnd === 3) return 'Octavos de Final'
+    return `Ronda ${r + 1}`
+  })
+
+  const rounds: BracketRound[] = []
+  let prevMatches: ({ seedIdx: number | null; isBye: boolean } | null)[] = []
+
+  for (let ri = 0; ri < numRounds; ri++) {
+    const numPairs = bracketSize / Math.pow(2, ri + 1)
+    const roundName = roundNames[ri] || `Ronda ${ri + 1}`
+    const isLast = ri === numRounds - 1
+    const isTwoLegged = playoffsTwoLegged && !(isLast && singleFinalMatch)
+    const thisRound: BracketMatch[] = []
+
+    const isFirstRound = ri === 0
+
+    for (let pi = 0; pi < numPairs; pi++) {
+      if (isFirstRound) {
+        const home = bracket[pi]
+        const away = bracket[bracketSize - 1 - pi]
+        const homeIsBye = !away
+        const awayIsBye = !home
+
+        if (homeIsBye && home) {
+          prevMatches.push({ seedIdx: pi, isBye: true })
+        } else if (awayIsBye && away) {
+          prevMatches.push({ seedIdx: bracketSize - 1 - pi, isBye: true })
+        } else if (home && away) {
+          const match: BracketMatch = {
+            slots: [
+              { label: home.label, isKnown: true },
+              { label: away.label, isKnown: true },
+            ],
+            roundName,
+            isTwoLegged: false,
+          }
+          thisRound.push(match)
+          prevMatches.push({ seedIdx: null, isBye: false })
+        }
+      } else {
+        const idx1 = pi * 2
+        const idx2 = prevMatches.length - 1 - pi * 2
+        const p1 = prevMatches[idx1]
+        const p2 = prevMatches[idx2]
+
+        const slot1: BracketSlot = p1 && p1.isBye
+          ? { label: bracket[p1.seedIdx!]!.label, isKnown: true }
+          : { label: 'Por definir', isKnown: false }
+        const slot2: BracketSlot = p2 && p2.isBye
+          ? { label: bracket[p2.seedIdx!]!.label, isKnown: true }
+          : { label: 'Por definir', isKnown: false }
+
+        const bothEmpty = !slot1.isKnown && !slot2.isKnown
+
+        if (!bothEmpty) {
+          const match: BracketMatch = {
+            slots: [slot1, slot2],
+            roundName,
+            isTwoLegged: false,
+          }
+          thisRound.push(match)
+          prevMatches.push({ seedIdx: null, isBye: false })
+        }
+      }
+    }
+
+    prevMatches = prevMatches.filter(p => p !== undefined)
+
+    if (isTwoLegged) {
+      const legRounds: BracketMatch[] = []
+      for (const m of thisRound) {
+        legRounds.push({ ...m, leg: 'ida', roundName: `${roundName} - Ida` })
+        legRounds.push({ ...m, leg: 'vuelta', roundName: `${roundName} - Vuelta` })
+      }
+      rounds.push({
+        name: roundName,
+        matches: legRounds,
+        isTwoLegged: true,
+      })
+    } else if (thisRound.length > 0) {
+      rounds.push({
+        name: roundName,
+        matches: thisRound,
+        isTwoLegged: false,
+      })
+    }
+  }
+
+  return rounds
+}
+
+const bracketRounds = computeBracket(groups, advancersPerGroup, playoffsTwoLegged, singleFinalMatch)
+
+const hasGroups = groups.length > 0 && groups.some(g => g.teams.length > 0)
+const hasBracket = bracketRounds !== null && bracketRounds.length > 0
+
+const leftGroups = groups.slice(0, Math.ceil(groups.length / 2))
+const rightGroups = groups.slice(Math.ceil(groups.length / 2))
+
+function splitBracketSides(rounds: BracketRound[]): { left: BracketRound[]; right: BracketRound[]; final: BracketMatch | null } {
+  const nonFinal = rounds.filter(r => !r.name.startsWith('Final'))
+  const finalRound = rounds.find(r => r.name.startsWith('Final'))
+  const finalMatch = finalRound?.matches?.[0] ?? null
+
+  const left: BracketRound[] = []
+  const right: BracketRound[] = []
+
+  for (const round of nonFinal) {
+    const matches = round.matches
+    const half = Math.ceil(matches.length / 2)
+    const leftMatches = matches.slice(0, half)
+    const rightMatches = matches.slice(half).reverse()
+
+    const rightSwapped = rightMatches.map(m => ({
+      ...m,
+      slots: [m.slots[1], m.slots[0]] as [BracketSlot, BracketSlot],
+    }))
+
+    if (leftMatches.length > 0) {
+      left.push({ ...round, matches: leftMatches })
+    }
+    if (rightSwapped.length > 0) {
+      right.push({ ...round, matches: rightSwapped })
+    }
+  }
+
+  return { left, right, final: finalMatch }
+}
+
+const { left, right, final: finalMatch } = hasBracket
+  ? splitBracketSides(bracketRounds!)
+  : { left: [] as BracketRound[], right: [] as BracketRound[], final: null as BracketMatch | null }
+
+function getConnectorPaths(from: number, to: number, slotH: number, gap: number, w: number): { height: number; paths: string[] } {
+  const fromH = from * slotH + (from - 1) * gap
+  const toH = to * slotH + (to - 1) * gap
+  const totalH = Math.max(fromH, toH, 1)
+
+  const paths: string[] = []
+  const midX = w * 0.5
+
+  if (from === 2 && to === 1) {
+    const y1 = slotH * 0.5
+    const y2 = slotH + gap + slotH * 0.5
+    const destY = (y1 + y2) * 0.5
+    paths.push(`M 0 ${y1} L ${midX} ${y1}`)
+    paths.push(`M 0 ${y2} L ${midX} ${y2}`)
+    paths.push(`M ${midX} ${y1} L ${midX} ${y2}`)
+    paths.push(`M ${midX} ${destY} L ${w} ${destY}`)
+  } else if (from === 1 && to === 1) {
+    paths.push(`M 0 ${totalH * 0.5} L ${w} ${totalH * 0.5}`)
+  } else {
+    for (let i = 0; i < Math.min(from, to); i++) {
+      const y = (i + 0.5) * slotH + i * gap
+      paths.push(`M 0 ${y} L ${w} ${y}`)
+    }
+  }
+
+  return { height: totalH, paths }
+}
+
+const SLOT_H = 42
+const GAP = 8
+const CONN_W = 28
+const GROUP_W = 190
+const MATCH_W = 158
+const FINAL_W = 182
+const SF_W = 162
+
+function roundColumnWidth(round: BracketRound): number {
+  if (round.name.startsWith('Final')) return FINAL_W
+  if (round.name.startsWith('Semifinal')) return SF_W
+  if (round.name.startsWith('Cuartos') || round.name.startsWith('Octavos')) return MATCH_W
+  return MATCH_W
+}
 ---
 
 <section class="w-full px-4 py-10 tb-fade-in">
-
-  <!-- ── HEADER ── -->
   <div class="text-center mb-10">
     <div class="flex justify-center gap-1.5 mb-2">
       <span class="tb-diamond"></span>
@@ -69,303 +267,200 @@ const hasGroups = groupA.length > 0 || groupB.length > 0 || groupC.length > 0 ||
     <p class="tb-subtitle">{subtitle}</p>
   </div>
 
-  <!-- ── BRACKET SCROLL ── -->
-  {hasGroups || hasBracketData ? (
-<div class="w-full overflow-x-auto 2xl:flex 2xl:justify-center pb-2 [-webkit-overflow-scrolling:touch]">
-  <div class="flex items-center w-max px-4">
-      <!-- ══════════════ GRUPOS IZQ (A + B) ══════════════ -->
+  {hasGroups || hasBracket ? (
+  <div class="w-full overflow-x-auto 2xl:flex 2xl:justify-center pb-2 [-webkit-overflow-scrolling:touch]">
+    <div class="flex items-start w-max px-4">
+
+      <!-- LEFT GROUPS -->
       {hasGroups ? (
-      <div class="flex flex-col gap-3 flex-shrink-0 self-center" style="width:190px">
-
-        <div class="flex flex-col gap-1.5">
-          <span class="tb-round-label">Grupo A</span>
-          <div class="tb-group-card">
-            {groupA.length > 0 ? groupA.map((t, i) => (
-              <div class="tb-group-row">
-                <span class={`tb-pos ${i === 0 ? 'tb-pos--gold' : ''}`}>{i + 1}</span>
-                {t.logo && <div class="tb-avatar"><img src={t.logo} alt={t.name} loading="lazy" /></div>}
-                <span class="tb-team-name">{t.name}</span>
-                <span class="tb-pts">{t.points}</span>
-              </div>
-            )) : (
-              <div class="tb-group-row"><span class="tb-team-name tb-placeholder">—</span></div>
-            )}
+      <div class="flex flex-col gap-4 flex-shrink-0 self-start" style="width:{GROUP_W}px">
+        {leftGroups.map(g => (
+          <div class="flex flex-col gap-1.5">
+            <span class="tb-round-label">Grupo {g.label}</span>
+            <div class="tb-group-card">
+              {g.teams.length > 0 ? g.teams.map((t, i) => (
+                <div class="tb-group-row">
+                  <span class={`tb-pos ${i === 0 ? 'tb-pos--gold' : ''}`}>{i + 1}</span>
+                  {t.logo && <div class="tb-avatar"><img src={t.logo} alt={t.name} loading="lazy" /></div>}
+                  <span class="tb-team-name">{t.name}</span>
+                  <span class="tb-pts">{t.points}</span>
+                </div>
+              )) : (
+                <div class="tb-group-row"><span class="tb-team-name tb-placeholder">&mdash;</span></div>
+              )}
+            </div>
           </div>
-        </div>
-
-        <div class="flex flex-col gap-1.5">
-          <span class="tb-round-label">Grupo B</span>
-          <div class="tb-group-card">
-            {groupB.length > 0 ? groupB.map((t, i) => (
-              <div class="tb-group-row">
-                <span class={`tb-pos ${i === 0 ? 'tb-pos--gold' : ''}`}>{i + 1}</span>
-                {t.logo && <div class="tb-avatar"><img src={t.logo} alt={t.name} loading="lazy" /></div>}
-                <span class="tb-team-name">{t.name}</span>
-                <span class="tb-pts">{t.points}</span>
-              </div>
-            )) : (
-              <div class="tb-group-row"><span class="tb-team-name tb-placeholder">—</span></div>
-            )}
-          </div>
-        </div>
-
+        ))}
       </div>
       ) : null}
 
-      {hasBracketData ? <>
-      <!-- ══ CONECTOR grupos izq → cuartos izq ══ -->
-      <div class="flex-shrink-0 self-stretch flex items-center" style="width:36px">
-        <svg class="w-full overflow-visible" style="height:260px" viewBox="0 0 36 200" preserveAspectRatio="none">
-          <line x1="0"  y1="38"  x2="18" y2="38"  />
-          <line x1="18" y1="38"  x2="18" y2="82"  />
-          <line x1="18" y1="82"  x2="36" y2="82"  />
-          <line x1="0"  y1="155" x2="18" y2="155" />
-          <line x1="18" y1="155" x2="18" y2="118" />
-          <line x1="18" y1="118" x2="36" y2="118" />
-        </svg>
-      </div>
-
-      <!-- ══════════════ CUARTOS IZQ ══════════════ -->
-      <div class="flex flex-col gap-3 flex-shrink-0 self-center" style="width:158px">
-        <span class="tb-round-label">Cuartos de Final</span>
-        {leftQuarterFinals && leftQuarterFinals.length > 0 ? leftQuarterFinals.map((m) => (
-          <div class="tb-match">
-            <div class={`tb-match-row ${m.winner === 'team1' ? 'tb-match-row--win' : ''}`}>
-              <span class="tb-team-name">{m.team1.name}</span>
-              <span class={`tb-score ${m.winner === 'team1' ? 'tb-score--win' : 'tb-score--loss'}`}>{m.score1}</span>
+      <!-- LEFT BRACKET ROUNDS -->
+      {left.length > 0 ? left.map((round, ri) => {
+        const colW = roundColumnWidth(round)
+        const prev = ri > 0 ? left[ri - 1] : null
+        const prevCount = prev ? prev.matches.length : leftGroups.length
+        const conn = prevCount > 0 ? getConnectorPaths(prevCount, round.matches.length, SLOT_H, GAP, CONN_W) : null
+        return (
+          <>
+            {conn ? (
+            <div class="flex-shrink-0 self-stretch flex items-center" style="width:{CONN_W}px">
+              <svg class="w-full overflow-visible" style="height:{conn.height}px;max-height:500px" viewBox="0 0 {CONN_W} {Math.max(conn.height,1)}" preserveAspectRatio="none">
+                {conn.paths.map((p, i) => <path key={i} d={p} />)}
+              </svg>
             </div>
-            <div class={`tb-match-row ${m.winner === 'team2' ? 'tb-match-row--win' : ''}`}>
-              <span class="tb-team-name">{m.team2.name}</span>
-              <span class={`tb-score ${m.winner === 'team2' ? 'tb-score--win' : 'tb-score--loss'}`}>{m.score2}</span>
+            ) : (
+            <div class="flex-shrink-0 self-center" style="width:{CONN_W * 0.5}px"></div>
+            )}
+            <div class="flex flex-col gap-2 flex-shrink-0 self-center" style="width:{colW}px">
+              <span class="tb-round-label">{round.name}</span>
+              {round.matches.map(m => (
+                <div class="tb-match">
+                  <div class="tb-match-row">
+                    <span class="tb-team-name">{m.slots[0].label}</span>
+                    <span class="tb-score tb-score--loss">-</span>
+                  </div>
+                  <div class="tb-match-row">
+                    <span class="tb-team-name">{m.slots[1].label}</span>
+                    <span class="tb-score tb-score--loss">-</span>
+                  </div>
+                  {m.leg && <div class="tb-match-leg">{m.leg === 'ida' ? 'IDA' : 'VUELTA'}</div>}
+                </div>
+              ))}
             </div>
-          </div>
-        )) : <div class="tb-match"><div class="tb-match-row"><span class="tb-team-name tb-placeholder">TBD</span></div><div class="tb-match-row"><span class="tb-team-name tb-placeholder">TBD</span></div></div>}
-      </div>
+          </>
+        )
+      }) : null}
 
-      <!-- ══ CONECTOR cuartos izq → semi izq ══ -->
-      <div class="flex-shrink-0 self-stretch flex items-center" style="width:36px">
-        <svg class="w-full overflow-visible" style="height:260px" viewBox="0 0 36 200" preserveAspectRatio="none">
-          <line x1="0"  y1="74"  x2="18" y2="74"  />
-          <line x1="18" y1="74"  x2="18" y2="100" />
-          <line x1="0"  y1="126" x2="18" y2="126" />
-          <line x1="18" y1="126" x2="18" y2="100" />
-          <line x1="18" y1="100" x2="36" y2="100" />
+      <!-- CONNECTOR TO FINAL -->
+      {left.length > 0 && finalMatch ? (
+      <div class="flex-shrink-0 self-center" style="width:{CONN_W}px">
+        <svg class="w-full" height="2" viewBox="0 0 {CONN_W} 2">
+          <line x1="0" y1="1" x2={CONN_W} y2="1" />
         </svg>
       </div>
+      ) : null}
 
-      <!-- ══════════════ SEMI IZQ ══════════════ -->
-      <div class="flex flex-col gap-1.5 flex-shrink-0 self-center" style="width:162px">
-        <span class="tb-round-label">Semifinal</span>
-        {leftSemiFinal ? (
-        <div class="tb-sf">
-          <div class={`tb-sf-row ${leftSemiFinal.winner === 'team1' ? 'tb-match-row--win' : ''}`}>
-            <span class="tb-team-name">{leftSemiFinal.team1.name}</span>
-            <span class={`tb-score ${leftSemiFinal.winner === 'team1' ? 'tb-score--win' : 'tb-score--loss'}`}>{leftSemiFinal.score1}</span>
-          </div>
-          <div class={`tb-sf-row ${leftSemiFinal.winner === 'team2' ? 'tb-match-row--win' : ''}`}>
-            <span class="tb-team-name">{leftSemiFinal.team2.name}</span>
-            <span class={`tb-score ${leftSemiFinal.winner === 'team2' ? 'tb-score--win' : 'tb-score--loss'}`}>{leftSemiFinal.score2}</span>
-          </div>
-        </div>
-        ) : <div class="tb-sf"><div class="tb-sf-row"><span class="tb-team-name tb-placeholder">TBD</span></div></div>}
-      </div>
-
-      <!-- ══ CONECTOR semi izq → final ══ -->
-      <div class="flex-shrink-0 self-center" style="width:42px">
-        <svg class="w-full" height="2" viewBox="0 0 42 2">
-          <line x1="0" y1="1" x2="42" y2="1" />
-        </svg>
-      </div>
-
-      <!-- ══════════════ FINAL ══════════════ -->
-      <div class="flex flex-col gap-1.5 flex-shrink-0 self-center" style="width:182px">
-        <span class="tb-round-label tb-round-label--final">★ Final ★</span>
+      <!-- FINAL -->
+      {finalMatch || (!hasBracket && hasGroups) ? (
+      <div class="flex flex-col gap-1.5 flex-shrink-0 self-center" style="width:{FINAL_W}px">
         {finalMatch ? (
-        <div class="tb-final">
-          <div class="tb-final-header">CAMPEÓN</div>
-          <div class={`tb-final-row ${finalMatch.winner === 'team1' ? 'tb-match-row--win' : ''}`}>
-            {finalMatch.team1.logo && (
-              <div class="tb-avatar tb-avatar--lg">
-                <img src={finalMatch.team1.logo} alt={finalMatch.team1.name} loading="lazy" />
-              </div>
-            )}
-            <span class="tb-team-name">{finalMatch.team1.name}</span>
-            <span class={`tb-score tb-score--xl ${finalMatch.winner === 'team1' ? 'tb-score--win' : 'tb-score--loss'}`}>{finalMatch.score1}</span>
+          <>
+          <span class="tb-round-label tb-round-label--final">&starf; Final &starf;</span>
+          <div class="tb-final">
+            <div class="tb-final-header">CAMPE&Oacute;N</div>
+            <div class="tb-final-row">
+              {finalMatch.slots[0].isKnown
+                ? <span class="tb-team-name">{finalMatch.slots[0].label}</span>
+                : <span class="tb-team-name tb-placeholder">Por definir</span>
+              }
+              <span class="tb-score tb-score--xl tb-score--loss">-</span>
+            </div>
+            <div class="tb-final-vs">VS</div>
+            <div class="tb-final-row">
+              {finalMatch.slots[1].isKnown
+                ? <span class="tb-team-name">{finalMatch.slots[1].label}</span>
+                : <span class="tb-team-name tb-placeholder">Por definir</span>
+              }
+              <span class="tb-score tb-score--xl tb-score--loss">-</span>
+            </div>
           </div>
-          <div class="tb-final-vs">VS</div>
-          <div class={`tb-final-row ${finalMatch.winner === 'team2' ? 'tb-match-row--win' : ''}`}>
-            {finalMatch.team2.logo && (
-              <div class="tb-avatar tb-avatar--lg">
-                <img src={finalMatch.team2.logo} alt={finalMatch.team2.name} loading="lazy" />
-              </div>
-            )}
-            <span class="tb-team-name">{finalMatch.team2.name}</span>
-            <span class={`tb-score tb-score--xl ${finalMatch.winner === 'team2' ? 'tb-score--win' : 'tb-score--loss'}`}>{finalMatch.score2}</span>
-          </div>
-        </div>
+          </>
         ) : (
-        <div class="tb-final tb-final--placeholder">
-          <div class="tb-final-header">PRÓXIMAMENTE</div>
-          <div class="tb-final-row tb-final-row--center">
-            <span class="tb-team-name tb-placeholder">Los cruces se definirán tras la fase de grupos</span>
+          <>
+          <span class="tb-round-label tb-round-label--final">&starf; PR&Oacute;XIMAMENTE &starf;</span>
+          <div class="tb-final tb-final--placeholder">
+            <div class="tb-final-header">FASE DE ELIMINACI&Oacute;N</div>
+            <div class="tb-final-row tb-final-row--center">
+              <span class="tb-team-name tb-placeholder">Los cruces se definir&aacute;n tras la fase de grupos</span>
+            </div>
           </div>
-        </div>
+          </>
         )}
-        <p class="tb-final-info">📍 {finalLocation} · {finalDate}</p>
+        <p class="tb-final-info">📍 {finalLocation} &middot; {finalDate}</p>
       </div>
+      ) : null}
 
-      <!-- ══ CONECTOR final → semi der ══ -->
-      <div class="flex-shrink-0 self-center" style="width:42px">
-        <svg class="w-full" height="2" viewBox="0 0 42 2">
-          <line x1="0" y1="1" x2="42" y2="1" />
+      <!-- CONNECTOR FROM FINAL -->
+      {right.length > 0 && finalMatch ? (
+      <div class="flex-shrink-0 self-center" style="width:{CONN_W}px">
+        <svg class="w-full" height="2" viewBox="0 0 {CONN_W} 2">
+          <line x1="0" y1="1" x2={CONN_W} y2="1" />
         </svg>
       </div>
+      ) : null}
 
-      <!-- ══════════════ SEMI DER ══════════════ -->
-      <div class="flex flex-col gap-1.5 flex-shrink-0 self-center" style="width:162px">
-        <span class="tb-round-label">Semifinal</span>
-        {rightSemiFinal ? (
-        <div class="tb-sf">
-          <div class={`tb-sf-row ${rightSemiFinal.winner === 'team1' ? 'tb-match-row--win' : ''}`}>
-            <span class="tb-team-name">{rightSemiFinal.team1.name}</span>
-            <span class={`tb-score ${rightSemiFinal.winner === 'team1' ? 'tb-score--win' : 'tb-score--loss'}`}>{rightSemiFinal.score1}</span>
-          </div>
-          <div class={`tb-sf-row ${rightSemiFinal.winner === 'team2' ? 'tb-match-row--win' : ''}`}>
-            <span class="tb-team-name">{rightSemiFinal.team2.name}</span>
-            <span class={`tb-score ${rightSemiFinal.winner === 'team2' ? 'tb-score--win' : 'tb-score--loss'}`}>{rightSemiFinal.score2}</span>
-          </div>
-        </div>
-        ) : <div class="tb-sf"><div class="tb-sf-row"><span class="tb-team-name tb-placeholder">TBD</span></div></div>}
-      </div>
-
-      <!-- ══ CONECTOR semi der ← cuartos der ══ -->
-      <div class="flex-shrink-0 self-stretch flex items-center" style="width:36px">
-        <svg class="w-full overflow-visible" style="height:260px" viewBox="0 0 36 200" preserveAspectRatio="none">
-          <line x1="36" y1="74"  x2="18" y2="74"  />
-          <line x1="18" y1="74"  x2="18" y2="100" />
-          <line x1="36" y1="126" x2="18" y2="126" />
-          <line x1="18" y1="126" x2="18" y2="100" />
-          <line x1="18" y1="100" x2="0"  y2="100" />
-        </svg>
-      </div>
-
-      <!-- ══════════════ CUARTOS DER ══════════════ -->
-      <div class="flex flex-col gap-3 flex-shrink-0 self-center" style="width:158px">
-        <span class="tb-round-label">Cuartos de Final</span>
-        {rightQuarterFinals && rightQuarterFinals.length > 0 ? rightQuarterFinals.map((m) => (
-          <div class="tb-match">
-            <div class={`tb-match-row ${m.winner === 'team1' ? 'tb-match-row--win' : ''}`}>
-              <span class="tb-team-name">{m.team1.name}</span>
-              <span class={`tb-score ${m.winner === 'team1' ? 'tb-score--win' : 'tb-score--loss'}`}>{m.score1}</span>
+      <!-- RIGHT BRACKET ROUNDS (reversed) -->
+      {right.length > 0 ? [...right].reverse().map((round, ri) => {
+        const colW = roundColumnWidth(round)
+        const next = ri < right.length - 1 ? right[right.length - 2 - ri] : null
+        const nextCount = next ? next.matches.length : rightGroups.length
+        const conn = round.matches.length > 0 ? getConnectorPaths(round.matches.length, nextCount, SLOT_H, GAP, CONN_W) : null
+        return (
+          <>
+            <div class="flex flex-col gap-2 flex-shrink-0 self-center" style="width:{colW}px">
+              <span class="tb-round-label">{round.name}</span>
+              {round.matches.map(m => (
+                <div class="tb-match">
+                  <div class="tb-match-row">
+                    <span class="tb-team-name">{m.slots[0].label}</span>
+                    <span class="tb-score tb-score--loss">-</span>
+                  </div>
+                  <div class="tb-match-row">
+                    <span class="tb-team-name">{m.slots[1].label}</span>
+                    <span class="tb-score tb-score--loss">-</span>
+                  </div>
+                  {m.leg && <div class="tb-match-leg">{m.leg === 'ida' ? 'IDA' : 'VUELTA'}</div>}
+                </div>
+              ))}
             </div>
-            <div class={`tb-match-row ${m.winner === 'team2' ? 'tb-match-row--win' : ''}`}>
-              <span class="tb-team-name">{m.team2.name}</span>
-              <span class={`tb-score ${m.winner === 'team2' ? 'tb-score--win' : 'tb-score--loss'}`}>{m.score2}</span>
+            {conn ? (
+            <div class="flex-shrink-0 self-stretch flex items-center" style="width:{CONN_W}px">
+              <svg class="w-full overflow-visible" style="height:{conn.height}px;max-height:500px" viewBox="0 0 {CONN_W} {Math.max(conn.height,1)}" preserveAspectRatio="none">
+                {conn.paths.map((p, i) => <path key={i} d={p} />)}
+              </svg>
             </div>
-          </div>
-        )) : <div class="tb-match"><div class="tb-match-row"><span class="tb-team-name tb-placeholder">TBD</span></div><div class="tb-match-row"><span class="tb-team-name tb-placeholder">TBD</span></div></div>}
-      </div>
+            ) : (
+            <div class="flex-shrink-0 self-center" style="width:{CONN_W * 0.5}px"></div>
+            )}
+          </>
+        )
+      }) : null}
 
-      <!-- ══ CONECTOR cuartos der ← grupos der ══ -->
-      <div class="flex-shrink-0 self-stretch flex items-center" style="width:36px">
-        <svg class="w-full overflow-visible" style="height:260px" viewBox="0 0 36 200" preserveAspectRatio="none">
-          <line x1="36" y1="38"  x2="18" y2="38"  />
-          <line x1="18" y1="38"  x2="18" y2="82"  />
-          <line x1="18" y1="82"  x2="0"  y2="82"  />
-          <line x1="36" y1="155" x2="18" y2="155" />
-          <line x1="18" y1="155" x2="18" y2="118" />
-          <line x1="18" y1="118" x2="0"  y2="118" />
-        </svg>
-      </div>
-      </> : hasGroups ? <>
-      <!-- ══ CONECTOR grupos izq → centro ══ -->
-      <div class="flex-shrink-0 self-center" style="width:42px">
-        <svg class="w-full" height="2" viewBox="0 0 42 2">
-          <line x1="0" y1="1" x2="42" y2="1" />
-        </svg>
-      </div>
-
-      <!-- ══════════════ CENTRO (PRÓXIMAMENTE) ══════════════ -->
-      <div class="flex flex-col gap-1.5 flex-shrink-0 self-center" style="width:220px">
-        <span class="tb-round-label tb-round-label--final">★ PRÓXIMAMENTE ★</span>
-        <div class="tb-final tb-final--placeholder">
-          <div class="tb-final-header">FASE DE ELIMINACIÓN</div>
-          <div class="tb-final-row tb-final-row--center">
-            <span class="tb-team-name tb-placeholder">Los cruces se definirán tras la fase de grupos</span>
-          </div>
-        </div>
-        <p class="tb-final-info">📍 {finalLocation} · {finalDate}</p>
-      </div>
-
-      <!-- ══ CONECTOR centro → grupos der ══ -->
-      <div class="flex-shrink-0 self-center" style="width:42px">
-        <svg class="w-full" height="2" viewBox="0 0 42 2">
-          <line x1="0" y1="1" x2="42" y2="1" />
-        </svg>
-      </div>
-      </> : null}
-
-      <!-- ══════════════ GRUPOS DER (C + D) ══════════════ -->
+      <!-- RIGHT GROUPS -->
       {hasGroups ? (
-      <div class="flex flex-col gap-3 flex-shrink-0 self-center" style="width:190px">
-
-        <div class="flex flex-col gap-1.5">
-          <span class="tb-round-label">Grupo C</span>
-          <div class="tb-group-card">
-            {groupC.length > 0 ? groupC.map((t, i) => (
-              <div class="tb-group-row">
-                <span class={`tb-pos ${i === 0 ? 'tb-pos--gold' : ''}`}>{i + 1}</span>
-                {t.logo && <div class="tb-avatar"><img src={t.logo} alt={t.name} loading="lazy" /></div>}
-                <span class="tb-team-name">{t.name}</span>
-                <span class="tb-pts">{t.points}</span>
-              </div>
-            )) : (
-              <div class="tb-group-row"><span class="tb-team-name tb-placeholder">—</span></div>
-            )}
+      <div class="flex flex-col gap-4 flex-shrink-0 self-start" style="width:{GROUP_W}px">
+        {rightGroups.map(g => (
+          <div class="flex flex-col gap-1.5">
+            <span class="tb-round-label">Grupo {g.label}</span>
+            <div class="tb-group-card">
+              {g.teams.length > 0 ? g.teams.map((t, i) => (
+                <div class="tb-group-row">
+                  <span class={`tb-pos ${i === 0 ? 'tb-pos--gold' : ''}`}>{i + 1}</span>
+                  {t.logo && <div class="tb-avatar"><img src={t.logo} alt={t.name} loading="lazy" /></div>}
+                  <span class="tb-team-name">{t.name}</span>
+                  <span class="tb-pts">{t.points}</span>
+                </div>
+              )) : (
+                <div class="tb-group-row"><span class="tb-team-name tb-placeholder">&mdash;</span></div>
+              )}
+            </div>
           </div>
-        </div>
-
-        <div class="flex flex-col gap-1.5">
-          <span class="tb-round-label">Grupo D</span>
-          <div class="tb-group-card">
-            {groupD.length > 0 ? groupD.map((t, i) => (
-              <div class="tb-group-row">
-                <span class={`tb-pos ${i === 0 ? 'tb-pos--gold' : ''}`}>{i + 1}</span>
-                {t.logo && <div class="tb-avatar"><img src={t.logo} alt={t.name} loading="lazy" /></div>}
-                <span class="tb-team-name">{t.name}</span>
-                <span class="tb-pts">{t.points}</span>
-              </div>
-            )) : (
-              <div class="tb-group-row"><span class="tb-team-name tb-placeholder">—</span></div>
-            )}
-          </div>
-        </div>
-
+        ))}
       </div>
       ) : null}
 
     </div>
   </div>
-) : null}
-
+  ) : null}
 </section>
 
 <style>
-  /* ─────────────────────────────────────────
-     Todas las vars vienen de tu global.css:
-       --color-theme-gold     → #fbbf24
-       --color-theme-cream    → #fef3c7
-       --color-theme-midnight → #1e1b4b
-  ───────────────────────────────────────── */
-
-  /* ── Animación entrada ── */
   .tb-fade-in { animation: tbFadeUp 0.5s ease-out both; }
   @keyframes tbFadeUp {
     from { opacity: 0; transform: translateY(14px); }
     to   { opacity: 1; transform: translateY(0); }
   }
 
-  /* ── Header ── */
   .tb-diamond {
     display: inline-block;
     width: 6px; height: 6px;
@@ -390,7 +485,6 @@ const hasGroups = groupA.length > 0 || groupB.length > 0 || groupC.length > 0 ||
     color: color-mix(in srgb, var(--color-theme-cream) 50%, transparent);
   }
 
-  /* ── Labels de ronda ── */
   .tb-round-label {
     display: block;
     font-size: 0.6rem;
@@ -406,13 +500,12 @@ const hasGroups = groupA.length > 0 || groupB.length > 0 || groupC.length > 0 ||
     letter-spacing: 0.25em;
   }
 
-  /* ── Conectores SVG ── */
-  svg line {
+  svg line, svg path {
     stroke: color-mix(in srgb, var(--color-theme-gold) 40%, transparent);
     stroke-width: 0.8px;
+    fill: none;
   }
 
-  /* ── Tabla de grupo ── */
   .tb-group-card {
     border-radius: 8px;
     border: 1px solid color-mix(in srgb, var(--color-theme-gold) 20%, transparent);
@@ -431,7 +524,6 @@ const hasGroups = groupA.length > 0 || groupB.length > 0 || groupC.length > 0 ||
   .tb-group-row:last-child { border-bottom: none; }
   .tb-group-row:hover { background: color-mix(in srgb, var(--color-theme-gold) 5%, transparent); }
 
-  /* ── Partido (cuartos) ── */
   .tb-match {
     display: block;
     border-radius: 8px;
@@ -453,36 +545,16 @@ const hasGroups = groupA.length > 0 || groupB.length > 0 || groupC.length > 0 ||
     border-bottom: 1px solid color-mix(in srgb, var(--color-theme-gold) 10%, transparent);
   }
   .tb-match-row:last-child { border-bottom: none; }
-  .tb-match-row--win { background: rgba(34, 197, 94, 0.10); }
+  .tb-match-leg {
+    text-align: center;
+    font-size: 0.5rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    color: color-mix(in srgb, var(--color-theme-gold) 50%, transparent);
+    padding: 2px 0;
+    border-top: 1px solid color-mix(in srgb, var(--color-theme-gold) 10%, transparent);
+  }
 
-  /* ── Semifinal ── */
-  .tb-sf {
-    display: block;
-    border-radius: 10px;
-    border: 2px solid color-mix(in srgb, var(--color-theme-gold) 30%, transparent);
-    background: linear-gradient(
-      to right,
-      color-mix(in srgb, var(--color-theme-gold) 10%, transparent),
-      color-mix(in srgb, var(--color-theme-midnight) 80%, transparent)
-    );
-    backdrop-filter: blur(8px);
-    overflow: hidden;
-    transition: border-color 0.2s, transform 0.2s;
-  }
-  .tb-sf:hover {
-    border-color: color-mix(in srgb, var(--color-theme-gold) 70%, transparent);
-    transform: scale(1.025);
-  }
-  .tb-sf-row {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 9px 10px;
-    border-bottom: 1px solid color-mix(in srgb, var(--color-theme-gold) 20%, transparent);
-  }
-  .tb-sf-row:last-child { border-bottom: none; }
-
-  /* ── Final ── */
   .tb-final {
     display: block;
     border-radius: 12px;
@@ -535,7 +607,6 @@ const hasGroups = groupA.length > 0 || groupB.length > 0 || groupC.length > 0 ||
     color: color-mix(in srgb, var(--color-theme-cream) 50%, transparent);
   }
 
-  /* ── Elementos comunes ── */
   .tb-pos {
     width: 14px;
     font-size: 0.6rem;
@@ -555,10 +626,6 @@ const hasGroups = groupA.length > 0 || groupB.length > 0 || groupC.length > 0 ||
     background: var(--color-theme-midnight);
   }
   .tb-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .tb-avatar--lg {
-    width: 32px; height: 32px;
-    border-color: color-mix(in srgb, var(--color-theme-gold) 50%, transparent);
-  }
 
   .tb-team-name {
     flex: 1;

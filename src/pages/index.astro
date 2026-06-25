@@ -77,57 +77,11 @@ function computeGroupStandings(teams: Array<{ id: string; name: string; logo?: s
   }).sort((a, b) => b.points - a.points)
 }
 
-const bracketGroups = groups?.reduce((acc, g) => {
+const bracketGroupData = groups?.map(g => {
   const prefix = `Grupo ${g.label}`
-  acc[`group${g.label}`] = computeGroupStandings(g.teams, prefix)
-  return acc
-}, {} as Record<string, Array<{ id: string; name: string; logo: string; points: number }>>)
-
-const groupA = bracketGroups?.groupA
-const groupB = bracketGroups?.groupB
-const groupC = bracketGroups?.groupC
-const groupD = bracketGroups?.groupD
-
-// Extract knockout matches from DB (those with Cuartos/Semifinal/Final labels)
-const knockoutLabels = ['Cuartos de final', 'Semifinal', 'Final']
-const knockoutMatches = tournamentMatches.filter(m =>
-  m.round_label && knockoutLabels.some(l => m.round_label!.startsWith(l))
-)
-
-function toBracketMatch(m: typeof tournamentMatches[0], team1Id: string | null | undefined, team1Name: string | null | undefined, team2Id: string | null | undefined, team2Name: string | null | undefined) {
-  const score1 = m.home_score ?? 0
-  const score2 = m.away_score ?? 0
-  let winner: 'team1' | 'team2' | undefined
-  if (m.status === 'finished' && score1 !== score2) {
-    winner = score1 > score2 ? 'team1' : 'team2'
-  }
-  return {
-    id: m.id,
-    team1: { id: team1Id || 'tbd', name: team1Name || 'Por definir', logo: '/images/Logo_Default.png', points: 0 },
-    team2: { id: team2Id || 'tbd', name: team2Name || 'Por definir', logo: '/images/Logo_Default.png', points: 0 },
-    score1,
-    score2,
-    winner,
-  }
-}
-
-const qfMatches = knockoutMatches.filter(m => m.round_label?.startsWith('Cuartos de final'))
-const sfMatches = knockoutMatches.filter(m => m.round_label?.startsWith('Semifinal'))
-const finalMatches = knockoutMatches.filter(m => m.round_label?.startsWith('Final'))
-
-const qfHalf = Math.ceil(qfMatches.length / 2)
-const leftQuarterFinals = qfMatches.slice(0, qfHalf).map(m =>
-  toBracketMatch(m, m.home_team_id, m.home_team_name, m.away_team_id, m.away_team_name)
-)
-const rightQuarterFinals = qfMatches.slice(qfHalf).map(m =>
-  toBracketMatch(m, m.home_team_id, m.home_team_name, m.away_team_id, m.away_team_name)
-)
-
-const sfHalf = Math.ceil(sfMatches.length / 2)
-const leftSemiFinal = sfMatches.length > 0 ? toBracketMatch(sfMatches[0], sfMatches[0].home_team_id, sfMatches[0].home_team_name, sfMatches[0].away_team_id, sfMatches[0].away_team_name) : undefined
-const rightSemiFinal = sfMatches.length > 1 ? toBracketMatch(sfMatches[1], sfMatches[1].home_team_id, sfMatches[1].home_team_name, sfMatches[1].away_team_id, sfMatches[1].away_team_name) : undefined
-
-const finalMatch = finalMatches.length > 0 ? toBracketMatch(finalMatches[0], finalMatches[0].home_team_id, finalMatches[0].home_team_name, finalMatches[0].away_team_id, finalMatches[0].away_team_name) : undefined
+  const teams = computeGroupStandings(g.teams, prefix)
+  return { label: g.label, teams }
+})
 
 function formatEndDate(d: string | null | undefined) {
   if (!d) return null
@@ -147,15 +101,11 @@ function formatEndDate(d: string | null | undefined) {
       subtitle={copa?.name?.toUpperCase() || "COPA CHONTADURO"}
       finalDate={formatEndDate(copa?.end_date) || "30 DE MAYO"}
       finalLocation={copa?.venue || "BUDAPEST"}
-      groupA={groupA}
-      groupB={groupB}
-      groupC={groupC}
-      groupD={groupD}
-      leftQuarterFinals={leftQuarterFinals}
-      rightQuarterFinals={rightQuarterFinals}
-      leftSemiFinal={leftSemiFinal}
-      rightSemiFinal={rightSemiFinal}
-      finalMatch={finalMatch}
+      groups={bracketGroupData}
+      numGroups={copa?.num_groups || 2}
+      advancersPerGroup={copa?.advancers_per_group || 2}
+      playoffsTwoLegged={copa?.playoffs_two_legged === 1}
+      singleFinalMatch={copa?.single_final_match === 1}
     />
   </section>
   <!-- <Sponsors /> -->
