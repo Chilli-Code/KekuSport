@@ -2,6 +2,7 @@
 import Layout from "@/layouts/Layout.astro";
 import Hero from "@/components/Hero.astro";
 import { TEAMS } from "@/consts/teams";
+import { getTeamById } from "../../../server/db";
 
 export async function getStaticPaths() {
   return TEAMS.map((team) => ({
@@ -10,9 +11,11 @@ export async function getStaticPaths() {
 }
 
 const { equipo } = Astro.params;
-const team = TEAMS.find((t) => t.id === equipo);
+const staticTeam = TEAMS.find((t) => t.id === equipo);
+const dbTeam = staticTeam ? null : await getTeamById(equipo || '');
 
-const teamLogo = '/images/Logo_Default.png'
+const team = staticTeam || dbTeam;
+const teamLogo = team && 'logo' in team ? (team.logo || '/images/Logo_Default.webp') : '/images/Logo_Default.webp'
 ---
 
 <Layout>

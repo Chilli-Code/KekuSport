@@ -28,7 +28,7 @@ const defaultText = "Sé parte del torneo de equipos más esperado. Intensidad, 
     section{
     position: relative;
     width: 100%;
-    height: 100svh;
+    min-height: 100svh;
     padding: 2rem;
     display: flex;
     flex-direction: column;
@@ -136,21 +136,23 @@ const defaultText = "Sé parte del torneo de equipos más esperado. Intensidad, 
 @media(max-width: 768px){
     section{
         padding: 1.5rem;
+        justify-content: flex-start;
+        padding-top: 8rem;
+        gap: 0.5rem;
+    }
+    .lottie-container{
+        width: 5rem;
+        height: 5rem;
     }
     .spotlight p{
         font-size: 0.85rem;
         width: 100%;
-        display: -webkit-box;
-        -webkit-line-clamp: 4;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
     }
 }
 
 @media(max-width: 480px){
     .spotlight p{
         font-size: 0.75rem;
-        -webkit-line-clamp: 3;
     }
 }
 </style>

@@ -53,14 +53,17 @@ const {
   singleFinalMatch,
 } = Astro.props
 
-function computeBracket(groups: GroupData[], advancersPerGroup: number, playoffsTwoLegged: boolean, singleFinalMatch: boolean) {
-  const totalAdvancers = groups.length * advancersPerGroup
+function computeBracket(groups: GroupData[], advancersPerGroup: number, numGroups: number, playoffsTwoLegged: boolean, singleFinalMatch: boolean) {
+  const groupCount = groups.length > 0 ? groups.length : numGroups
+  const totalAdvancers = groupCount * advancersPerGroup
   if (totalAdvancers < 2) return null
 
   const bracketSize = Math.pow(2, Math.ceil(Math.log2(totalAdvancers)))
   const numRounds = Math.log2(bracketSize)
 
-  const groupLabels = groups.map(g => g.label)
+  const groupLabels = groups.length > 0
+    ? groups.map(g => g.label)
+    : 'ABCDEFGHIJ'.slice(0, numGroups).split('')
 
   const seeds: { label: string; groupIdx: number }[] = []
   for (let pos = 0; pos < advancersPerGroup; pos++) {
@@ -170,13 +173,20 @@ function computeBracket(groups: GroupData[], advancersPerGroup: number, playoffs
   return rounds
 }
 
-const bracketRounds = computeBracket(groups, advancersPerGroup, playoffsTwoLegged, singleFinalMatch)
+const bracketRounds = computeBracket(groups, advancersPerGroup, numGroups, playoffsTwoLegged, singleFinalMatch)
 
-const hasGroups = groups.length > 0 && groups.some(g => g.teams.length > 0)
+const displayGroups = groups.length > 0
+  ? groups
+  : Array.from({ length: numGroups }, (_, i) => ({
+      label: 'ABCDEFGHIJ'[i] || `${i + 1}`,
+      teams: [] as TeamData[],
+    }))
+
+const hasGroups = displayGroups.some(g => g.teams.length > 0)
 const hasBracket = bracketRounds !== null && bracketRounds.length > 0
 
-const leftGroups = groups.slice(0, Math.ceil(groups.length / 2))
-const rightGroups = groups.slice(Math.ceil(groups.length / 2))
+const leftGroups = displayGroups.slice(0, Math.ceil(displayGroups.length / 2))
+const rightGroups = displayGroups.slice(Math.ceil(displayGroups.length / 2))
 
 function splitBracketSides(rounds: BracketRound[]): { left: BracketRound[]; right: BracketRound[]; final: BracketMatch | null } {
   const nonFinal = rounds.filter(r => !r.name.startsWith('Final'))

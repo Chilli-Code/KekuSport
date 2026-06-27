@@ -17,7 +17,7 @@ const { match: m, home, away, statusClass, showTime } = Astro.props
       <div class="duel-side duel-side--left">
         <div class="duel-avatar-wrap">
           <div class="duel-avatar-bg"></div>
-          <img class="duel-avatar" src="/images/Logo_Default.png" alt={home?.name || 'Equipo'} loading="lazy" />
+          <img class="duel-avatar" src="/images/Logo_Default.webp" alt={home?.name || 'Equipo'} loading="lazy" />
         </div>
         <span class="duel-name">{home?.name || '—'}</span>
       </div>
@@ -32,7 +32,7 @@ const { match: m, home, away, statusClass, showTime } = Astro.props
       <div class="duel-side duel-side--right">
         <div class="duel-avatar-wrap">
           <div class="duel-avatar-bg"></div>
-          <img class="duel-avatar" src="/images/Logo_Default.png" alt={away?.name || 'Equipo'} loading="lazy" />
+          <img class="duel-avatar" src="/images/Logo_Default.webp" alt={away?.name || 'Equipo'} loading="lazy" />
         </div>
         <span class="duel-name">{away?.name || '—'}</span>
       </div>
