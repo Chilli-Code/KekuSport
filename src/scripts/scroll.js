@@ -27,7 +27,9 @@ const pos = {
     lottie: {
         current: { x: 0, y:0 },
         center: { x: 0, y:0 },
+        size: { width: 0, height: 0 },
     },
+    spotlightSize: { width: 0, height: 0 },
 };
 
 function init(){
@@ -36,6 +38,9 @@ function init(){
 
     pos.lottie.center.x = lottieRect.left - spotlightRect.left + lottieRect.width / 2;
     pos.lottie.center.y = lottieRect.top - spotlightRect.top + lottieRect.height / 2;
+
+    pos.lottie.size = { width: lottieRect.width, height: lottieRect.height };
+    pos.spotlightSize = { width: spotlightRect.width, height: spotlightRect.height };
 
     pos.mouse.current.x = pos.mouse.target.x = spotlightRect.width / 2;
     pos.mouse.current.y = pos.mouse.target.y = spotlightRect.height / 2;
@@ -104,13 +109,22 @@ pos.mouse.current.y += (pos.mouse.target.y - pos.mouse.current.y) * 0.1;
 spotlight.style.setProperty("--mouse-x", `${pos.mouse.current.x}px`); 
 spotlight.style.setProperty("--mouse-y", `${pos.mouse.current.y}px`);
 
-const targetX = state.isTracking
+const halfL = pos.lottie.size.width / 2;
+const halfS = pos.spotlightSize.width / 2;
+const maxX = halfS - halfL;
+const halfLh = pos.lottie.size.height / 2;
+const halfSh = pos.spotlightSize.height / 2;
+const maxY = halfSh - halfLh;
+
+const rawTargetX = state.isTracking
 ? pos.mouse.current.x - pos.lottie.center.x
 : 0;
-
-const targetY = state.isTracking 
+const rawTargetY = state.isTracking 
 ? pos.mouse.current.y - pos.lottie.center.y 
-: 0; 
+: 0;
+
+const targetX = Math.max(-maxX, Math.min(maxX, rawTargetX));
+const targetY = Math.max(-maxY, Math.min(maxY, rawTargetY));
 
 pos.lottie.current.x += (targetX - pos.lottie.current.x) * 0.1; 
 pos.lottie.current.y += (targetY - pos.lottie.current.y) * 0.1;
