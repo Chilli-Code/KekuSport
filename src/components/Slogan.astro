@@ -1,5 +1,5 @@
 ---
-const { description, name } = Astro.props as { description?: string | null; name?: string | null }
+const { description } = Astro.props as { description?: string | null }
 const defaultText = "Sé parte del torneo de equipos más esperado. Intensidad, estrategia y pasión se unen en cada partido."
 ---
 
@@ -8,7 +8,6 @@ const defaultText = "Sé parte del torneo de equipos más esperado. Intensidad, 
         <div class="lottie"></div>
         <div class="fire-glow"></div>
     </div>
-    <h1>{name || "COPA CHONTADURO"}</h1>
     <p>{description || defaultText}</p>
 
     <div class="spotlight-mask"></div>
