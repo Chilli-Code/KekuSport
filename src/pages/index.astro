@@ -5,6 +5,7 @@ import TeamsHero from "../components/TeamsHero.astro";
 import TournamentBracket from "../components/TournamentBracket.astro";
 import StandingsTable from "../components/StandingsTable.astro";
 import Video from "../components/Videos.astro";
+import Slogan from "../components/Slogan.astro";
 import { getAllTournaments, getTeamsByTournament, getMatchesByTournamentWithTeams } from "../../server/db";
 
 const allTournaments = await getAllTournaments()
@@ -13,7 +14,7 @@ let tournamentTeams = copa ? await getTeamsByTournament(copa.id) : []
 let tournamentMatches = copa ? await getMatchesByTournamentWithTeams(copa.id) : []
 
 const heroTeams = tournamentTeams.length > 0
-  ? tournamentTeams.map(t => ({ id: t.id, name: t.name, logo: t.logo || '/images/Logo_Default.png' }))
+  ? tournamentTeams.map(t => ({ id: t.id, name: t.name, logo: t.logo || '/images/Logo_Default.webp' }))
   : undefined
 
 // Extract groups from match data after sorteo
@@ -31,7 +32,7 @@ const groups = groupLabels.length > 0 ? groupLabels.map(label => {
   })
   const teams = [...teamIds].map(id => {
     const t = tournamentTeams.find(tt => tt.id === id)
-    return t ? { id: t.id, name: t.name, logo: t.logo || '/images/Logo_Default.png' } : null
+    return t ? { id: t.id, name: t.name, logo: t.logo || '/images/Logo_Default.webp' } : null
   }).filter(Boolean)
   return { label: label.replace('Grupo ', ''), teams }
 }) : undefined
@@ -44,7 +45,7 @@ const standings = groups
         team: {
           id: t.id,
           name: t.name,
-          logo: t.logo || '/images/Logo_Default.png',
+          logo: t.logo || '/images/Logo_Default.webp',
         },
         played: 0,
         wins: 0,
@@ -73,7 +74,7 @@ function computeGroupStandings(teams: Array<{ id: string; name: string; logo?: s
       }
       return sum
     }, 0)
-    return { id: t.id, name: t.name, logo: t.logo || '/images/Logo_Default.png', points }
+    return { id: t.id, name: t.name, logo: t.logo || '/images/Logo_Default.webp', points }
   }).sort((a, b) => b.points - a.points)
 }
 
@@ -94,6 +95,7 @@ function formatEndDate(d: string | null | undefined) {
 
 <Layout>
   <TeamsHero teams={heroTeams} />
+  <Slogan description={copa?.description} name={copa?.name} />
   <StandingsTable title={copa ? copa.name : "TORNEO PES - TEMPORADA 1"} standings={standings} groups={groups} />
     <section class="py-12 px-4">
     <TournamentBracket

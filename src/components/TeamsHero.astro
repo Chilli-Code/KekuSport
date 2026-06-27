@@ -11,12 +11,12 @@ const rightRow = firstRow.slice(2)
 const secondRow = activeTeams.slice(4, 8)
 const allTeams = activeTeams
 
-const teamLogo = '/images/Logo_Default.png'
+const defaultLogo = '/images/Logo_Default.webp'
 ---
 
 <section class="relative flex min-h-screen w-full">
   <div
-    class="mask-fade-bottom absolute inset-0 w-full bg-[url('/images/fondo2.png')] bg-cover bg-center"
+    class="mask-fade-bottom absolute inset-0 w-full bg-[url('/images/fondo2.webp')] bg-cover bg-center"
   >
   </div>
 
@@ -36,7 +36,7 @@ const teamLogo = '/images/Logo_Default.png'
       <figure class="animate-fade-in relative mt-8">
         <img
           class="relative z-20 h-auto w-64"
-          src="/images/logobg.png"
+          src="/images/logobg.webp"
           fetchpriority="high"
           alt="KekuSport"
           decoding="async"
@@ -58,26 +58,26 @@ const teamLogo = '/images/Logo_Default.png'
     <div class="relative hidden h-full w-full max-w-6xl flex-col items-center justify-end gap-4 p-8 md:flex">
       <div class="flex w-full flex-wrap justify-between px-4">
         <div class="flex flex-wrap justify-start gap-4">
-          {leftRow.map(({ id, name }) => (
+          {leftRow.map(({ id, name, logo }) => (
             <FighterSelector
               id={id}
               name={name}
               cardLink={`/jugadores/${id}`}
-              cardImage={teamLogo}
-              bigImageSrc={teamLogo}
+              cardImage={logo || defaultLogo}
+              bigImageSrc={logo || defaultLogo}
               boxerCardClass='animate-fade-in-right animate-delay-500'
               hideHoverName
             />
           ))}
         </div>
         <div class="flex flex-wrap justify-end gap-4">
-          {rightRow.map(({ id, name }) => (
+          {rightRow.map(({ id, name, logo }) => (
             <FighterSelector
               id={id}
               name={name}
               cardLink={`/jugadores/${id}`}
-              cardImage={teamLogo}
-              bigImageSrc={teamLogo}
+              cardImage={logo || defaultLogo}
+              bigImageSrc={logo || defaultLogo}
               boxerCardClass='animate-fade-in-left animate-delay-500'
               hideHoverName
             />
@@ -86,13 +86,13 @@ const teamLogo = '/images/Logo_Default.png'
       </div>
 
       <div class="flex flex-wrap justify-between gap-4">
-        {secondRow.map(({ id, name }) => (
+        {secondRow.map(({ id, name, logo }) => (
           <FighterSelector
             id={id}
             name={name}
             cardLink={`/jugadores/${id}`}
-            cardImage={teamLogo}
-            bigImageSrc={teamLogo}
+            cardImage={logo || defaultLogo}
+            bigImageSrc={logo || defaultLogo}
             boxerCardClass='animate-fade-in-up animate-delay-700'
             hideHoverName
           />
@@ -104,13 +104,13 @@ const teamLogo = '/images/Logo_Default.png'
     <div class="relative flex h-full w-full flex-col items-center justify-end gap-4 p-4 md:hidden">
       <div class="w-full overflow-x-auto overflow-y-visible pb-2">
         <div class="flex min-w-max items-center justify-start gap-4 px-2">
-          {allTeams.map(({ id, name }) => (
+          {allTeams.map(({ id, name, logo }) => (
             <FighterSelector
               id={id}
               name={name}
               cardLink={`/jugadores/${id}`}
-              cardImage={teamLogo}
-              bigImageSrc={teamLogo}
+              cardImage={logo || defaultLogo}
+              bigImageSrc={logo || defaultLogo}
               boxerCardClass='flex-shrink-0'
               hideHoverName
             />

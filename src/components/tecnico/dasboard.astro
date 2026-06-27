@@ -2100,22 +2100,26 @@ function parseRules(v: string | null) {
     }
   }
 
-  function handleLogoFile(file) {
+  async function handleLogoFile(file) {
     if (!file) return;
-    const maxSize = 500 * 1024;
-    if (file.size > maxSize) {
+    if (file.size > 500 * 1024) {
       alert('La imagen es demasiado grande. Máximo 500KB.');
       return;
     }
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      newTeamLogo = e.target.result;
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      const res = await fetch('/api/teams/upload-logo', { method: 'POST', body: formData });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || 'Error al subir imagen');
+      newTeamLogo = data.url;
       _id('upload-placeholder').classList.add('hidden');
       _id('upload-preview-img').src = newTeamLogo;
       _id('upload-preview').classList.remove('hidden');
       updatePreview();
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      alert('Error al subir la imagen: ' + err.message);
+    }
   }
 
   function resetUpload() {

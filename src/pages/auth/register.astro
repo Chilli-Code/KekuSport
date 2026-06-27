@@ -2,7 +2,15 @@
 import Layout from '../../layouts/Layout.astro'
 
 const user = Astro.locals.user
-if (user) return Astro.redirect('/admin/dashboard')
+if (user) {
+  const dashboards: Record<string, string> = {
+    admin: '/admin/dashboard',
+    tecnico: '/tecnico',
+    referee: '/referee',
+    jugador: '/jugador',
+  }
+  return Astro.redirect(dashboards[user.role] || '/')
+}
 ---
 
 <Layout>

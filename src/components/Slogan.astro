@@ -1,0 +1,143 @@
+---
+const { description, name } = Astro.props as { description?: string | null; name?: string | null }
+const defaultText = "Sé parte del torneo de equipos más esperado. Intensidad, estrategia y pasión se unen en cada partido."
+---
+
+<section class="spotlight">
+    <div class="lottie-container">
+        <div class="lottie"></div>
+        <div class="fire-glow"></div>
+    </div>
+    <h1>{name || "COPA CHONTADURO"}</h1>
+    <p>{description || defaultText}</p>
+
+    <div class="spotlight-mask"></div>
+</section>
+
+<script>
+  import "../scripts/scroll.js"
+</script>
+
+
+<style>
+    h1{
+    color: #f2eec2;
+    font-size: clamp(3rem, 5vw, 7rem);
+    font-weight: 500;
+    letter-spacing: -0.15rem;
+}
+    section{
+    position: relative;
+    width: 100%;
+    height: 100svh;
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap:1em;
+}
+
+.spotlight p{
+    width: 60%;
+    color: #f2eec2;
+    text-align: center;
+}
+
+
+.lottie-container{
+    position: relative;
+    z-index: 1;
+    width: 8rem;
+    height: 8rem;
+    pointer-events: none;
+}
+
+.lottie-container .lottie{
+    width: 100%;
+    height: 100%;
+    transform: scale(1.25);
+}
+
+.lottie-container .fire-glow{
+    position: absolute;
+    top:50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 40%;
+    height: 100%;
+    background: radial-gradient(
+        circle,
+        rgba(255, 0, 72, 0.75) 0%,
+        rgba(255, 145, 0, 0.6) 30%,
+        rgba(255, 242, 140, 0.25) 50%,
+        transparent 70%
+    );
+    filter: blur(20px);
+    opacity: 0.25;
+    animation: firePulse 2s ease-in infinite;
+    pointer-events: none;
+    z-index: -1;
+}
+
+@keyframes firePulse{
+    0%,
+    100%{
+        transform: translate(-50%, -50%) scaleY(1);
+        opacity: 0.5;
+    }
+    25%{
+        transform: translate(-50%, -50%) scaleY(1.2);
+        opacity: 0.4;
+    }
+    50%{
+        transform: translate(-50%, -50%) scaleY(0.9);
+        opacity: 0.35;
+    }
+    75%{
+        transform: translate(-50%, -50%) scaleY(1.1);
+        opacity: 0.5;
+    }
+}
+
+.spotlight-mask{
+    position: absolute;
+    top:0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    background: #080c12;
+    -webkit-mask: radial-gradient(
+        circle 200px at var(--mouse-x) var(--mouse-y),
+        transparent 0%,
+        transparent 40%,
+        #080c12 80%,
+        #080c12 100%
+
+    );
+
+    mask:radial-gradient(
+        circle 200px at var(--mouse-x) var(--mouse-y),
+        transparent 0%,
+        transparent 40%,
+        #080c12 80%,
+        #080c12 100%
+
+    );
+
+    transition: opacity 0.3s ease;
+    opacity: 0;
+}
+
+.spotlight-mask.active{
+    opacity: 0.85;
+}
+
+@media(max-width: 1000px){
+    .spotlight p{
+        font-size: 1.5rem;
+        width: 100%;
+    }
+}
+</style>

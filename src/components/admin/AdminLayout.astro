@@ -54,7 +54,7 @@ const mobileNavItems = [
           <span class="ct-user-name">Administrador</span>
           <span class="ct-user-email">admin@copa.com</span>
         </div>
-        <a href="/login" class="ct-user-logout" title="Cerrar sesión">↩</a>
+        <a href="#" id="ct-logout-btn" class="ct-user-logout" title="Cerrar sesión">↩</a>
       </div>
     </div>
   </aside>
@@ -99,6 +99,12 @@ const mobileNavItems = [
   overlay.addEventListener('click', () => {
     sidebar.classList.remove('ct-sidebar--open')
     overlay.classList.remove('ct-overlay--visible')
+  })
+
+  document.getElementById('ct-logout-btn')?.addEventListener('click', async (e) => {
+    e.preventDefault()
+    await fetch('/api/auth/logout', { method: 'POST' })
+    window.location.href = '/login'
   })
 </script>
 

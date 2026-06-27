@@ -335,16 +335,21 @@ const COLORS = ['#00ff88','#f59e0b','#f87171','#a78bfa','#38bdf8','#e2ff5d','#ff
   logoInput.style.display = 'none';
   document.body.appendChild(logoInput);
 
-  logoInput.addEventListener('change', (e) => {
+  logoInput.addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     if (file.size > 500 * 1024) { alert('Máximo 500KB'); return; }
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      state.teamLogo = ev.target.result;
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      const res = await fetch('/api/teams/upload-logo', { method: 'POST', body: formData });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || 'Error al subir imagen');
+      state.teamLogo = data.url;
       save(); syncToTeams(); syncToApi(); renderHero();
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      alert('Error al subir la imagen: ' + err.message);
+    }
   });
 
   $('btn-change-logo').addEventListener('click', () => {
