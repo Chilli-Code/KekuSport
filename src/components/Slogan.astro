@@ -133,10 +133,24 @@ const defaultText = "Sé parte del torneo de equipos más esperado. Intensidad, 
     opacity: 0.85;
 }
 
-@media(max-width: 1000px){
+@media(max-width: 768px){
+    section{
+        padding: 1.5rem;
+    }
     .spotlight p{
-        font-size: 1.5rem;
+        font-size: 0.85rem;
         width: 100%;
+        display: -webkit-box;
+        -webkit-line-clamp: 4;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+}
+
+@media(max-width: 480px){
+    .spotlight p{
+        font-size: 0.75rem;
+        -webkit-line-clamp: 3;
     }
 }
 </style>
