@@ -303,6 +303,7 @@ const tournamentsJson = JSON.stringify(typedTournaments.map((t: any) => ({
                         venue={derivedVenue}
                         stage={derivedStage}
                         status={m.status}
+                        tournamentName={t.name}
                       />
                     )
                   })}
