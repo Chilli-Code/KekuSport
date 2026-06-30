@@ -1,5 +1,9 @@
 ---
-const FORMATIONS = ['4-3-3','4-4-2','4-2-3-1','3-5-2','5-3-2','4-3-2-1'];
+const FORMATIONS = [
+  '2-2','2-1-1','1-2-1','1-1-2','3-1','1-3',
+  '3-2-1','3-1-2','2-3-1','2-2-2','4-2-0','2-1-3',
+  '4-3-3','4-4-2','4-2-3-1','3-5-2','5-3-2','4-3-2-1',
+];
 ---
 
 <div class="tec-scroll-content">
@@ -20,6 +24,10 @@ const FORMATIONS = ['4-3-3','4-4-2','4-2-3-1','3-5-2','5-3-2','4-3-2-1'];
         VOLVER
       </button>
       <span id="editor-match-label" class="tec-label !mb-0"></span>
+      <button id="btn-save-lineup" class="tec-save-btn">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        GUARDAR
+      </button>
     </div>
 
     <!-- SISTEMA DE JUEGO -->
@@ -36,6 +44,12 @@ const FORMATIONS = ['4-3-3','4-4-2','4-2-3-1','3-5-2','5-3-2','4-3-2-1'];
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
         INTERCAMBIAR
       </button>
+    </div>
+
+    <!-- UNIFORME -->
+    <div class="flex items-center gap-2 mb-4 flex-wrap">
+      <p class="tec-section-label !mb-0">UNIFORME</p>
+      <div class="flex flex-wrap gap-1.5" id="match-kit-btns"></div>
     </div>
 
     <!-- CAMPO -->
@@ -136,6 +150,21 @@ const FORMATIONS = ['4-3-3','4-4-2','4-2-3-1','3-5-2','5-3-2','4-3-2-1'];
 <script data-astro-rerun>
 (function(){
   const FORMATIONS_DATA = {
+    // 5v5 (4 outfield + GK)
+    '2-2':   [['POR',50,92],['DF',30,75],['DF2',70,75],['MF',30,45],['MF2',70,45]],
+    '2-1-1': [['POR',50,92],['DF',30,77],['DF2',70,77],['MF',50,50],['FW',50,25]],
+    '1-2-1': [['POR',50,92],['DF',50,77],['MF1',30,50],['MF2',70,50],['FW',50,25]],
+    '1-1-2': [['POR',50,92],['DF',50,77],['MF',50,50],['FW1',35,25],['FW2',65,25]],
+    '3-1':   [['POR',50,92],['DF1',25,77],['DF2',50,77],['DF3',75,77],['MF',50,45]],
+    '1-3':   [['POR',50,92],['DF',50,77],['MF1',20,50],['MF2',50,50],['MF3',80,50]],
+    // 7v7 (6 outfield + GK)
+    '3-2-1': [['POR',50,92],['DF1',25,75],['DF2',50,75],['DF3',75,75],['MF1',30,50],['MF2',70,50],['FW',50,25]],
+    '3-1-2': [['POR',50,92],['DF1',25,75],['DF2',50,75],['DF3',75,75],['MF',50,50],['FW1',30,25],['FW2',70,25]],
+    '2-3-1': [['POR',50,92],['DF1',30,75],['DF2',70,75],['MF1',20,50],['MF2',50,50],['MF3',80,50],['FW',50,25]],
+    '2-2-2': [['POR',50,92],['DF1',30,75],['DF2',70,75],['MF1',30,50],['MF2',70,50],['FW1',35,25],['FW2',65,25]],
+    '4-2-0': [['POR',50,92],['DF1',15,75],['DF2',38,75],['DF3',62,75],['DF4',85,75],['MF1',35,50],['MF2',65,50]],
+    '2-1-3': [['POR',50,92],['DF1',30,75],['DF2',70,75],['MF',50,50],['FW1',20,25],['FW2',50,25],['FW3',80,25]],
+    // 11v11 (10 outfield + GK)
     '4-3-3':   [['POR',50,92],['LD',15,73],['DC',37,73],['DCI',63,73],['LI',85,73],['MC',25,52],['MCO',50,52],['MCI',75,52],['ED',20,27],['DC2',50,24],['EI',80,27]],
     '4-4-2':   [['POR',50,92],['LD',15,73],['DC',37,73],['DCI',63,73],['LI',85,73],['ED',15,52],['MC',38,52],['MCI',62,52],['EI',85,52],['DC1',35,24],['DC2',65,24]],
     '4-2-3-1': [['POR',50,92],['LD',15,73],['DC',37,73],['DCI',63,73],['LI',85,73],['MCD1',35,60],['MCD2',65,60],['ED',20,40],['MC',50,40],['EI',80,40],['DC',50,20]],
@@ -144,10 +173,52 @@ const FORMATIONS = ['4-3-3','4-4-2','4-2-3-1','3-5-2','5-3-2','4-3-2-1'];
     '4-3-2-1': [['POR',50,92],['LD',15,73],['DC',37,73],['DCI',63,73],['LI',85,73],['MC1',25,56],['MC2',50,56],['MC3',75,56],['MI1',35,38],['MI2',65,38],['DC',50,20]],
   };
 
+  // ── Formations per player count ──
+  const FORMATIONS_BY_COUNT = {
+    5: ['2-2','2-1-1','1-2-1','1-1-2','3-1','1-3'],
+    7: ['3-2-1','3-1-2','2-3-1','2-2-2','4-2-0','2-1-3'],
+    11: ['4-3-3','4-4-2','4-2-3-1','3-5-2','5-3-2','4-3-2-1'],
+  };
+
+  function getFormationsForCount(count) {
+    return FORMATIONS_BY_COUNT[count] || FORMATIONS_BY_COUNT[11];
+  }
+
+  function syncFormationButtons() {
+    const valid = getFormationsForCount(fieldPlayers);
+    document.querySelectorAll('#match-formation-btns .tec-formation-btn').forEach(btn => {
+      btn.style.display = valid.includes(btn.dataset.formation) ? '' : 'none';
+    });
+  }
+
+  const KITS = [
+    { primary: '#EE1B24', secondary: '#FFFFFF', name: 'Rojo' },
+    { primary: '#003DA5', secondary: '#FFFFFF', name: 'Azul' },
+    { primary: '#1A1A1A', secondary: '#FFFFFF', name: 'Negro' },
+    { primary: '#FFFFFF', secondary: '#1A1A1A', name: 'Blanco' },
+    { primary: '#FECC00', secondary: '#1A1A1A', name: 'Amarillo' },
+    { primary: '#00A650', secondary: '#FFFFFF', name: 'Verde' },
+    { primary: '#EE1B24', secondary: '#003DA5', name: 'Rojo/Azul' },
+    { primary: '#003DA5', secondary: '#FECC00', name: 'Azul/Dorado' },
+    { primary: '#1A1A1A', secondary: '#EE1B24', name: 'Negro/Rojo' },
+    { primary: '#00A650', secondary: '#FFFFFF', name: 'Verde/Blanco' },
+  ];
+
+  let currentKit = 0;
+  let fieldPlayers = 11;
+
   // ── Dynamic match labels (populated by loadMatches) ──
   const matchLabelsMap = {};
 
   // ── Helpers ──
+  function isLightColor(hex) {
+    const c = hex.replace('#','');
+    const r = parseInt(c.substring(0,2),16);
+    const g = parseInt(c.substring(2,4),16);
+    const b = parseInt(c.substring(4,6),16);
+    return (r*299 + g*587 + b*114) / 1000 > 128;
+  }
+
   function getBadgeInfo(scheduledDate, status) {
     if (status === 'finished') return { text: 'FINALIZADO', class: 'tec-badge-live' };
     if (status === 'live') return { text: 'EN VIVO', class: 'tec-badge-live' };
@@ -184,6 +255,15 @@ const FORMATIONS = ['4-3-3','4-4-2','4-2-3-1','3-5-2','5-3-2','4-3-2-1'];
       const team = teams.find(t => t.id === activeTeamId);
 
       if (team && team.tournament_id) {
+        // Fetch tournament info for field_players
+        try {
+          const tres = await fetch(`/api/tournaments?action=byId&id=${team.tournament_id}`);
+          const tdata = await tres.json();
+          if (tdata.success && tdata.tournament?.field_players) {
+            fieldPlayers = tdata.tournament.field_players;
+            syncFormationButtons();
+          }
+        } catch {}
         const res = await fetch(`/api/matches?tournamentId=${team.tournament_id}`);
         const data = await res.json();
         if (data.success && data.matches) {
@@ -255,7 +335,9 @@ const FORMATIONS = ['4-3-3','4-4-2','4-2-3-1','3-5-2','5-3-2','4-3-2-1'];
   }
 
   function getDefaultFormation() {
-    return localStorage.getItem('tec_formation') || '4-3-3';
+    const stored = localStorage.getItem('tec_formation');
+    if (stored && getFormationsForCount(fieldPlayers).includes(stored)) return stored;
+    return getFormationsForCount(fieldPlayers)[0] || '4-3-3';
   }
 
   function getDefaultSubs() {
@@ -288,9 +370,11 @@ const FORMATIONS = ['4-3-3','4-4-2','4-2-3-1','3-5-2','5-3-2','4-3-2-1'];
           currentFormation = data.lineup.formation || getDefaultFormation();
           currentLineup = data.lineup.lineup || {};
           currentSubs = data.lineup.subs || {};
+          currentKit = data.lineup.kit ?? 0;
           localStorage.setItem(getMatchKey('formation', matchId), currentFormation);
           localStorage.setItem(getMatchKey('lineup', matchId), JSON.stringify(currentLineup));
           localStorage.setItem(getMatchKey('subs', matchId), JSON.stringify(currentSubs));
+          localStorage.setItem(getMatchKey('kit', matchId), String(currentKit));
           return;
         }
       } catch {}
@@ -298,9 +382,11 @@ const FORMATIONS = ['4-3-3','4-4-2','4-2-3-1','3-5-2','5-3-2','4-3-2-1'];
     const savedFormation = localStorage.getItem(getMatchKey('formation', matchId));
     const savedLineup = localStorage.getItem(getMatchKey('lineup', matchId));
     const savedSubs = localStorage.getItem(getMatchKey('subs', matchId));
+    const savedKit = localStorage.getItem(getMatchKey('kit', matchId));
     currentFormation = savedFormation || getDefaultFormation();
     currentLineup = savedLineup ? JSON.parse(savedLineup) : JSON.parse(JSON.stringify(getDefaultLineup()));
     currentSubs = savedSubs ? JSON.parse(savedSubs) : JSON.parse(JSON.stringify(getDefaultSubs()));
+    currentKit = savedKit ? parseInt(savedKit) : 0;
   }
 
   function saveMatchState() {
@@ -308,12 +394,13 @@ const FORMATIONS = ['4-3-3','4-4-2','4-2-3-1','3-5-2','5-3-2','4-3-2-1'];
     localStorage.setItem(getMatchKey('formation', editingMatchId), currentFormation);
     localStorage.setItem(getMatchKey('lineup', editingMatchId), JSON.stringify(currentLineup));
     localStorage.setItem(getMatchKey('subs', editingMatchId), JSON.stringify(currentSubs));
+    localStorage.setItem(getMatchKey('kit', editingMatchId), String(currentKit));
     const teamId = localStorage.getItem('tec_activeTeam');
     if (teamId && editingMatchId && !editingMatchId.startsWith('m')) {
       fetch('/api/lineups', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'save', matchId: editingMatchId, teamId, formation: currentFormation, lineup: currentLineup, subs: currentSubs }),
+        body: JSON.stringify({ action: 'save', matchId: editingMatchId, teamId, formation: currentFormation, lineup: currentLineup, subs: currentSubs, kit: currentKit }),
       }).catch(() => {});
     }
   }
@@ -337,6 +424,21 @@ const FORMATIONS = ['4-3-3','4-4-2','4-2-3-1','3-5-2','5-3-2','4-3-2-1'];
   // ── Open match editor ──
   async function openMatchEditor(matchId) {
     editingMatchId = matchId;
+
+    // Fetch tournament field_players so formations are correct
+    try {
+      const teamId = localStorage.getItem('tec_activeTeam');
+      const teams = JSON.parse(localStorage.getItem('tec_teams') || '[]');
+      const team = teams.find(t => t.id === teamId);
+      if (team?.tournament_id) {
+        const tres = await fetch(`/api/tournaments?action=byId&id=${team.tournament_id}`);
+        const tdata = await tres.json();
+        if (tdata.success && tdata.tournament?.field_players) {
+          fieldPlayers = tdata.tournament.field_players;
+        }
+      }
+    } catch {}
+
     await loadMatchState(matchId);
 
     swapMode = false;
@@ -347,10 +449,29 @@ const FORMATIONS = ['4-3-3','4-4-2','4-2-3-1','3-5-2','5-3-2','4-3-2-1'];
 
     $('editor-match-label').textContent = matchLabelsMap[matchId] || matchId;
 
+    // Ensure formation is valid for fieldPlayers
+    const validFormations = getFormationsForCount(fieldPlayers);
+    if (!validFormations.includes(currentFormation)) {
+      currentFormation = validFormations[0];
+      saveMatchState();
+    }
+
     // Sync formation buttons
+    syncFormationButtons();
     document.querySelectorAll('#match-formation-btns .tec-formation-btn').forEach(btn => {
       btn.classList.toggle('tec-formation-btn--active', btn.dataset.formation === currentFormation);
     });
+
+    // Render kit buttons
+    const kitContainer = $('match-kit-btns');
+    if (kitContainer) {
+      kitContainer.innerHTML = KITS.map((k, i) => `
+        <button class="tec-kit-btn ${i === currentKit ? 'tec-kit-btn--active' : ''}" data-kit="${i}">
+          <span class="tec-kit-swatch" style="background:${k.primary};${k.secondary ? `border-color:${k.secondary}` : ''}"></span>
+          <span class="tec-kit-label">${k.name}</span>
+        </button>
+      `).join('');
+    }
 
     renderFormation();
     renderSubs();
@@ -373,7 +494,9 @@ const FORMATIONS = ['4-3-3','4-4-2','4-2-3-1','3-5-2','5-3-2','4-3-2-1'];
     if (!fp) return;
 
     const squad = getSquad();
-    const teamColor = localStorage.getItem('tec_teamColor') || '#00ff88';
+    const kit = KITS[currentKit] || KITS[0];
+    const primary = kit.primary;
+    const secondary = kit.secondary || (isLightColor(primary) ? '#1a1a1a' : '#ffffff');
 
     fp.innerHTML = positions.map(([pos, x, y], i) => {
       const assigned = currentLineup[`${currentFormation}_${i}`];
@@ -382,7 +505,7 @@ const FORMATIONS = ['4-3-3','4-4-2','4-2-3-1','3-5-2','5-3-2','4-3-2-1'];
       return `
         <div class="field-player" data-slot="${i}" style="left:${x}%;top:${y}%">
           <div class="field-player-dot ${p ? '' : 'field-player-dot--empty'}"
-            style="${p ? `border-color:rgba(255,255,255,.25);box-shadow:0 0 14px ${teamColor}55, 0 2px 12px rgba(0,0,0,.6)` : ''}">
+            style="border-color:${secondary};box-shadow:0 0 14px ${primary}77, 0 2px 12px rgba(0,0,0,.6)">
             ${img ? `<img class="field-player-img" src="${img}" alt="${p.name}" />` : (p ? p.emoji : `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`)}
           </div>
           <span class="field-player-name">${p ? p.name : pos}</span>
@@ -424,13 +547,13 @@ const FORMATIONS = ['4-3-3','4-4-2','4-2-3-1','3-5-2','5-3-2','4-3-2-1'];
     const bench = squad.filter(p => !assignedIds.includes(p.id));
     const bl = $('match-bench-list');
     if (!bl) return;
-    const teamColor = localStorage.getItem('tec_teamColor') || '#00ff88';
+    const primary = (KITS[currentKit] || KITS[0]).primary;
     if (!bench.length) {
-      bl.innerHTML = '<p class="tec-empty">Todos en el once o plantilla vacía.</p>'; return;
+      bl.innerHTML = `<p class="tec-empty">Todos en los ${fieldPlayers} iniciales o plantilla vacía.</p>`; return;
     }
     bl.innerHTML = bench.map(p => `
       <div class="tec-bench-player">
-        <div class="tec-bench-dot" style="background:${teamColor}">${p.emoji}</div>
+        <div class="tec-bench-dot" style="background:${primary}">${p.emoji}</div>
         <span style="font-family:var(--font-display);font-size:.55rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:rgba(232,220,200,.7)">${p.name}</span>
           <span style="font-family:var(--font-display);font-size:.4rem;letter-spacing:.12em;text-transform:uppercase;color:rgba(251,191,36,.45);margin-left:auto">${p.pos}</span>
       </div>`).join('');
@@ -546,6 +669,28 @@ const FORMATIONS = ['4-3-3','4-4-2','4-2-3-1','3-5-2','5-3-2','4-3-2-1'];
     if (!swapMode) renderFormation();
   });
 
+  // ── Kit buttons (delegated) ──
+  document.getElementById('match-kit-btns')?.addEventListener('click', e => {
+    const btn = e.target.closest('.tec-kit-btn');
+    if (!btn) return;
+    const idx = parseInt(btn.dataset.kit);
+    if (idx === currentKit) return;
+    currentKit = idx;
+    document.querySelectorAll('#match-kit-btns .tec-kit-btn').forEach(b => b.classList.remove('tec-kit-btn--active'));
+    btn.classList.add('tec-kit-btn--active');
+    saveMatchState();
+    renderFormation();
+  });
+
+  // ── Save lineup button ──
+  $('btn-save-lineup')?.addEventListener('click', () => {
+    saveMatchState();
+    const btn = $('btn-save-lineup');
+    const orig = btn.innerHTML;
+    btn.innerHTML = '✓ LISTO';
+    setTimeout(() => btn.innerHTML = orig, 1500);
+  });
+
   // ── Edit buttons on match cards (event delegation, cards are dynamic) ──
   document.getElementById('match-list-view').addEventListener('click', e => {
     const btn = e.target.closest('.tec-edit-lineup-btn');
@@ -608,6 +753,7 @@ const FORMATIONS = ['4-3-3','4-4-2','4-2-3-1','3-5-2','5-3-2','4-3-2-1'];
 
   // ── Load matches on init ──
   loadMatches();
+  syncFormationButtons();
 
   // ── Modal close handlers ──
   document.querySelectorAll('[data-close]').forEach(btn => {
@@ -732,5 +878,64 @@ const FORMATIONS = ['4-3-3','4-4-2','4-2-3-1','3-5-2','5-3-2','4-3-2-1'];
     border-color: rgba(251,191,36,.35);
     color: var(--gold);
     box-shadow: 0 0 14px rgba(251,191,36,.08);
+  }
+  .tec-save-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    margin-left: auto;
+    font-family: var(--font-display);
+    font-size: .42rem;
+    font-weight: 700;
+    letter-spacing: .12em;
+    color: #0a0a0a;
+    background: var(--gold);
+    border: none;
+    border-radius: 7px;
+    padding: .32rem .65rem;
+    cursor: pointer;
+    transition: all .2s;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .tec-save-btn:hover {
+    background: #fbbf24;
+    box-shadow: 0 0 18px rgba(251,191,36,.35);
+  }
+  .tec-kit-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: .3rem;
+    background: rgba(255,255,255,.03);
+    border: 1px solid rgba(255,255,255,.06);
+    border-radius: 6px;
+    padding: .25rem .45rem;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .tec-kit-btn:hover {
+    border-color: rgba(199,168,107,.25);
+    background: rgba(255,255,255,.06);
+  }
+  .tec-kit-btn--active {
+    border-color: var(--gold);
+    background: rgba(251,191,36,.08);
+    box-shadow: 0 0 10px rgba(251,191,36,.1);
+  }
+  .tec-kit-swatch {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,.3);
+    flex-shrink: 0;
+  }
+  .tec-kit-label {
+    font-family: var(--font-display);
+    font-size: .38rem;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: rgba(232,220,200,.6);
   }
 </style>

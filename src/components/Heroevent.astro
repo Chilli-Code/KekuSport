@@ -6,12 +6,19 @@ export interface Player {
   isCaptain?: boolean
 }
 
+export interface LineupData {
+  formation: string
+  players: Record<string, { playerId: string; playerName: string; playerImage: string | null }>
+  kit: number
+}
+
 export interface Team {
   id: string
   name: string
   color?: string
   logo?: string
   players: Player[]
+  lineup?: LineupData | null
 }
 
 export interface Props {
@@ -54,6 +61,53 @@ const {
 
 const colorA = teamA.color ?? '#00ff88'
 const colorB = teamB.color ?? '#f59e0b'
+
+const KITS = [
+  { primary: '#EE1B24', secondary: '#FFFFFF', name: 'Rojo' },
+  { primary: '#003DA5', secondary: '#FFFFFF', name: 'Azul' },
+  { primary: '#1A1A1A', secondary: '#FFFFFF', name: 'Negro' },
+  { primary: '#FFFFFF', secondary: '#1A1A1A', name: 'Blanco' },
+  { primary: '#FECC00', secondary: '#1A1A1A', name: 'Amarillo' },
+  { primary: '#00A650', secondary: '#FFFFFF', name: 'Verde' },
+  { primary: '#EE1B24', secondary: '#003DA5', name: 'Rojo/Azul' },
+  { primary: '#003DA5', secondary: '#FECC00', name: 'Azul/Dorado' },
+  { primary: '#1A1A1A', secondary: '#EE1B24', name: 'Negro/Rojo' },
+  { primary: '#00A650', secondary: '#FFFFFF', name: 'Verde/Blanco' },
+]
+
+const FORMATIONS_DATA: Record<string, [string, number, number][]> = {
+  '2-2':   [['POR',50,92],['DF',30,75],['DF2',70,75],['MF',30,45],['MF2',70,45]],
+  '2-1-1': [['POR',50,92],['DF',30,77],['DF2',70,77],['MF',50,50],['FW',50,25]],
+  '1-2-1': [['POR',50,92],['DF',50,77],['MF1',30,50],['MF2',70,50],['FW',50,25]],
+  '1-1-2': [['POR',50,92],['DF',50,77],['MF',50,50],['FW1',35,25],['FW2',65,25]],
+  '3-1':   [['POR',50,92],['DF1',25,77],['DF2',50,77],['DF3',75,77],['MF',50,45]],
+  '1-3':   [['POR',50,92],['DF',50,77],['MF1',20,50],['MF2',50,50],['MF3',80,50]],
+  '3-2-1': [['POR',50,92],['DF1',25,75],['DF2',50,75],['DF3',75,75],['MF1',30,50],['MF2',70,50],['FW',50,25]],
+  '3-1-2': [['POR',50,92],['DF1',25,75],['DF2',50,75],['DF3',75,75],['MF',50,50],['FW1',30,25],['FW2',70,25]],
+  '2-3-1': [['POR',50,92],['DF1',30,75],['DF2',70,75],['MF1',20,50],['MF2',50,50],['MF3',80,50],['FW',50,25]],
+  '2-2-2': [['POR',50,92],['DF1',30,75],['DF2',70,75],['MF1',30,50],['MF2',70,50],['FW1',35,25],['FW2',65,25]],
+  '4-2-0': [['POR',50,92],['DF1',15,75],['DF2',38,75],['DF3',62,75],['DF4',85,75],['MF1',35,50],['MF2',65,50]],
+  '2-1-3': [['POR',50,92],['DF1',30,75],['DF2',70,75],['MF',50,50],['FW1',20,25],['FW2',50,25],['FW3',80,25]],
+  '4-3-3':   [['POR',50,92],['LD',15,73],['DC',37,73],['DCI',63,73],['LI',85,73],['MC',25,52],['MCO',50,52],['MCI',75,52],['ED',20,27],['DC2',50,24],['EI',80,27]],
+  '4-4-2':   [['POR',50,92],['LD',15,73],['DC',37,73],['DCI',63,73],['LI',85,73],['ED',15,52],['MC',38,52],['MCI',62,52],['EI',85,52],['DC1',35,24],['DC2',65,24]],
+  '4-2-3-1': [['POR',50,92],['LD',15,73],['DC',37,73],['DCI',63,73],['LI',85,73],['MCD1',35,60],['MCD2',65,60],['ED',20,40],['MC',50,40],['EI',80,40],['DC',50,20]],
+  '3-5-2':   [['POR',50,92],['DC1',30,73],['DC2',50,73],['DC3',70,73],['CAD',10,54],['MC1',30,54],['MC2',50,54],['MC3',70,54],['CAI',90,54],['DC1',35,24],['DC2',65,24]],
+  '5-3-2':   [['POR',50,92],['LD',8,72],['DC1',28,74],['DC2',50,74],['DC3',72,74],['LI',92,72],['MC1',28,50],['MC2',50,50],['MC3',72,50],['DC1',35,24],['DC2',65,24]],
+  '4-3-2-1': [['POR',50,92],['LD',15,73],['DC',37,73],['DCI',63,73],['LI',85,73],['MC1',25,56],['MC2',50,56],['MC3',75,56],['MI1',35,38],['MI2',65,38],['DC',50,20]],
+}
+
+function isLightColor(hex: string) {
+  const c = hex.replace('#','')
+  const r = parseInt(c.substring(0,2),16)
+  const g = parseInt(c.substring(2,4),16)
+  const b = parseInt(c.substring(4,6),16)
+  return (r*299 + g*587 + b*114) / 1000 > 128
+}
+
+function lineupKit(team: Team): { primary: string; secondary: string } | null {
+  if (!team.lineup) return null
+  return KITS[team.lineup.kit] || KITS[0]
+}
 ---
 
 <section class="vs-root" aria-label={`${teamA.name} vs ${teamB.name}`}>
@@ -107,10 +161,48 @@ const colorB = teamB.color ?? '#f59e0b'
         </div>
       ))}
     </div>
-<!-- 
-    <div class="vs-team-name vs-team-name--a" style={`color:${colorA};text-shadow:0 0 30px ${colorA}88`}>
-      {teamA.name}
-    </div> -->
+    {
+      teamA.lineup ? (
+      <div class="vs-lineup">
+        {(() => {
+          const kit = lineupKit(teamA)!
+          const positions = FORMATIONS_DATA[teamA.lineup!.formation] || []
+          const isLight = isLightColor(kit.primary)
+          const textColor = isLight ? '#1A1A1A' : '#FFFFFF'
+          return <>
+            <div class="vs-lineup-header">
+              <span class="vs-kit-swatch" style={`background:${kit.primary}`}></span>
+              <span class="vs-kit-swatch" style={`background:${kit.secondary}`}></span>
+              <span class="vs-formation-label">{teamA.lineup!.formation}</span>
+            </div>
+            <div class="vs-mini-field">
+              <div class="vs-field-line--mid"></div>
+              <div class="vs-field-circle"></div>
+              <div class="vs-field-box vs-field-box--top"></div>
+              <div class="vs-field-box vs-field-box--bot"></div>
+              <div class="vs-field-goal vs-field-goal--top"></div>
+              <div class="vs-field-goal vs-field-goal--bot"></div>
+              {positions.map(([key, x, y]) => {
+                const player = teamA.lineup!.players[key]
+                return (
+                  <div class="vs-field-player" style={`left:${x}%;top:${y}%`}>
+                    <div class="vs-field-dot" style={`background:${kit.primary};color:${textColor};border-color:${kit.secondary}`}>
+                      {player?.playerImage ? <img class="vs-dot-img" src={player.playerImage} alt={player.playerName} /> : <span class="vs-dot-label">{key}</span>}
+                    </div>
+                    <span class="vs-field-player-name">{player?.playerName || key}</span>
+                  </div>
+                )
+              })}
+            </div>
+          </>
+        })()}
+      </div>
+      ) : (
+      <div class="vs-lineup vs-lineup--empty">
+        <span class="vs-lineup-undefined">AÚN SIN DEFINIR</span>
+      </div>
+      )
+    }
   </div>
 
   <!-- ═══ CENTRO ═══ -->
@@ -176,10 +268,48 @@ const colorB = teamB.color ?? '#f59e0b'
         </div>
       ))}
     </div>
-<!-- 
-    <div class="vs-team-name vs-team-name--b" style={`color:${colorB};text-shadow:0 0 30px ${colorB}88`}>
-      {teamB.name}
-    </div> -->
+    {
+      teamB.lineup ? (
+      <div class="vs-lineup">
+        {(() => {
+          const kit = lineupKit(teamB)!
+          const positions = FORMATIONS_DATA[teamB.lineup!.formation] || []
+          const isLight = isLightColor(kit.primary)
+          const textColor = isLight ? '#1A1A1A' : '#FFFFFF'
+          return <>
+            <div class="vs-lineup-header">
+              <span class="vs-kit-swatch" style={`background:${kit.primary}`}></span>
+              <span class="vs-kit-swatch" style={`background:${kit.secondary}`}></span>
+              <span class="vs-formation-label">{teamB.lineup!.formation}</span>
+            </div>
+            <div class="vs-mini-field">
+              <div class="vs-field-line--mid"></div>
+              <div class="vs-field-circle"></div>
+              <div class="vs-field-box vs-field-box--top"></div>
+              <div class="vs-field-box vs-field-box--bot"></div>
+              <div class="vs-field-goal vs-field-goal--top"></div>
+              <div class="vs-field-goal vs-field-goal--bot"></div>
+              {positions.map(([key, x, y]) => {
+                const player = teamB.lineup!.players[key]
+                return (
+                  <div class="vs-field-player" style={`left:${x}%;top:${y}%`}>
+                    <div class="vs-field-dot" style={`background:${kit.primary};color:${textColor};border-color:${kit.secondary}`}>
+                      {player?.playerImage ? <img class="vs-dot-img" src={player.playerImage} alt={player.playerName} /> : <span class="vs-dot-label">{key}</span>}
+                    </div>
+                    <span class="vs-field-player-name">{player?.playerName || key}</span>
+                  </div>
+                )
+              })}
+            </div>
+          </>
+        })()}
+      </div>
+      ) : (
+      <div class="vs-lineup vs-lineup--empty">
+        <span class="vs-lineup-undefined">AÚN SIN DEFINIR</span>
+      </div>
+      )
+    }
   </div>
 
 </section>
@@ -895,5 +1025,177 @@ font-size: 0.85rem;
   .vs-team-logo-wrap { width: 55px; height: 55px; }
   .vs-team-logo { width: 40px; height: 40px; }
   .vs-team-namebar span { font-size: 0.45rem; }
+}
+
+/* ══ LINEUP ══ */
+.vs-lineup {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 30;
+  padding: 0.5rem 0.75rem 0.75rem;
+  background: linear-gradient(to top, rgba(10,14,26,.88) 0%, transparent 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  pointer-events: none;
+}
+.vs-lineup--empty {
+  padding: 0.6rem 0.75rem;
+  text-align: center;
+  background: linear-gradient(to top, rgba(10,14,26,.7) 0%, transparent 100%);
+}
+.vs-lineup-undefined {
+  font-family: var(--font-cinzel, 'Cinzel'), serif;
+  font-size: 0.45rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: rgba(232,220,200,.45);
+  text-transform: uppercase;
+}
+.vs-lineup-header {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.vs-kit-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  border: 1px solid rgba(255,255,255,.2);
+  display: inline-block;
+  flex-shrink: 0;
+}
+.vs-formation-label {
+  font-family: var(--font-cinzel, 'Cinzel'), serif;
+  font-size: 0.5rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  color: rgba(232,220,200,.75);
+  text-transform: uppercase;
+  margin-left: 0.15rem;
+}
+.vs-mini-field {
+  position: relative;
+  width: 100%;
+  max-width: 300px;
+  aspect-ratio: 7/10;
+  background: linear-gradient(180deg, #0a2a0a 0%, #0e3d0e 45%, #0a2a0a 100%);
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,.08);
+  overflow: hidden;
+  box-shadow: 0 0 20px rgba(0,0,0,.3);
+}
+.vs-field-line--mid {
+  position: absolute;
+  left: 5%;
+  right: 5%;
+  top: 50%;
+  height: 1px;
+  background: rgba(255,255,255,.08);
+}
+.vs-field-circle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%,-50%);
+  width: 22%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,.08);
+}
+.vs-field-box {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 46%;
+  height: 14%;
+  border: 1px solid rgba(255,255,255,.08);
+}
+.vs-field-box--top { top: 0; border-top: none; }
+.vs-field-box--bot { bottom: 0; border-bottom: none; }
+.vs-field-goal {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 18%;
+  height: 4%;
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(255,255,255,.02);
+}
+.vs-field-goal--top { top: 0; }
+.vs-field-goal--bot { bottom: 0; }
+.vs-field-player {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 2;
+  pointer-events: none;
+}
+.vs-field-dot {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1.5px solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-cinzel, 'Cinzel'), serif;
+  font-size: 0.4rem;
+  font-weight: 700;
+  line-height: 1.1;
+  overflow: hidden;
+  box-shadow: 0 0 6px rgba(0,0,0,.4);
+}
+.vs-dot-label {
+  display: block;
+  text-align: center;
+  padding: 0 1px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 20px;
+  font-size: 0.3rem;
+}
+.vs-dot-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+.vs-field-player-name {
+  font-family: var(--font-cinzel, 'Cinzel'), serif;
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: var(--cream);
+  text-align: center;
+  white-space: nowrap;
+  margin-top: 2px;
+  text-shadow: 0 1px 3px rgba(0,0,0,.8);
+}
+
+@media (max-width: 600px) {
+  .vs-lineup {
+    padding: 0.3rem 0.5rem 0.5rem;
+    gap: 0.2rem;
+  }
+  .vs-lineup--empty {
+    padding: 0.35rem 0.5rem;
+  }
+  .vs-lineup-undefined { font-size: 0.35rem; }
+  .vs-kit-swatch { width: 8px; height: 8px; }
+  .vs-formation-label { font-size: 0.38rem; }
+  .vs-mini-field { max-width: 100px; }
+  .vs-field-player { transform: translate(-50%,-100%) scale(0.7); }
+  .vs-field-dot { width: 14px; height: 14px; font-size: 0.2rem; }
+  .vs-dot-label { max-width: 12px; font-size: 0.2rem; }
+  .vs-field-player-name { font-size: 0.2rem; }
+  .vs-field-goal { height: 3%; }
+  .vs-field-box { height: 12%; }
+  .vs-field-circle { width: 20%; }
 }
 </style>

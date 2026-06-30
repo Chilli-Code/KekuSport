@@ -28,6 +28,8 @@ async function migrateTables() {
   try { await db.execute("ALTER TABLE team_requests ADD COLUMN type TEXT DEFAULT 'request'") } catch {}
   try { await db.execute("ALTER TABLE matches ADD COLUMN round_label TEXT DEFAULT NULL") } catch {}
   try { await db.execute("ALTER TABLE matches ADD COLUMN elapsed_seconds INTEGER DEFAULT 0") } catch {}
+  try { await db.execute("ALTER TABLE match_lineups ADD COLUMN kit_color TEXT DEFAULT '#EF4444'") } catch {}
+  try { await db.execute("ALTER TABLE match_lineups ADD COLUMN kit INTEGER DEFAULT 0") } catch {}
 
   const colResult = await db.execute("PRAGMA table_info('teams')")
   const colInfo = colResult.rows as unknown as { name: string; notnull: number }[]
@@ -205,6 +207,7 @@ async function initTables() {
       formation TEXT NOT NULL DEFAULT '4-3-3',
       lineup TEXT NOT NULL DEFAULT '{}',
       subs TEXT NOT NULL DEFAULT '[]',
+      kit INTEGER NOT NULL DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (match_id) REFERENCES matches(id) ON DELETE CASCADE,
@@ -416,6 +419,18 @@ export async function getTournamentsOpenForRegistration(): Promise<Tournament[]>
     sql: "SELECT * FROM tournaments WHERE open_registration = 1 AND status = 'active' ORDER BY created_at DESC",
   })
   return result.rows as unknown as Tournament[]
+}
+
+export async function getTournamentsWithTeamCount(): Promise<(Tournament & { team_count: number })[]> {
+  const db = await getDb()
+  const result = await db.execute({
+    sql: `SELECT t.*,
+          (SELECT COUNT(*) FROM teams WHERE tournament_id = t.id) as team_count
+          FROM tournaments t
+          WHERE t.open_registration = 1 AND t.status = 'active'
+          ORDER BY t.created_at DESC`,
+  })
+  return result.rows as unknown as (Tournament & { team_count: number })[]
 }
 
 export async function getTeamById(id: string): Promise<Team | undefined> {
@@ -757,11 +772,12 @@ export interface MatchLineup {
   formation: string
   lineup: string
   subs: string
+  kit: number
   created_at: string
   updated_at: string
 }
 
-export async function saveMatchLineup(matchId: string, teamId: string, formation: string, lineup: string, subs: string): Promise<void> {
+export async function saveMatchLineup(matchId: string, teamId: string, formation: string, lineup: string, subs: string, kit: number = 0): Promise<void> {
   const db = await getDb()
   const existing = await db.execute({
     sql: 'SELECT id FROM match_lineups WHERE match_id = ? AND team_id = ?',
@@ -769,13 +785,13 @@ export async function saveMatchLineup(matchId: string, teamId: string, formation
   })
   if (existing.rows.length > 0) {
     await db.execute({
-      sql: "UPDATE match_lineups SET formation = ?, lineup = ?, subs = ?, updated_at = datetime('now') WHERE match_id = ? AND team_id = ?",
-      args: [formation, lineup, subs, matchId, teamId],
+      sql: "UPDATE match_lineups SET formation = ?, lineup = ?, subs = ?, kit = ?, updated_at = datetime('now') WHERE match_id = ? AND team_id = ?",
+      args: [formation, lineup, subs, kit, matchId, teamId],
     })
   } else {
     await db.execute({
-      sql: 'INSERT INTO match_lineups (id, match_id, team_id, formation, lineup, subs) VALUES (?, ?, ?, ?, ?, ?)',
-      args: [crypto.randomUUID(), matchId, teamId, formation, lineup, subs],
+      sql: 'INSERT INTO match_lineups (id, match_id, team_id, formation, lineup, subs, kit) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      args: [crypto.randomUUID(), matchId, teamId, formation, lineup, subs, kit],
     })
   }
 }

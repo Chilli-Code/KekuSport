@@ -1,10 +1,10 @@
 ---
 import EquipoManager from './EquipoManager.astro'
 import PartidoManager from './PartidoManager.astro'
-import { getTournamentsOpenForRegistration } from '../../../server/db'
+import { getTournamentsWithTeamCount } from '../../../server/db'
 
 const user = Astro.locals.user
-const tournaments = user ? await getTournamentsOpenForRegistration() : []
+const tournaments = user ? await getTournamentsWithTeamCount() : []
 const months = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC']
 function formatDate(d: string) {
   if (!d) return ''
@@ -77,7 +77,7 @@ function parseRules(v: string | null) {
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                 Hasta {t.num_teams} equipos
               </span>
-              <button class="tec-inscribir-btn" data-tourney={t.id} data-tourney-name={t.name}>INSCRIBIRSE</button>
+              <button class="tec-inscribir-btn" data-tourney={t.id} data-tourney-name={t.name} data-current-teams={t.team_count} data-max-teams={t.num_teams} disabled={t.team_count >= t.num_teams}>{t.team_count >= t.num_teams ? 'COMPLETO' : 'INSCRIBIRSE'}</button>
             </div>
             <div class="tec-tourney-details hidden">
               <div class="tec-td-grid">
@@ -654,6 +654,12 @@ function parseRules(v: string | null) {
   .tec-inscribir-btn:hover {
     filter: brightness(1.1);
     transform: translateY(-1px);
+  }
+  .tec-inscribir-btn:disabled {
+    filter: grayscale(0.6) brightness(0.7);
+    cursor: not-allowed;
+    transform: none;
+    opacity: 0.6;
   }
   .tec-tourney-card {
     cursor: pointer;
@@ -1856,7 +1862,7 @@ function parseRules(v: string | null) {
       if (data.success && data.invitations) {
         data.invitations.forEach(inv => {
           const btn = document.querySelector(`.tec-inscribir-btn[data-tourney="${inv.tournament_id}"]`);
-          if (btn) {
+          if (btn && !btn.disabled) {
             if (inv.status === 'accepted') {
               btn.textContent = 'YA INSCRITO';
               btn.disabled = true;
@@ -2156,6 +2162,13 @@ function parseRules(v: string | null) {
     const createFields = _id('new-team-name').closest('.flex.flex-col.gap-1');
 
     if (currentTourneyId) {
+      const btn = document.querySelector(`.tec-inscribir-btn[data-tourney="${currentTourneyId}"]`);
+      const current = parseInt(btn?.dataset.currentTeams || '0');
+      const max = parseInt(btn?.dataset.maxTeams || '0');
+      if (current >= max) {
+        alert('Este torneo ya tiene el cupo completo de equipos.');
+        return;
+      }
       _id('modal-title').textContent = 'INSCRIBIR EQUIPO';
       _id('modal-subtitle').textContent = 'Torneo: ' + currentTourneyName;
       _id('inscripcion-tourney-label').textContent = currentTourneyName;

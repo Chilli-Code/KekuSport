@@ -13,7 +13,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (!matchId || !teamId) {
       return new Response(JSON.stringify({ error: 'Faltan matchId o teamId' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
     }
-    await saveMatchLineup(matchId, teamId, body.formation || '4-3-3', JSON.stringify(body.lineup || {}), JSON.stringify(body.subs || []))
+    await saveMatchLineup(matchId, teamId, body.formation || '4-3-3', JSON.stringify(body.lineup || {}), JSON.stringify(body.subs || []), body.kit ?? 0)
     return new Response(JSON.stringify({ success: true }), { status: 200, headers: { 'Content-Type': 'application/json' } })
   }
 
@@ -28,6 +28,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         formation: data.formation,
         lineup: JSON.parse(data.lineup),
         subs: JSON.parse(data.subs),
+        kit: data.kit ?? 0,
       } : null,
     }), { status: 200, headers: { 'Content-Type': 'application/json' } })
   }
