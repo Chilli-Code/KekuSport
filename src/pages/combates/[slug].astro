@@ -18,22 +18,7 @@ function deslugify(text: string): string {
 
 if (!slug) return Astro.redirect('/combates')
 
-const parts = slug.split('-vs-')
-if (parts.length !== 2) return Astro.redirect('/combates')
-
-const [team1Slug, team2Slug] = parts
-
-const slugToTeam = new Map(TEAMS.map(t => [slugify(t.name), t]))
-const team1FromConst = slugToTeam.get(team1Slug)
-const team2FromConst = slugToTeam.get(team2Slug)
-
-const team1Name = team1FromConst?.name ?? deslugify(team1Slug)
-const team2Name = team2FromConst?.name ?? deslugify(team2Slug)
-const team1Id = team1FromConst?.id ?? team1Slug
-const team2Id = team2FromConst?.id ?? team2Slug
-
-const team1Players = team1FromConst ? PLAYERS.filter(p => p.team === team1FromConst.id).map(p => ({ id: p.id, name: p.name })) : []
-const team2Players = team2FromConst ? PLAYERS.filter(p => p.team === team2FromConst.id).map(p => ({ id: p.id, name: p.name })) : []
+const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug)
 
 function formatDate(iso: string): string {
   if (!iso) return ''
@@ -52,20 +37,58 @@ let matchStatus = ''
 let matchDuration = 90
 let matchElapsedSeconds = 0
 let ssrEvents: any[] = []
+let team1Name = '', team2Name = '', team1Id = '', team2Id = ''
+let team1Players: { id: string; name: string }[] = [], team2Players: { id: string; name: string }[] = []
 try {
   const db = await getDb()
-  const result = await db.execute({
-    sql: `SELECT m.id, m.scheduled_date, m.venue, m.status, m.elapsed_seconds, t.name as tournament_name, t.match_duration
-          FROM matches m
-          JOIN tournaments t ON t.id = m.tournament_id
-          JOIN teams ht ON ht.id = m.home_team_id
-          JOIN teams at ON at.id = m.away_team_id
-          WHERE (LOWER(ht.name) = LOWER(?) AND LOWER(at.name) = LOWER(?))
-             OR (LOWER(ht.name) = LOWER(?) AND LOWER(at.name) = LOWER(?))
-          ORDER BY m.scheduled_date DESC
-          LIMIT 1`,
-    args: [team1Name, team2Name, team2Name, team1Name],
-  })
+  let result: any
+
+  if (isUUID) {
+    // Lookup by match UUID (most reliable)
+    result = await db.execute({
+      sql: `SELECT m.id, m.scheduled_date, m.venue, m.status, m.elapsed_seconds,
+                   t.name as tournament_name, t.match_duration,
+                   ht.id as home_team_id, ht.name as home_name,
+                   at.id as away_team_id, at.name as away_name
+            FROM matches m
+            JOIN tournaments t ON t.id = m.tournament_id
+            JOIN teams ht ON ht.id = m.home_team_id
+            JOIN teams at ON at.id = m.away_team_id
+            WHERE m.id = ?`,
+      args: [slug],
+    })
+  } else {
+    // Fallback: lookup by team names (legacy slugs)
+    const parts = slug.split('-vs-')
+    if (parts.length !== 2) return Astro.redirect('/combates')
+    const [team1Slug, team2Slug] = parts
+    const slugToTeam = new Map(TEAMS.map(t => [slugify(t.name), t]))
+    const team1FromConst = slugToTeam.get(team1Slug)
+    const team2FromConst = slugToTeam.get(team2Slug)
+    team1Name = team1FromConst?.name ?? deslugify(team1Slug)
+    team2Name = team2FromConst?.name ?? deslugify(team2Slug)
+    team1Id = team1FromConst?.id ?? team1Slug
+    team2Id = team2FromConst?.id ?? team2Slug
+    team1Players = team1FromConst ? PLAYERS.filter(p => p.team === team1FromConst.id).map(p => ({ id: p.id, name: p.name })) : []
+    team2Players = team2FromConst ? PLAYERS.filter(p => p.team === team2FromConst.id).map(p => ({ id: p.id, name: p.name })) : []
+
+    result = await db.execute({
+      sql: `SELECT m.id, m.scheduled_date, m.venue, m.status, m.elapsed_seconds,
+                   t.name as tournament_name, t.match_duration,
+                   ht.id as home_team_id, ht.name as home_name,
+                   at.id as away_team_id, at.name as away_name
+            FROM matches m
+            JOIN tournaments t ON t.id = m.tournament_id
+            JOIN teams ht ON ht.id = m.home_team_id
+            JOIN teams at ON at.id = m.away_team_id
+            WHERE (LOWER(ht.name) = LOWER(?) AND LOWER(at.name) = LOWER(?))
+               OR (LOWER(ht.name) = LOWER(?) AND LOWER(at.name) = LOWER(?))
+            ORDER BY m.scheduled_date DESC
+            LIMIT 1`,
+      args: [team1Name, team2Name, team2Name, team1Name],
+    })
+  }
+
   if (result.rows.length > 0) {
     const row = result.rows[0] as any
     matchId = row.id || ''
@@ -75,6 +98,14 @@ try {
     matchTournament = (row.tournament_name || '').toUpperCase()
     matchDuration = row.match_duration || 90
     matchElapsedSeconds = row.elapsed_seconds || 0
+    team1Id = row.home_team_id || ''
+    team2Id = row.away_team_id || ''
+    team1Name = row.home_name || ''
+    team2Name = row.away_name || ''
+    const dbTeam1 = TEAMS.find(t => t.id === team1Id)
+    const dbTeam2 = TEAMS.find(t => t.id === team2Id)
+    team1Players = dbTeam1 ? PLAYERS.filter(p => p.team === dbTeam1.id).map(p => ({ id: p.id, name: p.name })) : []
+    team2Players = dbTeam2 ? PLAYERS.filter(p => p.team === dbTeam2.id).map(p => ({ id: p.id, name: p.name })) : []
     const status = matchStatus
     const sched = row.scheduled_date || ''
     if (status === 'live') {
@@ -107,14 +138,6 @@ try {
 
 const ssrScoreA = ssrEvents.filter(e => e.team === 'A' && e.type === 'goal').length
 const ssrScoreB = ssrEvents.filter(e => e.team === 'B' && e.type === 'goal').length
-
-// Fallback: try COMBATS constant for mock data
-if (!matchTournament && team1FromConst && team2FromConst) {
-  matchDate = 'SÁB 12 JUL'
-  matchVenue = 'CANCHA LA 93'
-  matchTournament = 'TORNEO PES'
-  matchEdition = 'PROGRAMADO'
-}
 ---
 <Layout>
   <HeroEvent
