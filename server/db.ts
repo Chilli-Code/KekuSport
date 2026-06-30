@@ -24,6 +24,7 @@ async function migrateTables() {
   try { await db.execute("ALTER TABLE tournaments ADD COLUMN playoffs_two_legged INTEGER DEFAULT 0") } catch {}
   try { await db.execute("ALTER TABLE tournaments ADD COLUMN advancers_per_group INTEGER DEFAULT NULL") } catch {}
   try { await db.execute("ALTER TABLE tournaments ADD COLUMN single_final_match INTEGER DEFAULT 1") } catch {}
+  try { await db.execute("ALTER TABLE tournaments ADD COLUMN field_players INTEGER DEFAULT 5") } catch {}
   try { await db.execute("ALTER TABLE team_requests ADD COLUMN type TEXT DEFAULT 'request'") } catch {}
   try { await db.execute("ALTER TABLE matches ADD COLUMN round_label TEXT DEFAULT NULL") } catch {}
   try { await db.execute("ALTER TABLE matches ADD COLUMN elapsed_seconds INTEGER DEFAULT 0") } catch {}
@@ -64,6 +65,7 @@ async function initTables() {
       format TEXT NOT NULL,
       num_teams INTEGER NOT NULL,
       players_per_team INTEGER NOT NULL,
+      field_players INTEGER DEFAULT 5,
       match_duration INTEGER,
       points_per_win INTEGER DEFAULT 3,
       rules TEXT DEFAULT '[]',
@@ -281,6 +283,7 @@ export interface Tournament {
   format: string
   num_teams: number
   players_per_team: number
+  field_players: number
   match_duration: number | null
   points_per_win: number
   rules: string
@@ -320,14 +323,14 @@ export async function createTournament(tournament: Omit<Tournament, 'created_at'
   await db.execute(
     `INSERT INTO tournaments (
       id, name, description, logo, venue, city, start_date, end_date,
-      format, num_teams, players_per_team, match_duration, points_per_win,
+      format, num_teams, players_per_team, field_players, match_duration, points_per_win,
       rules, open_registration, reg_deadline, registration_fee,
       min_age, max_age, requirements, prizes, awards, notes,
       num_groups, advancers_per_group, two_legged, playoffs_two_legged, single_final_match,
       status, created_by
     ) VALUES (
       @id, @name, @description, @logo, @venue, @city, @start_date, @end_date,
-      @format, @num_teams, @players_per_team, @match_duration, @points_per_win,
+      @format, @num_teams, @players_per_team, @field_players, @match_duration, @points_per_win,
       @rules, @open_registration, @reg_deadline, @registration_fee,
       @min_age, @max_age, @requirements, @prizes, @awards, @notes,
       @num_groups, @advancers_per_group, @two_legged, @playoffs_two_legged, @single_final_match,

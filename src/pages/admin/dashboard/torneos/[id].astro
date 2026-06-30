@@ -167,6 +167,7 @@ for (const m of finishedMatches) {
             {tournament.advancers_per_group != null && <div class="tm-info-row"><span>Avanzan por grupo</span><span>{tournament.advancers_per_group}</span></div>}
             <div class="tm-info-row"><span>Equipos totales</span><span>{tournament.num_teams}</span></div>
             <div class="tm-info-row"><span>Jugadores por equipo</span><span>{tournament.players_per_team}</span></div>
+            <div class="tm-info-row"><span>Jugadores en cancha</span><span>{tournament.field_players ?? 5} vs {tournament.field_players ?? 5}</span></div>
             <div class="tm-info-row"><span>Ida/vuelta grupos</span><span>{tournament.two_legged ? '✅ Sí' : '❌ No'}</span></div>
             <div class="tm-info-row"><span>Playoffs ida/vuelta</span><span>{tournament.playoffs_two_legged ? '✅ Sí' : '❌ No'}</span></div>
             {tournament.single_final_match != null && <div class="tm-info-row"><span>Final única</span><span>{tournament.single_final_match ? '✅ Sí' : '❌ No'}</span></div>}

@@ -18,7 +18,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     })
   }
 
-  const { name, venue, startDate, format, numTeams, playersPerTeam, categories } = body
+  const { name, venue, startDate, format, numTeams, playersPerTeam, fieldPlayers, categories } = body
 
   const errors: string[] = []
   if (!name || typeof name !== 'string') errors.push('Nombre del torneo es requerido')
@@ -48,6 +48,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     format: format as string,
     num_teams: numTeams as number,
     players_per_team: playersPerTeam as number,
+    field_players: (body.fieldPlayers as number) || 5,
     match_duration: (body.matchDuration as number) || null,
     points_per_win: (body.pointsPerWin as number) || 3,
     rules: JSON.stringify(body.rules || []),

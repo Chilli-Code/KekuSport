@@ -165,7 +165,7 @@ import AdminLayout from "../../../components/admin/AdminLayout.astro";
                   </div>
                 </div>
 
-                <!-- Jugadores -->
+                <!-- Jugadores por equipo -->
                 <div class="ct-field">
                   <label class="ct-label" for="t-players">Jugadores/equipo <span class="ct-required">*</span></label>
                   <div class="ct-input-wrap">
@@ -173,6 +173,19 @@ import AdminLayout from "../../../components/admin/AdminLayout.astro";
                     <select id="t-players" name="playersPerTeam" class="ct-input ct-input--icon">
                       {[3,4,5,6,7,8,9,10,11,12,15,20].map(n => (
                         <option value={n} selected={n===5}>{n} jugadores</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Jugadores en cancha -->
+                <div class="ct-field">
+                  <label class="ct-label" for="t-field">Jugadores en cancha <span class="ct-required">*</span></label>
+                  <div class="ct-input-wrap">
+                    <span class="ct-input-icon">🏃</span>
+                    <select id="t-field" name="fieldPlayers" class="ct-input ct-input--icon">
+                      {[5,6,7,8,9,10,11].map(n => (
+                        <option value={n} selected={n===5}>{n} vs {n}</option>
                       ))}
                     </select>
                   </div>

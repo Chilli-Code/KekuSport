@@ -63,7 +63,7 @@ function parseRules(v: string | null) {
             <div class="flex items-start justify-between mb-2">
               <div>
                 <h3 class="tec-tourney-name">{t.name}</h3>
-                <p class="tec-tourney-cat">{t.format} · {t.players_per_team}v{t.players_per_team}</p>
+                <p class="tec-tourney-cat">{t.format} · {t.field_players ?? 5}v{t.field_players ?? 5}</p>
               </div>
               <span class="tec-tourney-badge status-open">INSCRIPCIÓN ABIERTA</span>
             </div>
