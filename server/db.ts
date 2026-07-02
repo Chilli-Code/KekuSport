@@ -28,8 +28,11 @@ async function migrateTables() {
   try { await db.execute("ALTER TABLE team_requests ADD COLUMN type TEXT DEFAULT 'request'") } catch {}
   try { await db.execute("ALTER TABLE matches ADD COLUMN round_label TEXT DEFAULT NULL") } catch {}
   try { await db.execute("ALTER TABLE matches ADD COLUMN elapsed_seconds INTEGER DEFAULT 0") } catch {}
+  try { await db.execute("ALTER TABLE matches ADD COLUMN completed_at TEXT DEFAULT NULL") } catch {}
   try { await db.execute("ALTER TABLE match_lineups ADD COLUMN kit_color TEXT DEFAULT '#EF4444'") } catch {}
   try { await db.execute("ALTER TABLE match_lineups ADD COLUMN kit INTEGER DEFAULT 0") } catch {}
+  try { await db.execute("ALTER TABLE match_events ADD COLUMN team_request_id TEXT DEFAULT ''") } catch {}
+  try { await db.execute("ALTER TABLE match_events ADD COLUMN details_json TEXT DEFAULT ''") } catch {}
 
   const colResult = await db.execute("PRAGMA table_info('teams')")
   const colInfo = colResult.rows as unknown as { name: string; notnull: number }[]
@@ -631,6 +634,7 @@ export interface Match {
   status: string
   round_label: string | null
   elapsed_seconds?: number
+  completed_at?: string | null
   created_at: string
 }
 
@@ -712,11 +716,24 @@ export async function getMatchById(id: string): Promise<Match | undefined> {
 
 export async function updateMatch(id: string, data: Partial<Match>): Promise<void> {
   const db = await getDb()
+  if (data.status === 'finished' || data.status === 'completed') {
+    data.completed_at = new Date().toISOString()
+  }
   const keys = Object.keys(data).filter(k => k !== 'id')
   if (keys.length === 0) return
   const setClause = keys.map(k => `${k} = ?`).join(', ')
   const values = keys.map(k => (data as any)[k])
   await db.execute({ sql: `UPDATE matches SET ${setClause} WHERE id = ?`, args: [...values, id] })
+}
+
+export async function isMatchEditable(id: string): Promise<boolean> {
+  const match = await getMatchById(id)
+  if (!match) return false
+  if (match.status !== 'finished' && match.status !== 'completed') return true
+  if (!match.completed_at) return true
+  const completedAt = new Date(match.completed_at).getTime()
+  const twoHoursLater = completedAt + 2 * 60 * 60 * 1000
+  return Date.now() < twoHoursLater
 }
 
 export async function deleteMatch(id: string): Promise<void> {
@@ -733,6 +750,8 @@ export interface MatchEvent {
   player2: string
   minute: number
   detail: string
+  team_request_id: string
+  details_json: string
   created_at: string
 }
 
@@ -745,12 +764,12 @@ export async function getMatchEvents(matchId: string): Promise<MatchEvent[]> {
   return result.rows as unknown as MatchEvent[]
 }
 
-export async function createMatchEvent(data: { match_id: string; type: string; team: string; player: string; player2?: string; minute: number; detail?: string }): Promise<string> {
+export async function createMatchEvent(data: { match_id: string; type: string; team: string; player: string; player2?: string; minute: number; detail?: string; team_request_id?: string; details_json?: string }): Promise<string> {
   const db = await getDb()
   const id = crypto.randomUUID()
   await db.execute({
-    sql: 'INSERT INTO match_events (id, match_id, type, team, player, player2, minute, detail) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-    args: [id, data.match_id, data.type, data.team, data.player, data.player2 || '', data.minute, data.detail || ''],
+    sql: 'INSERT INTO match_events (id, match_id, type, team, player, player2, minute, detail, team_request_id, details_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    args: [id, data.match_id, data.type, data.team, data.player, data.player2 || '', data.minute, data.detail || '', data.team_request_id || '', data.details_json || ''],
   })
   return id
 }
@@ -1062,6 +1081,196 @@ export async function getTeamPendingInvitesByOwner(userId: string): Promise<(Tea
   })
   return result.rows as unknown as (TeamRequestWithDetails & { user_id: string })[]
 }
+
+// ─── PLAYER STATS / DISCIPLINE ───
+
+export interface PlayerTournamentStat {
+  team_request_id: string
+  player_id: string
+  player_name: string
+  player_image_card: string | null
+  team_name: string
+  team_id: string
+  goals: number
+  assists: number
+  yellows: number
+  reds: number
+  matches_played: number
+}
+
+export async function getPlayerTournamentStats(tournamentId: string): Promise<PlayerTournamentStat[]> {
+  const db = await getDb()
+  const result = await db.execute({
+    sql: `
+      SELECT
+        me.team_request_id,
+        r.player_id,
+        p.name as player_name,
+        p.image_card as player_image_card,
+        t.name as team_name,
+        t.id as team_id,
+        SUM(CASE WHEN me.type = 'goal' THEN 1 ELSE 0 END) as goals,
+        SUM(CASE WHEN me.type = 'assist' THEN 1 ELSE 0 END) as assists,
+        SUM(CASE WHEN me.type = 'yellow' THEN 1 ELSE 0 END) as yellows,
+        SUM(CASE WHEN me.type = 'red' THEN 1 ELSE 0 END) as reds,
+        COUNT(DISTINCT me.match_id) as matches_played
+      FROM match_events me
+      JOIN matches m ON m.id = me.match_id
+      JOIN team_requests r ON r.id = me.team_request_id
+      JOIN players p ON p.id = r.player_id
+      JOIN teams t ON t.id = r.team_id
+      WHERE m.tournament_id = ? AND me.team_request_id != ''
+      GROUP BY me.team_request_id
+      ORDER BY goals DESC
+    `,
+    args: [tournamentId],
+  })
+  return result.rows as unknown as PlayerTournamentStat[]
+}
+
+export interface PlayerDisciplineInfo {
+  match_id: string
+  match_round: number
+  match_round_label: string | null
+  yellows: number
+  reds: number
+}
+
+export async function getPlayerDisciplineByMatch(tournamentId: string, teamRequestId: string): Promise<PlayerDisciplineInfo[]> {
+  const db = await getDb()
+  const result = await db.execute({
+    sql: `
+      SELECT
+        me.match_id,
+        m.round as match_round,
+        m.round_label as match_round_label,
+        SUM(CASE WHEN me.type = 'yellow' THEN 1 ELSE 0 END) as yellows,
+        SUM(CASE WHEN me.type = 'red' THEN 1 ELSE 0 END) as reds
+      FROM match_events me
+      JOIN matches m ON m.id = me.match_id
+      WHERE me.team_request_id = ? AND m.tournament_id = ? AND m.status IN ('finished', 'live')
+      GROUP BY me.match_id
+      ORDER BY m.round ASC
+    `,
+    args: [teamRequestId, tournamentId],
+  })
+  return result.rows as unknown as PlayerDisciplineInfo[]
+}
+
+export async function isPlayerSuspended(tournamentId: string, teamRequestId: string, currentMatchRound: number): Promise<boolean> {
+  const discipline = await getPlayerDisciplineByMatch(tournamentId, teamRequestId)
+  const priorMatches = discipline.filter(d => d.match_round < currentMatchRound)
+  const hadRed = priorMatches.some(d => d.reds > 0)
+  if (hadRed) return true
+  const matchesWithYellow = priorMatches.filter(d => d.yellows > 0).length
+  if (matchesWithYellow >= 2) return true
+  return false
+}
+
+export interface PlayerSquadStats extends TeamRequestWithDetails {
+  user_id: string
+  goals: number
+  assists: number
+  yellows: number
+  reds: number
+  suspended: boolean
+}
+
+export async function getTeamSquadWithStats(tournamentId: string, teamId: string, currentMatchRound: number): Promise<PlayerSquadStats[]> {
+  const squad = await getTeamSquadByTeamId(teamId)
+  const db = await getDb()
+  const statsResult = await db.execute({
+    sql: `
+      SELECT
+        me.team_request_id,
+        SUM(CASE WHEN me.type = 'goal' THEN 1 ELSE 0 END) as goals,
+        SUM(CASE WHEN me.type = 'assist' THEN 1 ELSE 0 END) as assists,
+        SUM(CASE WHEN me.type = 'yellow' THEN 1 ELSE 0 END) as yellows,
+        SUM(CASE WHEN me.type = 'red' THEN 1 ELSE 0 END) as reds
+      FROM match_events me
+      JOIN matches m ON m.id = me.match_id
+      WHERE m.tournament_id = ? AND me.team_request_id != ''
+      GROUP BY me.team_request_id
+    `,
+    args: [tournamentId],
+  })
+  const statsMap: Record<string, { goals: number; assists: number; yellows: number; reds: number }> = {}
+  for (const row of statsResult.rows as unknown as { team_request_id: string; goals: number; assists: number; yellows: number; reds: number }[]) {
+    statsMap[row.team_request_id] = row
+  }
+  const result: PlayerSquadStats[] = []
+  for (const s of squad) {
+    const st = statsMap[s.id] || { goals: 0, assists: 0, yellows: 0, reds: 0 }
+    const suspended = await isPlayerSuspended(tournamentId, s.id, currentMatchRound)
+    result.push({
+      ...s,
+      goals: st.goals,
+      assists: st.assists,
+      yellows: st.yellows,
+      reds: st.reds,
+      suspended,
+    })
+  }
+  return result
+}
+
+export interface PlayerAggStats {
+  goals: number
+  assists: number
+  yellows: number
+  reds: number
+  matches_played: number
+  tournament_name: string | null
+  tournament_id: string | null
+  team_name: string | null
+}
+
+export async function getPlayerAggStats(playerId: string): Promise<PlayerAggStats> {
+  const db = await getDb()
+  // Find the player's current active team
+  const teamReq = await db.execute({
+    sql: `SELECT r.id as team_request_id, t.id as team_id, t.name as team_name, t.tournament_id
+          FROM team_requests r
+          JOIN teams t ON t.id = r.team_id
+          WHERE r.player_id = ? AND r.status = 'accepted'
+          LIMIT 1`,
+    args: [playerId],
+  })
+  const tr = teamReq.rows[0] as unknown as { team_request_id: string; team_id: string; team_name: string; tournament_id: string } | undefined
+  if (!tr || !tr.tournament_id) {
+    return { goals: 0, assists: 0, yellows: 0, reds: 0, matches_played: 0, tournament_name: null, tournament_id: null, team_name: tr?.team_name || null }
+  }
+
+  const tourRes = await db.execute({ sql: 'SELECT name FROM tournaments WHERE id = ?', args: [tr.tournament_id] })
+  const tourName = (tourRes.rows[0] as unknown as { name: string } | undefined)?.name || null
+
+  const statsRes = await db.execute({
+    sql: `
+      SELECT
+        SUM(CASE WHEN me.type = 'goal' THEN 1 ELSE 0 END) as goals,
+        SUM(CASE WHEN me.type = 'assist' THEN 1 ELSE 0 END) as assists,
+        SUM(CASE WHEN me.type = 'yellow' THEN 1 ELSE 0 END) as yellows,
+        SUM(CASE WHEN me.type = 'red' THEN 1 ELSE 0 END) as reds,
+        COUNT(DISTINCT me.match_id) as matches_played
+      FROM match_events me
+      JOIN matches m ON m.id = me.match_id
+      WHERE me.team_request_id = ? AND m.tournament_id = ?
+    `,
+    args: [tr.team_request_id, tr.tournament_id],
+  })
+  const row = statsRes.rows[0] as unknown as { goals: number; assists: number; yellows: number; reds: number; matches_played: number } | undefined
+  return {
+    goals: row?.goals || 0,
+    assists: row?.assists || 0,
+    yellows: row?.yellows || 0,
+    reds: row?.reds || 0,
+    matches_played: row?.matches_played || 0,
+    tournament_name: tourName,
+    tournament_id: tr.tournament_id,
+    team_name: tr.team_name,
+  }
+}
+
 
 export interface MatchWithTeams extends Match {
   home_team_name: string | null

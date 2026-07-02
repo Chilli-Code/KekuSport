@@ -2,11 +2,11 @@ import { defineMiddleware } from 'astro/middleware'
 import { verifyToken } from '../server/auth'
 
 const PUBLIC_ROUTES = ['/', '/login', '/auth/register', '/api/auth/login', '/api/auth/logout']
-const PUBLIC_PREFIXES = ['/jugadores', '/player/', '/combates', '/combate/', '/torneos', '/la-porra', '/api/players', '/api/matches']
+const PUBLIC_PREFIXES = ['/jugadores', '/player/', '/combates', '/combate/', '/torneos', '/la-porra', '/api/players', '/api/matches', '/api/stats']
 
 const ROLE_ROUTES: Record<string, string[]> = {
-  admin: ['/admin', '/api/tournaments', '/api/teams', '/api/matches', '/api/invitations', '/api/players', '/api/team-requests', '/api/notifications', '/api/referees', '/api/referee'],
-  tecnico: ['/tecnico', '/api/teams', '/api/tournaments', '/api/invitations', '/api/team-requests', '/api/notifications', '/api/lineups'],
+  admin: ['/admin', '/api/tournaments', '/api/teams', '/api/matches', '/api/invitations', '/api/players', '/api/team-requests', '/api/notifications', '/api/referees', '/api/referee', '/api/stats'],
+  tecnico: ['/tecnico', '/api/teams', '/api/tournaments', '/api/invitations', '/api/team-requests', '/api/notifications', '/api/lineups', '/api/stats'],
   referee: ['/referee', '/api/referee', '/api/matches'],
   jugador: ['/jugador', '/api/players', '/api/teams', '/api/team-requests', '/api/notifications'],
 }

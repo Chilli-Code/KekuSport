@@ -31,6 +31,7 @@ export interface Props {
   isLive?: boolean
   events?: MatchEvent[]
   matchId?: string
+  matchElapsedSeconds?: number
 }
 
 const {
@@ -50,10 +51,19 @@ const {
     { minute: 61, team: 'A', type: 'sub',    player: 'Perxitaa', player2: 'Andoni' },
     { minute: 65, team: 'B', type: 'sub',    player: 'Rubius',   player2: 'Arigeli'},
   ],
+  matchElapsedSeconds = 0,
 } = Astro.props
 
 const cA = teamA.color ?? '#00ff88'
 const cB = teamB.color ?? '#f59e0b'
+
+const _halfTimeSecs = Math.floor((matchDuration || 90) * 60 / 2)
+let halfLabel = ''
+if (isLive || minute > 0) {
+  if (matchElapsedSeconds < _halfTimeSecs) halfLabel = '1T'
+  else if (matchElapsedSeconds === _halfTimeSecs) halfLabel = 'DESCANSO'
+  else halfLabel = '2T'
+}
 
 function toNum(v: number | string): number {
   if (typeof v === 'number') return v
@@ -109,7 +119,8 @@ const stats: StatRow[] = [
           )}
           <span class="ms-score-sep">—</span>
           <div class="ms-minute-badge">
-            <span class="ms-minute-num">{minute}'</span>
+            {halfLabel && <span class="ms-half-label" data-descanso={halfLabel === 'DESCANSO' ? 'true' : 'false'}>{halfLabel}</span>}
+            <span class="ms-minute-num" style={halfLabel === 'DESCANSO' ? 'display:none' : ''}>{minute}'</span>
           </div>
         </div>
         <span class="ms-score" style={`color:${cB};text-shadow:0 0 24px ${cB}88`}>{score[1]}</span>
@@ -396,6 +407,12 @@ const stats: StatRow[] = [
   }
   .ms-minute-num {
     font-size: .62rem; font-weight: 700; letter-spacing: .05em; color: #00ff88;
+  }
+  .ms-half-label {
+    font-size: .58rem; font-weight: 700; letter-spacing: .05em; color: #00ff88;
+  }
+  .ms-half-label[data-descanso="true"] {
+    font-size: .75rem; color: #fbbf24; text-shadow: 0 0 12px rgba(251,191,36,.5);
   }
 
   /* Barra de tiempo */

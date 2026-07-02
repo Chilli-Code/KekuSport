@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro'
-import { createMatch, updateMatch, deleteMatch, getMatchesByTournamentWithTeams } from '../../../../server/db'
+import { createMatch, updateMatch, deleteMatch, getMatchesByTournamentWithTeams, isMatchEditable } from '../../../../server/db'
 
 export const GET: APIRoute = async ({ request, locals }) => {
   if (!locals.user) {
@@ -44,10 +44,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   if (action === 'update') {
+    if (data.id) {
+      const editable = await isMatchEditable(data.id)
+      if (!editable) {
+        return new Response(JSON.stringify({ error: 'El plazo de 2 horas para modificar el partido ha expirado' }), { status: 403, headers: { 'Content-Type': 'application/json' } })
+      }
+    }
     const dbData: Record<string, unknown> = { id: data.id }
     const map: Record<string, string> = { homeTeamId: 'home_team_id', awayTeamId: 'away_team_id', scheduledDate: 'scheduled_date', homeScore: 'home_score', awayScore: 'away_score', elapsedSeconds: 'elapsed_seconds' }
     for (const [key, val] of Object.entries(data)) {
-      if (key === 'id') continue
+      if (key === 'action' || key === 'id') continue
       dbData[map[key] || key] = val
     }
     await updateMatch(data.id, dbData)
@@ -55,6 +61,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   if (action === 'delete') {
+    if (data.id) {
+      const editable = await isMatchEditable(data.id)
+      if (!editable) {
+        return new Response(JSON.stringify({ error: 'El plazo de 2 horas para modificar el partido ha expirado' }), { status: 403, headers: { 'Content-Type': 'application/json' } })
+      }
+    }
     await deleteMatch(data.id)
     return new Response(JSON.stringify({ success: true }), { status: 200, headers: { 'Content-Type': 'application/json' } })
   }

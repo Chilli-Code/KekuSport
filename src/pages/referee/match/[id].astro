@@ -1,6 +1,6 @@
 ---
 import Layout from '@/layouts/Layout.astro'
-import { getMatchByIdWithTeams, getMatchById, getMatchEvents, getDb } from '../../../../server/db'
+import { getMatchByIdWithTeams, getMatchById, getMatchEvents, getDb, getTeamSquadByTeamId, isMatchEditable } from '../../../../server/db'
 
 const { id } = Astro.params
 
@@ -19,6 +19,17 @@ const matchData = await getMatchById(id)
 const matchDuration = matchData?.tournament_id
   ? (await (await getDb()).execute({ sql: 'SELECT match_duration FROM tournaments WHERE id = ?', args: [matchData.tournament_id] })).rows[0]?.match_duration ?? 90
   : 90
+const halfTimeSecs = Math.floor((matchDuration * 60) / 2)
+// Load squads for both teams so referee can select players
+let homeSquad: any[] = []
+let awaySquad: any[] = []
+if (match.home_team_id) {
+  try { homeSquad = await getTeamSquadByTeamId(match.home_team_id) } catch {}
+}
+if (match.away_team_id) {
+  try { awaySquad = await getTeamSquadByTeamId(match.away_team_id) } catch {}
+}
+
 const homeGoals = events.filter(e => e.type === 'goal' && e.team === 'A').length
 const awayGoals = events.filter(e => e.type === 'goal' && e.team === 'B').length
 
@@ -26,9 +37,14 @@ const isLive = match.status === 'live'
 const isFinished = match.status === 'completed' || match.status === 'finished'
 const isCancelled = match.status === 'cancelled'
 
+let isEditable = true
+if (isFinished) {
+  try { isEditable = await isMatchEditable(id) } catch {}
+}
+
 let statusLabel = 'PROGRAMADO'
 if (isLive) statusLabel = 'EN VIVO'
-if (isFinished) statusLabel = 'FINALIZADO'
+if (isFinished) statusLabel = isEditable ? 'FINALIZADO (editable)' : 'FINALIZADO'
 if (isCancelled) statusLabel = 'CANCELADO'
 
 const teamAName = match.home_team_name || 'LOCAL'
@@ -44,6 +60,20 @@ const serializedEvents = JSON.stringify(events.map(e => ({
   player: e.player,
   player2: e.player2 || '',
   detail: e.detail || '',
+  team_request_id: e.team_request_id || '',
+})))
+
+const serializedHomeSquad = JSON.stringify(homeSquad.map(s => ({
+  id: s.id,
+  name: s.player_name,
+  player_image_card: s.player_image_card,
+  position: s.player_position,
+})))
+const serializedAwaySquad = JSON.stringify(awaySquad.map(s => ({
+  id: s.id,
+  name: s.player_name,
+  player_image_card: s.player_image_card,
+  position: s.player_position,
 })))
 ---
 
@@ -115,6 +145,15 @@ const serializedEvents = JSON.stringify(events.map(e => ({
           <span class="mo-sb-name" id="mo-sb-name-b">{teamBName}</span>
           <span class="mo-sb-score" id="mo-sb-score-b">{awayGoals}</span>
         </div>
+      </div>
+
+      <!-- ─── Indicador de tiempo ─── -->
+      <div id="mo-half-indicator" class="mo-half-indicator mt-5" style="display:none">
+        <span class="mo-section-label !mb-0">DESCANSO</span>
+        <button id="mo-start-second-half" class="mo-start-btn mt-2">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          INICIAR SEGUNDO TIEMPO
+        </button>
       </div>
 
       <!-- ─── Acciones ─── -->
@@ -195,7 +234,8 @@ const serializedEvents = JSON.stringify(events.map(e => ({
           </div>
           <div class="mo-field-group">
             <label class="mo-field-label" for="mo-m-player">Jugador</label>
-            <input id="mo-m-player" type="text" placeholder="Nombre o número" autocomplete="off" class="mo-input" />
+            <input id="mo-m-player" type="text" placeholder="Nombre o dorsal" autocomplete="off" class="mo-input" />
+            <div id="mo-player-results" class="flex flex-col gap-[2px] max-h-[140px] overflow-y-auto mt-1"></div>
           </div>
           <div id="mo-m-extra"></div>
           <div class="mo-field-group">
@@ -224,6 +264,10 @@ const serializedEvents = JSON.stringify(events.map(e => ({
   data-events={serializedEvents}
   data-elapsed-seconds={matchData?.elapsed_seconds ?? 0}
   data-match-duration={matchDuration}
+  data-half-time={halfTimeSecs}
+  data-home-squad={serializedHomeSquad}
+  data-away-squad={serializedAwaySquad}
+  data-editable={isEditable ? 'true' : 'false'}
   style="display:none"></div>
   </div>
 
@@ -671,6 +715,18 @@ const serializedEvents = JSON.stringify(events.map(e => ({
     box-shadow:0 0 20px rgba(199,168,107,.3);
   }
   .mo-btn-primary:active { transform:scale(.97); }
+
+  .mo-half-indicator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .25rem;
+    padding: 1.5rem 1rem;
+    border-radius: 14px;
+    background: linear-gradient(160deg, rgba(251,191,36,.06) 0%, transparent 100%);
+    border: 1px solid rgba(251,191,36,.15);
+  }
+  .mo-half-indicator + .mo-actions-grid { margin-top: 1.5rem; }
 </style>
 
 <script>
@@ -683,6 +739,44 @@ const serializedEvents = JSON.stringify(events.map(e => ({
   const COLOR_B = SSR?.teamBColor || '#f59e0b';
   const MATCH_DURATION = parseInt(SSR?.matchDuration || '90', 10);
   const MAX_SECONDS = MATCH_DURATION * 60;
+  const HALF_TIME = parseInt(SSR?.halfTime || '0', 10) || Math.floor(MAX_SECONDS / 2);
+  const IS_EDITABLE = SSR?.editable !== 'false';
+
+  // Parse squad data
+  let homeSquad = [], awaySquad = [];
+  try { homeSquad = JSON.parse(SSR?.homeSquad || '[]'); } catch {}
+  try { awaySquad = JSON.parse(SSR?.awaySquad || '[]'); } catch {}
+  const squadMap = { 'a': homeSquad, 'b': awaySquad };
+
+  function renderPlayerSuggestions(query) {
+    const container = $('mo-player-results');
+    if (!container) return;
+    const teamVal = $('mo-m-team')?.value || 'a';
+    const players = squadMap[teamVal] || [];
+    if (!query.trim()) { container.innerHTML = ''; return; }
+    const q = query.toLowerCase().trim();
+    const results = players.filter(p => p.name.toLowerCase().includes(q) || p.position?.toLowerCase().includes(q));
+    if (!results.length) {
+      container.innerHTML = '<div class="text-[0.48rem] text-white/20 text-center py-1">Sin resultados</div>';
+      return;
+    }
+    container.innerHTML = results.map(p => {
+      const sel = p.id === selectedPlayerTrid;
+      return `<button type="button" class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-transparent bg-white/[.04] text-cream/65 cursor-pointer font-body text-[0.6rem] leading-tight text-left transition-all duration-100 hover:bg-green-500/10 hover:border-green-500/20 hover:text-cream ${sel ? 'bg-green-500/15 border-green-500/30 text-cream' : ''}" data-trid="${p.id}" data-name="${p.name.replace(/"/g,'&quot;')}">
+        ${p.player_image_card ? `<img class="w-[22px] h-[22px] rounded object-cover shrink-0 border border-theme-gold/15" src="${p.player_image_card}" />` : ''}
+        <span class="font-semibold tracking-wide uppercase flex-1 min-w-0 text-theme-gold">${p.name}</span>
+        <span class="text-[0.45rem] text-cream/25 uppercase tracking-wide shrink-0 text-white">${p.position || ''}</span>
+        ${sel ? '<span class="text-green-400 text-[0.6rem] shrink-0">✓</span>' : ''}
+      </button>`;
+    }).join('');
+    container.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        selectedPlayerTrid = btn.dataset.trid;
+        $('mo-m-player').value = btn.dataset.name;
+        $('mo-player-results').innerHTML = '';
+      });
+    });
+  }
 
   function disableTimer() {
     const btn = $('mo-timer-btn');
@@ -709,7 +803,8 @@ const serializedEvents = JSON.stringify(events.map(e => ({
   const tKey  = id => 'velada_timer_' + id;
 
   let timerSec = 0, timerRunning = false, timerStartedAt = null, timerBase = 0;
-  let timerInterval = null, currentEventType = null;
+  let timerInterval = null, currentEventType = null, selectedPlayerTrid = '';
+  let isHalfTime = false, secondHalfStarted = false;
 
   const $ = id => document.getElementById(id);
 
@@ -717,7 +812,8 @@ const serializedEvents = JSON.stringify(events.map(e => ({
   function renderTimerDisplay(){
     const m = Math.floor(timerSec/60).toString().padStart(2,'0');
     const s = (timerSec%60).toString().padStart(2,'0');
-    $('mo-timer-display').textContent = m+':'+s;
+    const halfLabel = isHalfTime ? 'DESC' : (secondHalfStarted || timerSec >= HALF_TIME ? '2T' : '1T');
+    $('mo-timer-display').textContent = halfLabel + ' ' + m+':'+s;
   }
   function saveTimerState(){
     try {
@@ -774,6 +870,22 @@ const serializedEvents = JSON.stringify(events.map(e => ({
   function tick(){
     if (timerRunning && timerStartedAt) {
       timerSec = timerBase + Math.floor((Date.now() - timerStartedAt) / 1000);
+      // Half-time check
+      if (!isHalfTime && !secondHalfStarted && timerSec >= HALF_TIME && timerSec < MAX_SECONDS) {
+        timerSec = HALF_TIME;
+        timerRunning = false;
+        timerStartedAt = null;
+        clearInterval(timerInterval);
+        timerInterval = null;
+        isHalfTime = true;
+        renderTimerDisplay();
+        saveTimerState();
+        saveElapsedToServer();
+        $('mo-half-indicator').style.display = 'flex';
+        $('mo-timer-btn')?.classList.remove('active');
+        $('mo-timer-label').textContent = 'DESCANSO';
+        return;
+      }
       if (timerSec >= MAX_SECONDS) {
         timerSec = MAX_SECONDS;
         timerRunning = false;
@@ -864,6 +976,7 @@ const serializedEvents = JSON.stringify(events.map(e => ({
 
     list.querySelectorAll('.mo-log-del').forEach(btn =>
       btn.addEventListener('click', async () => {
+        if (!IS_EDITABLE) return;
         const eventId = btn.dataset.eid;
         try {
           await fetch('/api/matches/' + MATCH_ID + '/events', {
@@ -905,6 +1018,8 @@ const serializedEvents = JSON.stringify(events.map(e => ({
       <option value="a">${TEAM_A}</option>
       <option value="b">${TEAM_B}</option>`;
     $('mo-m-player').value = '';
+    selectedPlayerTrid = '';
+    $('mo-player-results').innerHTML = '';
     $('mo-m-minute').value = Math.floor(timerSec / 60) || '';
 
     const extra = $('mo-m-extra');
@@ -946,9 +1061,33 @@ const serializedEvents = JSON.stringify(events.map(e => ({
 
   $('mo-modal-cancel').addEventListener('click', closeModal);
 
+  // Player search on input
+  $('mo-m-player')?.addEventListener('input', () => {
+    selectedPlayerTrid = '';
+    renderPlayerSuggestions($('mo-m-player').value);
+  });
+
+  // Re-populate player list when team changes
+  $('mo-m-team')?.addEventListener('change', () => {
+    $('mo-m-player').value = '';
+    selectedPlayerTrid = '';
+    $('mo-player-results').innerHTML = '';
+  });
+
+  // Close suggestions on outside click
+  document.addEventListener('click', e => {
+    const container = $('mo-player-results');
+    const input = $('mo-m-player');
+    if (container && input && !input.contains(e.target) && !container.contains(e.target)) {
+      container.innerHTML = '';
+    }
+  });
+
   $('mo-modal-save').addEventListener('click', async () => {
+    if (!IS_EDITABLE) return;
     const teamVal = $('mo-m-team').value;
     const player = ($('mo-m-player').value || '').trim() || '—';
+    const teamRequestId = selectedPlayerTrid;
     const rawMin = parseInt($('mo-m-minute').value, 10);
     const minute = isNaN(rawMin) ? Math.floor(timerSec / 60) : rawMin;
     const type = currentEventType;
@@ -963,7 +1102,7 @@ const serializedEvents = JSON.stringify(events.map(e => ({
     }
 
     try {
-      const body = { type, team: teamVal.toUpperCase(), player, minute, detail };
+      const body = { type, team: teamVal.toUpperCase(), player, minute, detail, team_request_id: teamRequestId };
       if (type === 'change') {
         const out = ($('mo-m-out')?.value || '').trim() || '—';
         const inp = ($('mo-m-in')?.value || '').trim() || '—';
@@ -1006,6 +1145,7 @@ const serializedEvents = JSON.stringify(events.map(e => ({
 
   /* ── CLEAR ALL ── */
   $('mo-log-clear').addEventListener('click', async () => {
+    if (!IS_EDITABLE) return;
     if (!confirm('¿Eliminar todos los eventos de este partido?')) return;
     try {
       await fetch('/api/matches/' + MATCH_ID + '/events', {
@@ -1017,6 +1157,23 @@ const serializedEvents = JSON.stringify(events.map(e => ({
       await updateScore();
     } catch {}
   });
+
+  /* ── START SECOND HALF ── */
+  const secondHalfBtn = $('mo-start-second-half');
+  if (secondHalfBtn) {
+    secondHalfBtn.addEventListener('click', async () => {
+      isHalfTime = false;
+      secondHalfStarted = true;
+      $('mo-half-indicator').style.display = 'none';
+      timerBase = timerSec;
+      timerRunning = true;
+      timerStartedAt = Date.now();
+      $('mo-timer-btn').classList.add('active');
+      $('mo-timer-label').textContent = 'Pausar';
+      timerInterval = setInterval(tick, 1000);
+      saveTimerState();
+    });
+  }
 
   /* ── START MATCH ── */
   const startBtn = $('mo-start-match');
@@ -1059,6 +1216,37 @@ const serializedEvents = JSON.stringify(events.map(e => ({
   // If the end match button is not rendered, match is finished → disable timer
   if (!$('mo-end-match')) {
     disableTimer();
+  }
+
+  // If match is finished and the 2-hour edit window has expired, lock editing
+  if (!IS_EDITABLE) {
+    document.querySelectorAll('.mo-action-btn').forEach(btn => {
+      btn.style.opacity = '0.35';
+      btn.style.pointerEvents = 'none';
+      btn.style.cursor = 'not-allowed';
+    });
+    const clearBtn = $('mo-log-clear');
+    if (clearBtn) {
+      clearBtn.style.opacity = '0.35';
+      clearBtn.style.pointerEvents = 'none';
+      clearBtn.style.cursor = 'not-allowed';
+    }
+    const editLocked = document.createElement('div');
+    editLocked.style.cssText = 'text-align:center;padding:.75rem;margin-top:.5rem;border-radius:10px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:#fca5a5;font-size:.7rem;letter-spacing:.04em;';
+    editLocked.textContent = 'El plazo de 2 horas para editar el partido ha expirado. No se pueden realizar más cambios.';
+    const actionsGrid = document.querySelector('.mo-actions-grid');
+    if (actionsGrid && actionsGrid.parentNode) actionsGrid.parentNode.insertBefore(editLocked, actionsGrid.nextSibling);
+  }
+
+  // Half-time state on page load (runs regardless of match status)
+  if (timerSec >= HALF_TIME && timerSec < MAX_SECONDS && timerSec > 0) {
+    isHalfTime = true;
+    secondHalfStarted = timerSec > HALF_TIME;
+    if (isHalfTime && !secondHalfStarted) {
+      $('mo-half-indicator').style.display = 'flex';
+      $('mo-timer-label').textContent = 'DESCANSO';
+    }
+    renderTimerDisplay();
   }
 
   // Load SSR events if available

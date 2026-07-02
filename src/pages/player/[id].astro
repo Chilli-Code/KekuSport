@@ -3,7 +3,7 @@ import { PLAYERS } from '@/consts/fighters'
 import { fixedTitle } from '@/consts/pageTitles'
 import Layout from '@/layouts/Layout.astro'
 import BoxerProfileCard from '@/components/BoxerProfileCard.astro'
-import { getPlayerById, getPlayerSocials } from '../../../server/db'
+import { getPlayerById, getPlayerSocials, getPlayerAggStats } from '../../../server/db'
 
 const { id } = Astro.params
 
@@ -17,6 +17,8 @@ if (id) {
       isDbPlayer = true
       const socialsRaw = await getPlayerSocials(dbPlayer.id)
       const socials = Array.isArray(socialsRaw) ? socialsRaw : []
+      let aggStats = { goals: 0, assists: 0, yellows: 0, reds: 0, matches_played: 0, tournament_name: null as string | null, tournament_id: null as string | null, team_name: null as string | null }
+      try { aggStats = await getPlayerAggStats(dbPlayer.id) } catch {}
       player = {
         id: dbPlayer.id,
         name: dbPlayer.name,
@@ -26,12 +28,13 @@ if (id) {
         city: dbPlayer.city || '',
         neighborhood: dbPlayer.neighborhood || '',
         preferredFoot: dbPlayer.preferred_foot || '',
-        team: '',
+        team: aggStats.team_name || '',
         position: dbPlayer.position,
         number: dbPlayer.number || 0,
         bio: dbPlayer.bio || '',
         imageBig: dbPlayer.image_big || '/images/fighters/big/jugador_mistery.webp',
         imageCard: dbPlayer.image_card || '/images/fighters/cards/jugador_mistery_card.png',
+        stats: aggStats,
         socials: socials.map(s => ({
           id: s.platform.toLowerCase(),
           name: s.platform,
@@ -74,6 +77,43 @@ const imgSrc = isDbPlayer ? player.imageBig : `/images/fighters/big/jugador_mist
       </div>
     </div>
   </section>
+
+  {isDbPlayer && player.stats && player.stats.tournament_name && (
+    <section class="relative w-full px-6 pb-20">
+      <div class="mx-auto max-w-4xl">
+        <div class="mb-6">
+          <h2 class="font-cinzel text-lg font-black uppercase tracking-[0.15em] text-theme-gold/80">
+            ESTADÍSTICAS DEL TORNEO
+          </h2>
+          <p class="text-[0.55rem] tracking-widest uppercase text-theme-cream/30 mt-1">
+            {player.stats.tournament_name} · {player.stats.team_name}
+          </p>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          <div class="rounded-xl bg-theme-midnight/40 backdrop-blur-sm border border-theme-gold/20 p-4 text-center">
+            <p class="text-[0.5rem] font-bold uppercase tracking-wider text-theme-cream/40">PARTIDOS</p>
+            <p class="font-cinzel text-2xl font-black text-theme-cream mt-1">{player.stats.matches_played}</p>
+          </div>
+          <div class="rounded-xl bg-theme-midnight/40 backdrop-blur-sm border border-emerald-500/20 p-4 text-center">
+            <p class="text-[0.5rem] font-bold uppercase tracking-wider text-theme-cream/40">GOLES</p>
+            <p class="font-cinzel text-2xl font-black text-emerald-400 mt-1">{player.stats.goals}</p>
+          </div>
+          <div class="rounded-xl bg-theme-midnight/40 backdrop-blur-sm border border-theme-gold/20 p-4 text-center">
+            <p class="text-[0.5rem] font-bold uppercase tracking-wider text-theme-cream/40">ASISTENCIAS</p>
+            <p class="font-cinzel text-2xl font-black text-theme-gold mt-1">{player.stats.assists}</p>
+          </div>
+          <div class="rounded-xl bg-theme-midnight/40 backdrop-blur-sm border border-amber-500/20 p-4 text-center">
+            <p class="text-[0.5rem] font-bold uppercase tracking-wider text-theme-cream/40">AMARILLAS</p>
+            <p class="font-cinzel text-2xl font-black text-amber-400 mt-1">{player.stats.yellows}</p>
+          </div>
+          <div class="rounded-xl bg-theme-midnight/40 backdrop-blur-sm border border-red-500/20 p-4 text-center">
+            <p class="text-[0.5rem] font-bold uppercase tracking-wider text-theme-cream/40">ROJAS</p>
+            <p class="font-cinzel text-2xl font-black text-red-400 mt-1">{player.stats.reds}</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  )}
 </Layout>
 
 <style>

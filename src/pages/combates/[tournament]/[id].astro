@@ -198,6 +198,7 @@ const ssrScoreB = ssrEvents.filter(e => e.team === 'B' && e.type === 'goal').len
     matchDuration={matchDuration}
     isLive={matchEdition === 'EN VIVO'}
     minute={Math.floor(matchElapsedSeconds / 60)}
+    matchElapsedSeconds={matchElapsedSeconds}
     score={[ssrScoreA, ssrScoreB]}
     events={ssrEvents}
   />
@@ -212,13 +213,32 @@ const ssrScoreB = ssrEvents.filter(e => e.team === 'B' && e.type === 'goal').len
   const matchDuration = parseInt(el.dataset.matchDuration || '90', 10);
   if (!matchId || status !== 'live') return;
 
+  const HALF_TIME_SECS = Math.floor(matchDuration * 60 / 2);
   const EVENT_ICONS = { goal:'⚽', yellow:'🟨', red:'🟥', sub:'🔄', var:'📺', shot:'🎯', foul:'⚠️' };
 
-  function updateTimeBar(minute) {
+  function updateHalfDisplay(elapsedSeconds) {
+    const halfLabel = document.querySelector('.ms-half-label');
     const minEl = document.querySelector('.ms-minute-num');
+    if (!halfLabel) return;
+    let label, showMin;
+    if (elapsedSeconds < HALF_TIME_SECS) {
+      label = '1T';
+      showMin = true;
+    } else if (elapsedSeconds === HALF_TIME_SECS) {
+      label = 'DESCANSO';
+      showMin = false;
+    } else {
+      label = '2T';
+      showMin = true;
+    }
+    halfLabel.textContent = label;
+    halfLabel.dataset.descanso = label === 'DESCANSO' ? 'true' : 'false';
+    if (minEl) minEl.style.display = showMin ? '' : 'none';
+  }
+
+  function updateTimeBar(minute) {
     const fillEl = document.querySelector('.ms-time-fill');
     const dotEl = document.querySelector('.ms-time-dot');
-    if (minEl) minEl.textContent = minute + "'";
     if (fillEl) fillEl.style.width = Math.min((minute / matchDuration) * 100, 100) + '%';
     if (dotEl) dotEl.style.left = Math.min((minute / matchDuration) * 100, 100) + '%';
   }
@@ -232,6 +252,9 @@ const ssrScoreB = ssrEvents.filter(e => e.team === 'B' && e.type === 'goal').len
 
       if (data.elapsedSeconds !== undefined) {
         const minute = Math.floor(data.elapsedSeconds / 60);
+        updateHalfDisplay(data.elapsedSeconds);
+        const minEl = document.querySelector('.ms-minute-num');
+        if (minEl) minEl.textContent = minute + "'";
         updateTimeBar(minute);
       }
 

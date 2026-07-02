@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro'
-import { getMatchEvents, createMatchEvent, deleteMatchEvent, deleteAllMatchEvents, getMatchById } from '../../../../../server/db'
+import { getMatchEvents, createMatchEvent, deleteMatchEvent, deleteAllMatchEvents, getMatchById, isMatchEditable } from '../../../../../server/db'
 
 export const GET: APIRoute = async ({ params }) => {
   const { id } = params
@@ -23,6 +23,11 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
     return new Response(JSON.stringify({ error: 'Se requiere match ID' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
   }
 
+  const editable = await isMatchEditable(id)
+  if (!editable) {
+    return new Response(JSON.stringify({ error: 'El plazo de 2 horas para modificar el partido ha expirado' }), { status: 403, headers: { 'Content-Type': 'application/json' } })
+  }
+
   const body = await request.json()
   const { action, eventId, ...eventData } = body
 
@@ -44,6 +49,7 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
     player2: eventData.player2 || '',
     minute: Number(eventData.minute) || 0,
     detail: eventData.detail || '',
+    team_request_id: eventData.team_request_id || '',
   })
 
   return new Response(JSON.stringify({ success: true, id: eventIdCreated }), { status: 201, headers: { 'Content-Type': 'application/json' } })
