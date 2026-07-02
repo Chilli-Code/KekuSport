@@ -1,0 +1,180 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { getDb, getPlayerTournamentStats, getTournamentById } from '../../../server/db';
+
+const { tournament } = Astro.params;
+
+let stats: Awaited<ReturnType<typeof getPlayerTournamentStats>> = [];
+let tournamentName = 'Torneo';
+let tournamentData: Awaited<ReturnType<typeof getTournamentById>> = null;
+
+if (tournament) {
+  try {
+    tournamentData = await getTournamentById(tournament);
+    if (tournamentData) tournamentName = tournamentData.name;
+    stats = await getPlayerTournamentStats(tournament);
+  } catch (e) {
+    console.error('Error loading stats:', e);
+  }
+}
+
+const sortedByGoals = [...stats].sort((a, b) => b.goals - a.goals);
+const sortedByAssists = [...stats].sort((a, b) => b.assists - a.assists);
+const sortedByYellows = [...stats].sort((a, b) => b.yellows - a.yellows);
+const sortedByReds = [...stats].sort((a, b) => b.reds - a.reds);
+const sortedByMatches = [...stats].sort((a, b) => b.matches_played - a.matches_played);
+
+function RankRow(rank, name, team, value, valueLabel, img) {
+  const isTop = rank <= 3;
+  const medals = ['🥇','🥈','🥉'];
+  return `<div class="rr">
+    <span class="rr-rank${isTop ? ' rr-rank--top' : ''}">${rank <= 3 ? medals[rank-1] : `#${rank}`}</span>
+    <div class="rr-avatar">${img ? `<img src="${img}" alt="${name}" />` : '👤'}</div>
+    <div class="rr-name" style="flex:1;min-width:0">
+      ${name}
+      <span class="rr-team" style="display:block;margin-top:.05rem">${team}</span>
+    </div>
+    <div style="text-align:right">
+      <div class="rr-value">${value}</div>
+      <div class="rr-label">${valueLabel}</div>
+    </div>
+  </div>`;
+}
+
+function EmptyRow() {
+  return '<p style="font-size:.5rem;letter-spacing:.04em;color:rgba(232,220,200,.18);padding:.3rem 0">Sin datos</p>';
+}
+---
+<Layout title={`Estadísticas - ${tournamentName}`} hideFooter={true}>
+<div style="min-height:100svh;background:radial-gradient(ellipse at 50% -10%,#0b2a1a 0%,#050d08 55%,#03080e 100%);padding:1.5rem 1rem 6rem;font-family:'Rajdhani',sans-serif;color:var(--cream,#fef3c7);max-width:720px;margin:0 auto">
+  <a href="/combates" style="display:inline-flex;align-items:center;gap:.3rem;font-family:'Orbitron',monospace;font-size:.45rem;font-weight:600;letter-spacing:.1em;color:rgba(232,220,200,.4);background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:99px;padding:.35rem .7rem;cursor:pointer;transition:all .2s;text-transform:uppercase;white-space:nowrap;text-decoration:none;margin-bottom:1rem">
+    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+    VOLVER
+  </a>
+
+  <h1 style="font-family:'Cinzel',serif;font-size:1.2rem;font-weight:900;text-transform:uppercase;letter-spacing:.06em;color:white;margin-bottom:.35rem">
+    ESTADÍSTICAS
+  </h1>
+  <p style="font-size:.5rem;letter-spacing:.15em;text-transform:uppercase;color:rgba(0,255,136,.6);margin-bottom:1.5rem">{tournamentName}</p>
+
+  {stats.length === 0 ? (
+    <div style="text-align:center;padding:3rem 0">
+      <p style="font-size:.55rem;letter-spacing:.04em;color:rgba(232,220,200,.18)">No hay estadísticas disponibles para este torneo.</p>
+    </div>
+  ) : (
+    <div style="display:flex;flex-direction:column;gap:1.5rem">
+
+      <!-- ═══ GOLES ═══ -->
+      <section>
+        <h2 style="font-family:'Orbitron',monospace;font-size:.48rem;font-weight:600;letter-spacing:.22em;color:rgba(251,191,36,.5);text-transform:uppercase;margin-bottom:.35rem;border-bottom:1px solid rgba(199,168,107,.14);padding-bottom:.35rem">⚽ GOLES</h2>
+        <div style="display:flex;flex-direction:column;gap:.25rem">
+          {sortedByGoals.filter(p => p.goals > 0).slice(0, 20).map((p, i) => (
+            RankRow(i+1, p.player_name, p.team_name, p.goals, "GOL", p.player_image_card)
+          ))}
+          {sortedByGoals.filter(p => p.goals > 0).length === 0 && EmptyRow()}
+        </div>
+      </section>
+
+      <!-- ═══ ASISTENCIAS ═══ -->
+      <section>
+        <h2 style="font-family:'Orbitron',monospace;font-size:.48rem;font-weight:600;letter-spacing:.22em;color:rgba(251,191,36,.5);text-transform:uppercase;margin-bottom:.35rem;border-bottom:1px solid rgba(199,168,107,.14);padding-bottom:.35rem">🎯 ASISTENCIAS</h2>
+        <div style="display:flex;flex-direction:column;gap:.25rem">
+          {sortedByAssists.filter(p => p.assists > 0).slice(0, 20).map((p, i) => (
+            RankRow(i+1, p.player_name, p.team_name, p.assists, "ASIST", p.player_image_card)
+          ))}
+          {sortedByAssists.filter(p => p.assists > 0).length === 0 && EmptyRow()}
+        </div>
+      </section>
+
+      <!-- ═══ TARJETAS AMARILLAS ═══ -->
+      <section>
+        <h2 style="font-family:'Orbitron',monospace;font-size:.48rem;font-weight:600;letter-spacing:.22em;color:rgba(251,191,36,.5);text-transform:uppercase;margin-bottom:.35rem;border-bottom:1px solid rgba(199,168,107,.14);padding-bottom:.35rem">🟡 TARJETAS AMARILLAS</h2>
+        <div style="display:flex;flex-direction:column;gap:.25rem">
+          {sortedByYellows.filter(p => p.yellows > 0).slice(0, 20).map((p, i) => (
+            RankRow(i+1, p.player_name, p.team_name, p.yellows, "AMAR", p.player_image_card)
+          ))}
+          {sortedByYellows.filter(p => p.yellows > 0).length === 0 && EmptyRow()}
+        </div>
+      </section>
+
+      <!-- ═══ TARJETAS ROJAS ═══ -->
+      <section>
+        <h2 style="font-family:'Orbitron',monospace;font-size:.48rem;font-weight:600;letter-spacing:.22em;color:rgba(251,191,36,.5);text-transform:uppercase;margin-bottom:.35rem;border-bottom:1px solid rgba(199,168,107,.14);padding-bottom:.35rem">🔴 TARJETAS ROJAS</h2>
+        <div style="display:flex;flex-direction:column;gap:.25rem">
+          {sortedByReds.filter(p => p.reds > 0).slice(0, 20).map((p, i) => (
+            RankRow(i+1, p.player_name, p.team_name, p.reds, "ROJA", p.player_image_card)
+          ))}
+          {sortedByReds.filter(p => p.reds > 0).length === 0 && EmptyRow()}
+        </div>
+      </section>
+
+      <!-- ═══ PARTIDOS JUGADOS ═══ -->
+      <section>
+        <h2 style="font-family:'Orbitron',monospace;font-size:.48rem;font-weight:600;letter-spacing:.22em;color:rgba(251,191,36,.5);text-transform:uppercase;margin-bottom:.35rem;border-bottom:1px solid rgba(199,168,107,.14);padding-bottom:.35rem">📋 PARTIDOS JUGADOS</h2>
+        <div style="display:flex;flex-direction:column;gap:.25rem">
+          {sortedByMatches.filter(p => p.matches_played > 0).slice(0, 20).map((p, i) => (
+            RankRow(i+1, p.player_name, p.team_name, p.matches_played, "PART", p.player_image_card)
+          ))}
+          {sortedByMatches.filter(p => p.matches_played > 0).length === 0 && EmptyRow()}
+        </div>
+      </section>
+
+    </div>
+  )}
+</div>
+</Layout>
+
+<style>
+  .rr {
+    display:flex;align-items:center;gap:.5rem;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.06);
+    border-radius:10px;
+    padding:.4rem .6rem;
+    transition:border-color .2s,background .2s;
+  }
+  .rr:hover {
+    border-color:rgba(199,168,107,.25);
+    background:rgba(255,255,255,.05);
+  }
+  .rr-rank {
+    font-family:'Orbitron',monospace;
+    font-size:.5rem;font-weight:700;
+    color:rgba(251,191,36,.4);
+    min-width:1.2rem;text-align:center;
+  }
+  .rr-rank--top {
+    color:var(--gold,#fbbf24);
+    text-shadow:0 0 10px rgba(251,191,36,.3);
+  }
+  .rr-avatar {
+    width:28px;height:28px;border-radius:7px;flex-shrink:0;
+    background:rgba(199,168,107,.06);border:1px solid rgba(199,168,107,.1);
+    display:flex;align-items:center;justify-content:center;
+    font-size:.75rem;overflow:hidden;
+  }
+  .rr-avatar img { width:100%;height:100%;object-fit:cover; }
+  .rr-name {
+    flex:1;min-width:0;
+    font-size:.55rem;font-weight:700;letter-spacing:.04em;
+    color:var(--cream,#fef3c7);text-transform:uppercase;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .rr-team {
+    font-size:.38rem;letter-spacing:.08em;
+    color:rgba(232,220,200,.25);text-transform:uppercase;
+  }
+  .rr-value {
+    font-family:'Orbitron',monospace;
+    font-size:.75rem;font-weight:900;
+    color:#00ff88;
+    text-shadow:0 0 12px rgba(0,255,136,.15);
+    min-width:1.8rem;text-align:right;
+  }
+  .rr-label {
+    font-size:.35rem;letter-spacing:.1em;
+    color:rgba(0,255,136,.4);text-transform:uppercase;
+    text-align:right;
+  }
+</style>
+

@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro'
-import { createTeamRequest, deleteTeamRequest, getTeamRequestsByPlayer, getTeamRequestsByPlayerWithTeam, getTeamRequestsByOwner, getTeamRequestById, updateTeamRequestStatus, getPlayerByUser, createNotification, getDb, getTeamSquadByTeamId, getTeamPendingInvitesByOwner } from '../../../../server/db'
+import { createTeamRequest, deleteTeamRequest, getTeamRequestsByPlayer, getTeamRequestsByPlayerWithTeam, getTeamRequestsByOwner, getTeamRequestById, updateTeamRequestStatus, getPlayerByUser, createNotification, getDb, getTeamSquadByTeamId, getTeamPendingInvitesByOwner, addPlayerToTeam } from '../../../../server/db'
 
 export const GET: APIRoute = async ({ locals, url }) => {
   if (!locals.user) {
@@ -145,6 +145,37 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     return new Response(JSON.stringify({ success: true }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+  }
+
+  if (action === 'add-player') {
+    if (locals.user.role !== 'tecnico') {
+      return new Response(JSON.stringify({ error: 'Solo los técnicos pueden agregar jugadores' }), { status: 403, headers: { 'Content-Type': 'application/json' } })
+    }
+
+    const teamId = data.teamId
+    const name = (data.name || '').trim()
+    const position = (data.position || '').trim()
+    if (!teamId || !name || !position) {
+      return new Response(JSON.stringify({ error: 'Nombre, posición y equipo son requeridos' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
+    }
+
+    const db = await getDb()
+    const team = (await db.execute('SELECT * FROM teams WHERE id = ? AND created_by = ?', [teamId, locals.user.id])).rows[0] as unknown as { id: string; name: string } | undefined
+    if (!team) {
+      return new Response(JSON.stringify({ error: 'Equipo no encontrado o no te pertenece' }), { status: 404, headers: { 'Content-Type': 'application/json' } })
+    }
+
+    const result = await addPlayerToTeam({
+      id: data.id || crypto.randomUUID(),
+      name,
+      number: data.number ? Number(data.number) : null,
+      position,
+      image_big: data.imageBig || null,
+      image_card: data.imageCard || null,
+      teamId,
+    })
+
+    return new Response(JSON.stringify({ success: true, playerId: result.playerId, requestId: result.requestId }), { status: 201, headers: { 'Content-Type': 'application/json' } })
   }
 
   if (action === 'invite') {

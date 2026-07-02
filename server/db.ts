@@ -33,6 +33,7 @@ async function migrateTables() {
   try { await db.execute("ALTER TABLE match_lineups ADD COLUMN kit INTEGER DEFAULT 0") } catch {}
   try { await db.execute("ALTER TABLE match_events ADD COLUMN team_request_id TEXT DEFAULT ''") } catch {}
   try { await db.execute("ALTER TABLE match_events ADD COLUMN details_json TEXT DEFAULT ''") } catch {}
+  await ensurePlayersTable(db)
 
   const colResult = await db.execute("PRAGMA table_info('teams')")
   const colInfo = colResult.rows as unknown as { name: string; notnull: number }[]
@@ -42,6 +43,20 @@ async function migrateTables() {
     await db.execute("INSERT INTO teams_migrated (id, tournament_id, name, logo, color, category, created_by, created_at) SELECT id, tournament_id, name, logo, IFNULL(color, '#00ff88'), IFNULL(category, ''), created_by, created_at FROM teams")
     await db.execute('DROP TABLE teams')
     await db.execute('ALTER TABLE teams_migrated RENAME TO teams')
+  }
+}
+
+async function ensurePlayersTable(db?: Awaited<ReturnType<typeof getDb>>) {
+  if (!db) db = await getDb()
+  try { await db.execute("ALTER TABLE players ADD COLUMN direct_team_id TEXT DEFAULT NULL") } catch {}
+  const colResult = await db.execute("PRAGMA table_info('players')")
+  const colInfo = colResult.rows as unknown as { name: string; notnull: number }[]
+  const userIdCol = colInfo.find(c => c.name === 'user_id')
+  if (userIdCol && userIdCol.notnull === 1) {
+    await db.execute("CREATE TABLE players_migrated (id TEXT PRIMARY KEY, user_id TEXT UNIQUE, name TEXT NOT NULL, real_name TEXT, age INTEGER, country TEXT DEFAULT 'co', city TEXT, neighborhood TEXT, preferred_foot TEXT, position TEXT NOT NULL, number INTEGER, bio TEXT, image_big TEXT, image_card TEXT, direct_team_id TEXT, created_at TEXT DEFAULT (datetime('now')), FOREIGN KEY (user_id) REFERENCES users(id))")
+    await db.execute("INSERT INTO players_migrated (id, user_id, name, real_name, age, country, city, neighborhood, preferred_foot, position, number, bio, image_big, image_card, direct_team_id, created_at) SELECT id, user_id, name, real_name, age, country, city, neighborhood, preferred_foot, position, number, bio, image_big, image_card, direct_team_id, created_at FROM players")
+    await db.execute('DROP TABLE players')
+    await db.execute('ALTER TABLE players_migrated RENAME TO players')
   }
 }
 
@@ -151,7 +166,7 @@ async function initTables() {
   await db.execute(`
     CREATE TABLE IF NOT EXISTS players (
       id TEXT PRIMARY KEY,
-      user_id TEXT UNIQUE NOT NULL,
+      user_id TEXT UNIQUE,
       name TEXT NOT NULL,
       real_name TEXT,
       age INTEGER,
@@ -164,6 +179,7 @@ async function initTables() {
       bio TEXT,
       image_big TEXT,
       image_card TEXT,
+      direct_team_id TEXT,
       created_at TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (user_id) REFERENCES users(id)
     )
@@ -540,7 +556,7 @@ export async function acceptInvitation(id: string): Promise<void> {
 
 export interface DBPlayer {
   id: string
-  user_id: string
+  user_id: string | null
   name: string
   real_name: string | null
   age: number | null
@@ -553,6 +569,7 @@ export interface DBPlayer {
   bio: string | null
   image_big: string | null
   image_card: string | null
+  direct_team_id: string | null
   created_at: string
 }
 
@@ -584,7 +601,7 @@ export async function getPlayerSocials(playerId: string): Promise<PlayerSocial[]
 
 export async function upsertPlayer(player: {
   id: string
-  user_id: string
+  user_id: string | null
   name: string
   real_name: string | null
   age: number | null
@@ -597,17 +614,26 @@ export async function upsertPlayer(player: {
   bio: string | null
   image_big: string | null
   image_card: string | null
+  direct_team_id?: string | null
 }): Promise<void> {
   const db = await getDb()
-  await db.execute(
-    `INSERT INTO players (id, user_id, name, real_name, age, country, city, neighborhood, preferred_foot, position, number, bio, image_big, image_card)
-     VALUES (@id, @user_id, @name, @real_name, @age, @country, @city, @neighborhood, @preferred_foot, @position, @number, @bio, @image_big, @image_card)
-     ON CONFLICT(user_id) DO UPDATE SET
-       name=@name, real_name=@real_name, age=@age, country=@country, city=@city,
-       neighborhood=@neighborhood, preferred_foot=@preferred_foot, position=@position,
-       number=@number, bio=@bio, image_big=@image_big, image_card=@image_card`,
-    player as any,
-  )
+  if (player.user_id) {
+    await db.execute(
+      `INSERT INTO players (id, user_id, name, real_name, age, country, city, neighborhood, preferred_foot, position, number, bio, image_big, image_card, direct_team_id)
+       VALUES (@id, @user_id, @name, @real_name, @age, @country, @city, @neighborhood, @preferred_foot, @position, @number, @bio, @image_big, @image_card, @direct_team_id)
+       ON CONFLICT(user_id) DO UPDATE SET
+         name=@name, real_name=@real_name, age=@age, country=@country, city=@city,
+         neighborhood=@neighborhood, preferred_foot=@preferred_foot, position=@position,
+         number=@number, bio=@bio, image_big=@image_big, image_card=@image_card, direct_team_id=@direct_team_id`,
+      player as any,
+    )
+  } else {
+    await db.execute(
+      `INSERT INTO players (id, user_id, name, real_name, age, country, city, neighborhood, preferred_foot, position, number, bio, image_big, image_card, direct_team_id)
+       VALUES (@id, @user_id, @name, @real_name, @age, @country, @city, @neighborhood, @preferred_foot, @position, @number, @bio, @image_big, @image_card, @direct_team_id)`,
+      player as any,
+    )
+  }
 }
 
 export async function savePlayerSocials(playerId: string, socials: { platform: string; url: string | null; followers: string | null }[]): Promise<void> {
@@ -1052,7 +1078,33 @@ export async function searchPlayers(query: string): Promise<DBPlayer[]> {
   return result.rows as unknown as DBPlayer[]
 }
 
-export async function getTeamSquadByOwner(userId: string): Promise<(TeamRequestWithDetails & { user_id: string })[]> {
+export async function addPlayerToTeam(params: {
+  id: string
+  name: string
+  number: number | null
+  position: string
+  image_big: string | null
+  image_card: string | null
+  teamId: string
+}): Promise<{ playerId: string; requestId: string }> {
+  const db = await getDb()
+  await ensurePlayersTable(db)
+  const playerId = params.id || crypto.randomUUID()
+  await db.execute({
+    sql: `INSERT INTO players (id, user_id, name, position, number, image_big, image_card, direct_team_id)
+          VALUES (?, NULL, ?, ?, ?, ?, ?, ?)`,
+    args: [playerId, params.name, params.position, params.number, params.image_big, params.image_card, params.teamId],
+  })
+  const requestId = crypto.randomUUID()
+  await db.execute({
+    sql: `INSERT INTO team_requests (id, player_id, team_id, status, type)
+          VALUES (?, ?, ?, 'accepted', 'direct')`,
+    args: [requestId, playerId, params.teamId],
+  })
+  return { playerId, requestId }
+}
+
+export async function getTeamSquadByOwner(userId: string): Promise<(TeamRequestWithDetails & { user_id: string | null })[]> {
   const db = await getDb()
   const result = await db.execute({
     sql: `SELECT r.*, p.name as player_name, p.position as player_position, p.age as player_age, p.image_big as player_image, p.image_card as player_image_card,
@@ -1064,10 +1116,10 @@ export async function getTeamSquadByOwner(userId: string): Promise<(TeamRequestW
           ORDER BY r.created_at DESC`,
     args: [userId],
   })
-  return result.rows as unknown as (TeamRequestWithDetails & { user_id: string })[]
+  return result.rows as unknown as (TeamRequestWithDetails & { user_id: string | null })[]
 }
 
-export async function getTeamPendingInvitesByOwner(userId: string): Promise<(TeamRequestWithDetails & { user_id: string })[]> {
+export async function getTeamPendingInvitesByOwner(userId: string): Promise<(TeamRequestWithDetails & { user_id: string | null })[]> {
   const db = await getDb()
   const result = await db.execute({
     sql: `SELECT r.*, p.name as player_name, p.position as player_position, p.age as player_age, p.image_big as player_image, p.image_card as player_image_card,
@@ -1079,7 +1131,7 @@ export async function getTeamPendingInvitesByOwner(userId: string): Promise<(Tea
           ORDER BY r.created_at DESC`,
     args: [userId],
   })
-  return result.rows as unknown as (TeamRequestWithDetails & { user_id: string })[]
+  return result.rows as unknown as (TeamRequestWithDetails & { user_id: string | null })[]
 }
 
 // ─── PLAYER STATS / DISCIPLINE ───
@@ -1168,7 +1220,7 @@ export async function isPlayerSuspended(tournamentId: string, teamRequestId: str
 }
 
 export interface PlayerSquadStats extends TeamRequestWithDetails {
-  user_id: string
+  user_id: string | null
   goals: number
   assists: number
   yellows: number
@@ -1297,7 +1349,7 @@ export async function getMatchesByTournamentWithTeams(tournamentId: string): Pro
   return result.rows as unknown as MatchWithTeams[]
 }
 
-export async function getTeamSquadByTeamId(teamId: string): Promise<(TeamRequestWithDetails & { user_id: string })[]> {
+export async function getTeamSquadByTeamId(teamId: string): Promise<(TeamRequestWithDetails & { user_id: string | null })[]> {
   const db = await getDb()
   const result = await db.execute({
     sql: `SELECT r.*, p.name as player_name, p.position as player_position, p.age as player_age, p.image_big as player_image, p.image_card as player_image_card,
@@ -1309,5 +1361,5 @@ export async function getTeamSquadByTeamId(teamId: string): Promise<(TeamRequest
           ORDER BY r.created_at DESC`,
     args: [teamId],
   })
-  return result.rows as unknown as (TeamRequestWithDetails & { user_id: string })[]
+  return result.rows as unknown as (TeamRequestWithDetails & { user_id: string | null })[]
 }

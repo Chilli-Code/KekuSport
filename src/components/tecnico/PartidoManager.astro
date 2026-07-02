@@ -245,9 +245,6 @@ const FORMATIONS = [
     const loadingMsg = $('match-loading-msg');
     if (!container) return;
 
-    const teamName = localStorage.getItem('tec_teamName') || 'MI EQUIPO';
-    const teamLogo = localStorage.getItem('tec_teamLogo') || '/images/Logo_Default.webp';
-
     let realCards = '';
     try {
       const teams = JSON.parse(localStorage.getItem('tec_teams') || '[]');
@@ -270,11 +267,14 @@ const FORMATIONS = [
           const ourMatches = data.matches.filter(m => m.home_team_id === activeTeamId || m.away_team_id === activeTeamId);
           ourMatches.forEach(m => {
             const isHome = m.home_team_id === activeTeamId;
+            const ourName = isHome ? (m.home_team_name || team.name || 'MI EQUIPO') : (m.away_team_name || team.name || 'MI EQUIPO');
             const rivalName = isHome ? (m.away_team_name || 'TBD') : (m.home_team_name || 'TBD');
-            matchLabelsMap[m.id] = `${m.round_label || 'PARTIDO'} · ${teamName} vs ${rivalName}`;
+            matchLabelsMap[m.id] = `${m.round_label || 'PARTIDO'} · ${ourName} vs ${rivalName}`;
           });
           realCards = ourMatches.map(m => {
             const isHome = m.home_team_id === activeTeamId;
+            const ourName = isHome ? (m.home_team_name || team.name || 'MI EQUIPO') : (m.away_team_name || team.name || 'MI EQUIPO');
+            const ourLogo = isHome ? (m.home_team_logo || '/images/Logo_Default.webp') : (m.away_team_logo || '/images/Logo_Default.webp');
             const rivalName = isHome ? (m.away_team_name || 'POR DEFINIR') : (m.home_team_name || 'POR DEFINIR');
             const rivalLogo = isHome ? (m.away_team_logo || '/images/Logo_Default.webp') : (m.home_team_logo || '/images/Logo_Default.webp');
             const badge = getBadgeInfo(m.scheduled_date, m.status);
@@ -290,9 +290,9 @@ const FORMATIONS = [
                   <div class="duel-side duel-side--left">
                     <div class="duel-avatar-wrap">
                       <div class="duel-avatar-bg"></div>
-                      <img class="duel-avatar" src="${teamLogo}" alt="${teamName}" loading="lazy" />
+                      <img class="duel-avatar" src="${ourLogo}" alt="${ourName}" loading="lazy" />
                     </div>
-                    <span class="duel-name">${teamName}</span>
+                    <span class="duel-name">${ourName}</span>
                   </div>
                   <div class="duel-vs" aria-hidden="true">
                     <span class="duel-vs-circle">

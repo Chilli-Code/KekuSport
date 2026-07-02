@@ -277,6 +277,10 @@ const tournamentsJson = JSON.stringify(typedTournaments.map((t: any) => ({
                         </span>
                       </div>
                       <span class="tcard-format-badge">{t.format.toUpperCase()}</span>
+                      <a href={`/estadisticas/${t.id}`} class="tcard-stats-link" onclick="event.stopPropagation()">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+                        ESTADÍSTICAS
+                      </a>
                     </div>
                   </button>
                 ))}
@@ -922,6 +926,27 @@ window.addEventListener('pageshow', function(e) { if (e.persisted) initCombates(
     padding: 2px 8px; border-radius: 99px;
     background: rgba(0,255,136,0.1); color: rgba(0,255,136,0.7);
     border: 1px solid rgba(0,255,136,0.2); margin-top: 0.15rem;
+  }
+
+  .tcard-stats-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    font-family: var(--font-display), monospace;
+    font-size: 0.4rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    text-decoration: none;
+    color: rgba(199,168,107,0.5);
+    padding: 0.15rem 0.4rem;
+    border-radius: 6px;
+    margin-top: 0.25rem;
+    transition: color 0.2s, background 0.2s;
+  }
+  .tcard-stats-link:hover {
+    color: #fbbf24;
+    background: rgba(251,191,36,0.06);
   }
 
   /* ── BACK BUTTON (inside filter panel) ── */

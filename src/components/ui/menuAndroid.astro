@@ -10,6 +10,10 @@ const TABS = [
 ---
 
 <div class="navigation" id="bottomNav">
+  <div class="nav-topbar"></div>
+  <div class="nav-scanlines" aria-hidden="true"></div>
+  <span class="hud-corner hud-corner--tl"></span>
+  <span class="hud-corner hud-corner--tr"></span>
   <ul>
     {TABS.map((t, i) => (
       <li class="list {i === 0 ? 'active' : ''}" data-tab={t.id}>
@@ -35,7 +39,7 @@ const TABS = [
     width: 100%;
     max-width: 720px;
     height: 70px;
-    background: linear-gradient(180deg, color-mix(in srgb, #050d08 90%, #fbbf24) 0%, #050d08 100%);
+    background: linear-gradient(180deg, color-mix(in srgb, #0a0e1a 88%, #00ff88) 0%, #0a0e1a 100%);
     backdrop-filter: blur(16px);
     display: flex;
     justify-content: center;
@@ -44,6 +48,19 @@ const TABS = [
     border-top: 1px solid rgba(199,168,107,.14);
     border-radius: 16px 16px 0 0;
     box-shadow: 0 -8px 40px rgba(0,0,0,.5);
+    overflow: hidden;
+  }
+  .nav-topbar {
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent 0%, #00ff88 50%, transparent 100%);
+    opacity: .65;
+  }
+  .nav-scanlines {
+    position: absolute; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(
+      0deg, transparent, transparent 3px,
+      rgba(0,255,136,.008) 3px, rgba(0,255,136,.008) 4px
+    );
   }
 
   .navigation ul{
@@ -87,7 +104,10 @@ const TABS = [
 
   .navigation ul li.active a .icon{
     transform: translateY(-32px);
-    color: #fbbf24;
+  }
+  .navigation ul li.active a .icon,
+  .navigation ul li.active a .icon ion-icon {
+    color: #00ff88;
   }
 
   .navigation ul li a .text{
@@ -106,7 +126,7 @@ const TABS = [
   .navigation ul li.active a .text{
     opacity: 1;
     transform: translateY(10px);
-    color: #fbbf24;
+    color: #00ff88;
   }
 
   .indicator{
@@ -114,12 +134,29 @@ const TABS = [
     top: -35px;
     width: 70px;
     height: 70px;
-    background: rgba(251,191,36,.08);
+    background: rgba(0,255,136,.08);
     border-radius: 50%;
     border: none;
     transition: 0.5s;
     pointer-events: none;
-    box-shadow: 0 0 20px rgba(251,191,36,.05), inset 0 0 12px rgba(251,191,36,.04);
+    box-shadow: 0 0 20px rgba(0,255,136,.05), inset 0 0 12px rgba(0,255,136,.04);
+  }
+
+  .hud-corner {
+    position: absolute;
+    width: 10px; height: 10px;
+    border-style: solid;
+    border-color: rgba(199,168,107,.2);
+    pointer-events: none;
+    z-index: 2;
+  }
+  .hud-corner--tl { top: 6px; left: 6px; border-width: 1.5px 0 0 1.5px; }
+  .hud-corner--tr { top: 6px; right: 6px; border-width: 1.5px 1.5px 0 0; }
+
+  .navigation:hover .hud-corner {
+    border-color: rgba(0,255,136,.4);
+    width: 14px; height: 14px;
+    transition: all .3s ease;
   }
 
   @media(max-width: 360px){
