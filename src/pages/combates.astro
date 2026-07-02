@@ -38,8 +38,8 @@ const fallbackTournament = {
       home_score: null, away_score: null,
       scheduled_date: simulated[c.id]?.scheduled_date || null, venue: null, status: simulated[c.id]?.status || 'pending',
       created_at: '', round_label: null,
-      home_team_name: teamA?.name ?? null, home_team_logo: null, home_team_color: null,
-      away_team_name: teamB?.name ?? null, away_team_logo: null, away_team_color: null,
+      home_team_name: teamA?.name ?? null, home_team_logo: teamA?.logo ?? null, home_team_color: null,
+      away_team_name: teamB?.name ?? null, away_team_logo: teamB?.logo ?? null, away_team_color: null,
       title: c.title,
       _hour: simulated[c.id]?.hour,
       _date: simulated[c.id]?.date,
@@ -84,6 +84,8 @@ type MatchInfo = {
   _stage?: string
   home_team_name?: string | null
   away_team_name?: string | null
+  home_team_logo?: string | null
+  away_team_logo?: string | null
   scheduled_date?: string | null
   venue?: string | null
   round_label?: string | null
@@ -103,6 +105,8 @@ const tournamentsJson = JSON.stringify(typedTournaments.map((t: any) => ({
     away_team_id: m.away_team_id,
     home_team_name: m.home_team_name,
     away_team_name: m.away_team_name,
+    home_team_logo: m.home_team_logo,
+    away_team_logo: m.away_team_logo,
     scheduled_date: m.scheduled_date,
     venue: m.venue,
     round_label: m.round_label,
@@ -301,6 +305,8 @@ const tournamentsJson = JSON.stringify(typedTournaments.map((t: any) => ({
                         team2Id={m.away_team_id}
                         team1Name={m.home_team_name || undefined}
                         team2Name={m.away_team_name || undefined}
+                        team1Logo={m.home_team_logo}
+                        team2Logo={m.away_team_logo}
                         title={m.title}
                         hour={derivedHour}
                         date={derivedDate}

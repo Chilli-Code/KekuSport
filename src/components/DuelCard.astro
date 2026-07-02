@@ -7,6 +7,8 @@ export interface Props {
   team2Id: string
   team1Name?: string
   team2Name?: string
+  team1Logo?: string | null
+  team2Logo?: string | null
   title: string
   hour?: string
   date?: string
@@ -22,6 +24,8 @@ const {
   team2Id,
   team1Name,
   team2Name,
+  team1Logo,
+  team2Logo,
   hour,
   date,
   venue,
@@ -41,7 +45,10 @@ const team1Slug = t1?.name ? slugify(t1.name) : team1Id
 const team2Slug = t2?.name ? slugify(t2.name) : team2Id
 
 const tournamentSlug = tournamentName ? slugify(tournamentName) : 'torneo'
-const teamLogo = '/images/Logo_Default.webp'
+
+const DEFAULT_LOGO = '/images/Logo_Default.webp'
+const logo1 = team1Logo || DEFAULT_LOGO
+const logo2 = team2Logo || DEFAULT_LOGO
 ---
 
 <div class="duel-card group">
@@ -60,7 +67,7 @@ const teamLogo = '/images/Logo_Default.webp'
           <div class="duel-avatar-bg"></div>
           <img
             class="duel-avatar"
-            src={teamLogo}
+            src={logo1}
             alt={t1?.name || 'Equipo'}
             loading="lazy"
           />
@@ -80,7 +87,7 @@ const teamLogo = '/images/Logo_Default.webp'
           <div class="duel-avatar-bg"></div>
           <img
             class="duel-avatar"
-            src={teamLogo}
+            src={logo2}
             alt={t2?.name || 'Equipo'}
             loading="lazy"
           />
