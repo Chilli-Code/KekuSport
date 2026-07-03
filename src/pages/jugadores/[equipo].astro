@@ -2,7 +2,7 @@
 import Layout from "@/layouts/Layout.astro";
 import Hero from "@/components/Hero.astro";
 import { TEAMS } from "@/consts/teams";
-import { getTeamById } from "../../../server/db";
+import { getTeamById, getTeamSquadByTeamId } from "../../../server/db";
 
 export async function getStaticPaths() {
   return TEAMS.map((team) => ({
@@ -13,11 +13,420 @@ export async function getStaticPaths() {
 const { equipo } = Astro.params;
 const staticTeam = TEAMS.find((t) => t.id === equipo);
 const dbTeam = staticTeam ? null : await getTeamById(equipo || '');
-
 const team = staticTeam || dbTeam;
-const teamLogo = team && 'logo' in team ? (team.logo || '/images/Logo_Default.webp') : '/images/Logo_Default.webp'
+
+let players: any[] = [];
+let error: string | null = null;
+if (team && 'id' in team) {
+  try {
+    players = await getTeamSquadByTeamId(team.id);
+  } catch (e: any) {
+    error = e?.message || 'Error al cargar jugadores';
+  }
+}
+
+const teamLogo = team && 'logo' in team ? (team.logo || '/images/Logo_Default.webp') : '/images/Logo_Default.webp';
+const teamName = team?.name || equipo;
+const hasPlayers = players.length > 0;
+const playerCount = players.length;
+const pluralLabel = playerCount === 1 ? 'JUGADOR' : 'JUGADORES';
 ---
 
 <Layout>
-  <Hero teamLogo={teamLogo} />
+  <div class="teamplayers-root">
+    <div class="teamplayers-bg" aria-hidden="true">
+      <div class="teamplayers-glow teamplayers-glow--green"></div>
+      <div class="teamplayers-glow teamplayers-glow--purple"></div>
+      <div class="teamplayers-stars"></div>
+    </div>
+
+    <Hero teamLogo={teamLogo} hideFighterCards={true}>
+      {error && (
+        <div class="teamplayers-error">
+          <p>{error}</p>
+        </div>
+      )}
+
+      {hasPlayers ? (
+        <div class="teamplayers-grid">
+          {players.map((p, i) => (
+            <a
+              href={p.user_id ? `/player/${p.player_id}` : '#'}
+              class="tpcard"
+              style={`animation-delay:${i * 0.04}s`}
+            >
+              <span class="tpcard-corner tpcard-corner--tl"></span>
+              <span class="tpcard-corner tpcard-corner--tr"></span>
+              <span class="tpcard-corner tpcard-corner--bl"></span>
+              <span class="tpcard-corner tpcard-corner--br"></span>
+
+              <div class="tpcard-img-wrap">
+                <img
+                  src={p.player_image_card || '/images/fighters/cards/jugador_mistery_card.png'}
+                  alt={p.player_name}
+                  class="tpcard-img"
+                  loading="lazy"
+                />
+                <div class="tpcard-overlay"></div>
+                <div class="tpcard-lightning tpcard-lightning--l"></div>
+                <div class="tpcard-lightning tpcard-lightning--r"></div>
+              </div>
+
+              <div class="tpcard-glow" aria-hidden="true"></div>
+
+              <div class="tpcard-info">
+                <div class="tpcard-divider"></div>
+                <h2 class="tpcard-name">{p.player_name}</h2>
+                <div class="tpcard-meta-row">
+                  {p.player_position && <span class="tpcard-position">{p.player_position.toUpperCase()}</span>}
+                  {p.player_number && <span class="tpcard-number">#{p.player_number}</span>}
+                </div>
+                {!p.user_id && <span class="tpcard-badge">SIN CUENTA</span>}
+              </div>
+            </a>
+          ))}
+        </div>
+      ) : (
+        <div class="teamplayers-empty" id="empty-state">
+          <div id="lottie-container" class="teamplayers-lottie"></div>
+          <h2 class="teamplayers-empty-title">Aún no hay jugadores registrados</h2>
+          <p class="teamplayers-empty-desc">Los jugadores aparecerán aquí cuando se unan al equipo.</p>
+        </div>
+      )}
+    </Hero>
+  </div>
 </Layout>
+
+{hasPlayers ? null : (
+  <script>
+    import lottie from 'lottie-web';
+    document.addEventListener('astro:page-load', function initLottie() {
+      var container = document.getElementById('lottie-container');
+      if (!container) return;
+      lottie.loadAnimation({
+        container: container,
+        renderer: 'svg',
+        loop: true,
+        autoplay: true,
+        path: '/lottie/SoccerNot_People.json',
+      });
+    });
+    window.addEventListener('pageshow', function(e) {
+      if (e.persisted) {
+        var container = document.getElementById('lottie-container');
+        if (!container) return;
+        lottie.loadAnimation({
+          container: container,
+          renderer: 'svg',
+          loop: true,
+          autoplay: true,
+          path: '/lottie/SoccerNot_People.json',
+        });
+      }
+    });
+  </script>
+)}
+
+<style>
+  .teamplayers-root {
+    position: relative;
+    min-height: 100vh;
+    background: radial-gradient(ellipse at 50% -10%, #0b2a1a 0%, #050d08 55%, #03080e 100%);
+    overflow: hidden;
+    isolation: isolate;
+  }
+
+  .teamplayers-bg { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
+
+  .teamplayers-glow {
+    position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.35;
+  }
+  .teamplayers-glow--green {
+    width: 60vw; height: 50vh; top: -10%; left: 20%;
+    background: radial-gradient(circle, #00ff88 0%, transparent 70%);
+    animation: tpGlow 8s ease-in-out infinite alternate;
+  }
+  .teamplayers-glow--purple {
+    width: 40vw; height: 40vh; bottom: 10%; right: -5%;
+    background: radial-gradient(circle, #7c3aed 0%, transparent 70%);
+    opacity: 0.25;
+    animation: tpGlow 10s ease-in-out infinite alternate-reverse;
+  }
+  @keyframes tpGlow {
+    0%   { opacity: 0.2; transform: scale(1); }
+    100% { opacity: 0.45; transform: scale(1.1); }
+  }
+
+  .teamplayers-stars {
+    position: absolute; inset: 0;
+    background-image:
+      radial-gradient(1.5px 1.5px at 10% 20%, #fff, transparent),
+      radial-gradient(1px 1px at 30% 65%, #aaffcc, transparent),
+      radial-gradient(2px 2px at 55% 15%, #a855f7, transparent),
+      radial-gradient(1px 1px at 70% 80%, #fff, transparent),
+      radial-gradient(2px 2px at 85% 40%, #00ff88, transparent),
+      radial-gradient(1px 1px at 20% 90%, #c084fc, transparent),
+      radial-gradient(1.5px 1.5px at 60% 55%, #fff, transparent),
+      radial-gradient(1px 1px at 45% 35%, #aaffcc, transparent),
+      radial-gradient(2px 2px at 92% 10%, #fff, transparent);
+    background-size: 300px 300px;
+    background-repeat: repeat;
+    opacity: 0.55;
+    animation: tpStars 7s ease-in-out infinite alternate;
+  }
+  @keyframes tpStars {
+    0%   { opacity: 0.3; }
+    100% { opacity: 0.7; }
+  }
+
+  .teamplayers-error {
+    text-align: center; padding: 1rem;
+    color: #f87171; font-family: var(--font-cinzel), serif; font-size: 0.7rem;
+  }
+
+  /* ── PLAYER GRID ── */
+  .teamplayers-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+  @media (min-width: 480px) {
+    .teamplayers-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+  @media (min-width: 768px) {
+    .teamplayers-grid { grid-template-columns: repeat(4, 1fr); gap: 1.25rem; }
+  }
+  @media (min-width: 1024px) {
+    .teamplayers-grid { grid-template-columns: repeat(5, 1fr); gap: 1.5rem; }
+  }
+  @media (min-width: 1280px) {
+    .teamplayers-grid { grid-template-columns: repeat(6, 1fr); }
+  }
+
+  /* ── PLAYER CARD ── */
+  .tpcard {
+    position: relative;
+    display: block;
+    aspect-ratio: 3 / 4;
+    text-decoration: none;
+    border-radius: 12px;
+    overflow: hidden;
+    opacity: 0;
+    animation: tpCardIn 0.5s ease-out forwards;
+    cursor: pointer;
+  }
+  @keyframes tpCardIn {
+    from { opacity: 0; transform: translateY(18px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .tpcard:hover { transform: translateY(-6px) scale(1.02); }
+  .tpcard { transition: transform 0.3s cubic-bezier(0.2,0.9,0.4,1.1); }
+
+  .tpcard::before {
+    content: '';
+    position: absolute; inset: 0;
+    border-radius: 12px;
+    border: 1px solid color-mix(in srgb, var(--color-theme-gold) 25%, transparent);
+    transition: border-color 0.3s, box-shadow 0.3s;
+    z-index: 8;
+    pointer-events: none;
+  }
+  .tpcard:hover::before {
+    border-color: #00ff88;
+    box-shadow:
+      0 0 0 1px #00ff88,
+      inset 0 0 20px rgba(0,255,136,0.08),
+      0 0 30px rgba(0,255,136,0.25);
+  }
+
+  .tpcard-corner {
+    position: absolute;
+    width: 14px; height: 14px;
+    border-color: color-mix(in srgb, var(--color-theme-gold) 50%, transparent);
+    border-style: solid;
+    transition: width 0.3s, height 0.3s, border-color 0.3s, box-shadow 0.3s;
+    z-index: 9;
+    pointer-events: none;
+  }
+  .tpcard-corner--tl { top: 8px; left: 8px;  border-width: 1.5px 0 0 1.5px; }
+  .tpcard-corner--tr { top: 8px; right: 8px;  border-width: 1.5px 1.5px 0 0; }
+  .tpcard-corner--bl { bottom: 8px; left: 8px;  border-width: 0 0 1.5px 1.5px; }
+  .tpcard-corner--br { bottom: 8px; right: 8px;  border-width: 0 1.5px 1.5px 0; }
+  .tpcard:hover .tpcard-corner {
+    width: 20px; height: 20px;
+    border-color: #00ff88;
+    box-shadow: 0 0 10px #00ff88;
+  }
+
+  .tpcard-img-wrap {
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, #061a0e 0%, #030d07 100%);
+  }
+  .tpcard-img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    object-position: top center;
+    filter: saturate(0.88) brightness(0.92);
+    transition: transform 0.45s ease, filter 0.45s ease;
+    display: block;
+  }
+  .tpcard:hover .tpcard-img {
+    transform: scale(1.07);
+    filter: saturate(1.05) brightness(1.0);
+  }
+
+  .tpcard-overlay {
+    position: absolute; inset: 0;
+    background:
+      linear-gradient(180deg,
+        transparent 30%,
+        rgba(0,10,5,0.55) 65%,
+        rgba(0,8,4,0.97) 100%
+      );
+    pointer-events: none;
+  }
+
+  .tpcard-lightning {
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 3px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+    z-index: 3;
+  }
+  .tpcard-lightning--l {
+    left: 0;
+    background: linear-gradient(180deg, transparent, rgba(0,255,136,0.6), transparent);
+  }
+  .tpcard-lightning--r {
+    right: 0;
+    background: linear-gradient(180deg, transparent, rgba(124,58,237,0.6), transparent);
+  }
+  .tpcard:hover .tpcard-lightning { opacity: 1; }
+
+  .tpcard-glow {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 50% 20%, rgba(0,255,136,0.18) 0%, transparent 65%);
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    pointer-events: none;
+    z-index: 4;
+  }
+  .tpcard:hover .tpcard-glow { opacity: 1; }
+
+  .tpcard-info {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    padding: 0.75rem 0.75rem 1rem;
+    text-align: center;
+    z-index: 10;
+  }
+
+  .tpcard-divider {
+    width: 1.75rem;
+    height: 1px;
+    background: rgba(0,255,136,0.5);
+    margin: 0 auto 0.45rem;
+    box-shadow: 0 0 6px rgba(0,255,136,0.4);
+    transition: width 0.3s, background 0.3s;
+  }
+  .tpcard:hover .tpcard-divider {
+    width: 3rem;
+    background: #00ff88;
+    box-shadow: 0 0 10px #00ff88;
+  }
+
+  .tpcard-name {
+    font-family: var(--font-cinzel), serif;
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--color-theme-cream);
+    text-transform: uppercase;
+    margin-bottom: 0.25rem;
+    text-shadow: 0 0 12px rgba(0,0,0,0.9), 0 0 8px rgba(0,255,136,0.3);
+    transition: color 0.3s;
+  }
+  .tpcard:hover .tpcard-name { color: #fff; }
+
+  .tpcard-meta-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+  }
+
+  .tpcard-position {
+    font-family: var(--font-cinzel), serif;
+    font-size: 0.55rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    color: color-mix(in srgb, var(--color-theme-gold) 70%, transparent);
+    text-transform: uppercase;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: rgba(199,168,107,0.08);
+    border: 1px solid rgba(199,168,107,0.15);
+  }
+
+  .tpcard-number {
+    font-family: var(--font-display), monospace;
+    font-size: 0.6rem;
+    font-weight: 700;
+    color: color-mix(in srgb, var(--color-theme-cream) 50%, transparent);
+  }
+
+  .tpcard-badge {
+    display: inline-block;
+    font-family: var(--font-cinzel), serif;
+    font-size: 0.45rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    color: rgba(251,191,36,0.7);
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: rgba(251,191,36,0.06);
+    border: 1px solid rgba(251,191,36,0.15);
+    margin-top: 0.2rem;
+  }
+
+  /* ── EMPTY STATE ── */
+  .teamplayers-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1rem 1rem;
+    text-align: center;
+  }
+
+  .teamplayers-lottie {
+    width: 250px;
+    height: 250px;
+    margin-bottom: 1.5rem;
+  }
+
+  .teamplayers-empty-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: color-mix(in srgb, var(--color-theme-cream) 80%, transparent);
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+
+  .teamplayers-empty-desc {
+    font-size: 0.6rem;
+    letter-spacing: 0.15em;
+    color: color-mix(in srgb, var(--color-theme-cream) 40%, transparent);
+    max-width: 300px;
+  }
+
+  @media (min-width: 768px) {
+    .teamplayers-lottie { width: 350px; height: 350px; }
+    .teamplayers-empty-title { font-size: 1.3rem; }
+    .teamplayers-empty-desc { font-size: 0.65rem; }
+  }
+</style>

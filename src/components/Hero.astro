@@ -2,7 +2,7 @@
 import { PLAYERS } from '@/consts/fighters'
 import FighterSelector from './FighterSelector.astro'
 
-const { hideLogo, teamLogo } = Astro.props
+const { hideLogo, teamLogo, hideFighterCards } = Astro.props
 
 const firstRow = PLAYERS.slice(0, 6)
 const leftRow = firstRow.slice(0, 3)
@@ -53,44 +53,51 @@ const allPlayers = PLAYERS
       </div>
     </div>
 
-    <!-- VERSIÓN DESKTOP (original) -->
-    <div class="relative hidden h-full w-full max-w-6xl flex-col items-center justify-end gap-4 p-8 pb-2 md:flex">
-      <div class="flex w-full flex-wrap justify-between px-4">
-        <div class="flex flex-wrap justify-start gap-4">
-          {leftRow.map(({ id, name }) => <FighterSelector id={id} name={name} boxerCardClass='animate-fade-in-right animate-delay-500' />)}
-        </div>
-        <div class="flex flex-wrap justify-end gap-4">
-          {rightRow.map(({ id, name }) => <FighterSelector id={id} name={name} boxerCardClass='animate-fade-in-left animate-delay-500' />)}
-        </div>
+    {hideFighterCards ? (
+      <div class="relative flex w-full flex-col items-center justify-end gap-4 p-4 mt-auto">
+        <slot />
       </div>
+    ) : (
+      <>
+        <!-- VERSIÓN DESKTOP (original) -->
+        <div class="relative hidden h-full w-full max-w-6xl flex-col items-center justify-end gap-4 p-8 pb-2 md:flex">
+          <div class="flex w-full flex-wrap justify-between px-4">
+            <div class="flex flex-wrap justify-start gap-4">
+              {leftRow.map(({ id, name }) => <FighterSelector id={id} name={name} boxerCardClass='animate-fade-in-right animate-delay-500' />)}
+            </div>
+            <div class="flex flex-wrap justify-end gap-4">
+              {rightRow.map(({ id, name }) => <FighterSelector id={id} name={name} boxerCardClass='animate-fade-in-left animate-delay-500' />)}
+            </div>
+          </div>
 
-      <div class="flex flex-wrap justify-between gap-4">
-        {secondRow.map(({ id, name }) => <FighterSelector id={id} name={name} boxerCardClass='animate-fade-in-up animate-delay-700' />)}
-      </div>
-    </div>
-
-    <!-- VERSIÓN MOBILE (una sola línea con scroll horizontal) -->
-    <div class="relative flex h-full w-full flex-col items-center justify-end gap-4 p-4 md:hidden">
-      <div class="w-full overflow-x-auto overflow-y-visible pb-2">
-        <div class="flex min-w-max items-center justify-start gap-4 px-2">
-          {allPlayers.map(({ id, name }) => (
-            <FighterSelector 
-              id={id} 
-              name={name} 
-              boxerCardClass='flex-shrink-0' 
-            />
-          ))}
+          <div class="flex flex-wrap justify-between gap-4">
+            {secondRow.map(({ id, name }) => <FighterSelector id={id} name={name} boxerCardClass='animate-fade-in-up animate-delay-700' />)}
+          </div>
         </div>
-      </div>
 
-    </div>
+        <!-- VERSIÓN MOBILE (una sola línea con scroll horizontal) -->
+        <div class="relative flex h-full w-full flex-col items-center justify-end gap-4 p-4 md:hidden">
+          <div class="w-full overflow-x-auto overflow-y-visible pb-2">
+            <div class="flex min-w-max items-center justify-start gap-4 px-2">
+              {allPlayers.map(({ id, name }) => (
+                <FighterSelector 
+                  id={id} 
+                  name={name} 
+                  boxerCardClass='flex-shrink-0' 
+                />
+              ))}
+            </div>
+          </div>
+        </div>
 
-    <a
-      href="/jugadores"
-      class="boxer-detail-cta boxer-detail-cta-ghost relative z-10 mt-1"
-    >
-      VER TODOS LOS JUGADORES
-    </a>
+        <a
+          href="/jugadores"
+          class="boxer-detail-cta boxer-detail-cta-ghost relative z-10 mt-1"
+        >
+          VER TODOS LOS JUGADORES
+        </a>
+      </>
+    )}
   </div>
   </div>
 </section>
