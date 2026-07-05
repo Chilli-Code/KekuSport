@@ -34,6 +34,14 @@ const groups = groupLabels.length > 0 ? groupLabels.map(label => {
     const t = tournamentTeams.find(tt => tt.id === id)
     return t ? { id: t.id, name: t.name, logo: t.logo || '/images/Logo_Default.webp' } : null
   }).filter(Boolean)
+  teams.sort((a: any, b: any) => {
+    const ta = tournamentTeams.find(tt => tt.id === a.id)
+    const tb = tournamentTeams.find(tt => tt.id === b.id)
+    const oa = ta?.group_sort_order ?? 0
+    const ob = tb?.group_sort_order ?? 0
+    if (oa !== ob) return oa - ob
+    return (a.name || '').localeCompare(b.name || '')
+  })
   return { label: label.replace('Grupo ', ''), teams }
 }) : undefined
 
