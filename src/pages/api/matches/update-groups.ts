@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro'
-import { getTournamentById, getTeamsByTournament, deleteAllMatches, createMatch } from '../../../../server/db'
+import { getTournamentById, getTeamsByTournament, deleteAllMatches, createMatch, updateTeamGroupOrder } from '../../../../server/db'
 import { generateRoundRobin } from './generate'
 
 export const POST: APIRoute = async ({ request, locals }) => {
@@ -59,6 +59,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const groupMatches = generateRoundRobin(groupTeamIds, twoLegged, roundOffset, groupName)
     fixture.push(...groupMatches)
     roundOffset += twoLegged ? (groupTeamIds.length - 1) * 2 : groupTeamIds.length - 1
+  }
+
+  // Persist team order per group
+  for (const [, groupTeamIds] of sortedEntries) {
+    for (let idx = 0; idx < groupTeamIds.length; idx++) {
+      await updateTeamGroupOrder(groupTeamIds[idx], idx + 1)
+    }
   }
 
   const created: Array<{ id: string; round: number; home: string; away: string }> = []

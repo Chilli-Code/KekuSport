@@ -33,6 +33,7 @@ async function migrateTables() {
   try { await db.execute("ALTER TABLE match_lineups ADD COLUMN kit INTEGER DEFAULT 0") } catch {}
   try { await db.execute("ALTER TABLE match_events ADD COLUMN team_request_id TEXT DEFAULT ''") } catch {}
   try { await db.execute("ALTER TABLE match_events ADD COLUMN details_json TEXT DEFAULT ''") } catch {}
+  try { await db.execute("ALTER TABLE teams ADD COLUMN group_sort_order INTEGER DEFAULT 0") } catch {}
   await ensurePlayersTable(db)
 
   const colResult = await db.execute("PRAGMA table_info('teams')")
@@ -401,6 +402,7 @@ export interface Team {
   logo: string | null
   color: string | null
   category: string | null
+  group_sort_order: number | null
   created_by: string | null
   created_at: string
 }
@@ -472,6 +474,11 @@ export async function deleteTeam(id: string): Promise<void> {
 export async function deleteAllTeams(tournamentId: string): Promise<void> {
   const db = await getDb()
   await db.execute({ sql: 'DELETE FROM teams WHERE tournament_id = ?', args: [tournamentId] })
+}
+
+export async function updateTeamGroupOrder(teamId: string, order: number): Promise<void> {
+  const db = await getDb()
+  await db.execute({ sql: 'UPDATE teams SET group_sort_order = ? WHERE id = ?', args: [order, teamId] })
 }
 
 export async function removeTeamFromTournament(teamId: string, tournamentId: string): Promise<void> {

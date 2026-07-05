@@ -38,9 +38,12 @@ for (const m of matches) {
 }
 for (const [, ids] of groupTeams) {
   ids.sort((a, b) => {
-    const na = teams.find(t => t.id === a)?.name || ''
-    const nb = teams.find(t => t.id === b)?.name || ''
-    return na.localeCompare(nb)
+    const ta = teams.find(t => t.id === a)
+    const tb = teams.find(t => t.id === b)
+    const oa = ta?.group_sort_order ?? 0
+    const ob = tb?.group_sort_order ?? 0
+    if (oa !== ob) return oa - ob
+    return (ta?.name || '').localeCompare(tb?.name || '')
   })
 }
 
