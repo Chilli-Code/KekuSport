@@ -58,6 +58,7 @@ for (const gk of groupKeys) {
   if (jc > maxJornada) maxJornada = jc
 }
 const filterJornadaOptions = Array.from({ length: maxJornada }, (_, i) => i + 1)
+const groupsLocked = matches.some(m => m.home_score !== null || m.away_score !== null)
 
 ---
 
@@ -94,20 +95,27 @@ const filterJornadaOptions = Array.from({ length: maxJornada }, (_, i) => i + 1)
           {groupKeys.map(gk => {
             const groupTeamIds = groupTeams.get(gk) || []
             return (
-              <div class="ms-group-card">
+              <div class="ms-group-card" data-group={gk}>
                 <h3 class="ms-group-card-title">{gk}</h3>
                 <div class="ms-group-table">
                   {groupTeamIds.map((tid, i) => {
                     const t = teams.find(tt => tt.id === tid)
                     if (!t) return null
                     return (
-                      <div class="ms-group-row" data-search={t.name.toLowerCase()}>
+                      <div class="ms-group-row" data-search={t.name.toLowerCase()} data-team-id={t.id}>
                         <span class={`ms-gpos ${i === 0 ? 'ms-gpos--gold' : ''}`}>{i + 1}</span>
                         <div class="ms-gavatar">
                           <img src={t.logo || '/images/Logo_Default.webp'} alt={t.name} loading="lazy" />
                         </div>
                         <span class="ms-gname">{t.name}</span>
                         <span class="mg-gpts">0</span>
+                        {!groupsLocked && tournamentFormat === 'grupos' && (
+                          <>
+                            <button class="ms-order-btn ms-order-up" title="Subir posición">▲</button>
+                            <button class="ms-order-btn ms-order-down" title="Bajar posición">▼</button>
+                            <button class="ms-move-btn" data-team-id={t.id} data-team-name={t.name} title="Mover de grupo">↔</button>
+                          </>
+                        )}
                       </div>
                     )
                   })}
@@ -296,6 +304,26 @@ const filterJornadaOptions = Array.from({ length: maxJornada }, (_, i) => i + 1)
   </div>
 </div>
 
+<!-- ══ MODAL MOVER EQUIPO ══ -->
+<div class="ms-modal-overlay" id="ms-move-overlay">
+  <div class="ms-modal">
+    <div class="ms-modal-header">
+      <h3 class="ms-modal-title">Mover Equipo</h3>
+      <button class="ms-modal-close" id="ms-move-close">✕</button>
+    </div>
+    <div class="ms-modal-body">
+      <p style="font-size:.52rem;color:var(--color-theme-cream);margin-bottom:.5rem">
+        Mover <strong id="ms-move-team-name"></strong> a:
+      </p>
+      <select id="ms-move-target" class="ms-input"></select>
+    </div>
+    <div class="ms-modal-footer">
+      <button class="ms-btn ms-btn--ghost" id="ms-move-cancel">Cancelar</button>
+      <button class="ms-btn ms-btn--green" id="ms-move-confirm">Mover</button>
+    </div>
+  </div>
+</div>
+
 <script>
   const tournamentId = document.querySelector<HTMLElement>('.ms')!.dataset.tournamentId
 
@@ -442,6 +470,139 @@ const filterJornadaOptions = Array.from({ length: maxJornada }, (_, i) => i + 1)
         alert('Error al eliminar')
       }
     })
+  })
+
+  // ── Reorder & Move Team ──
+  function readGroupsFromDOM(): Record<string, string[]> {
+    const groups: Record<string, string[]> = {}
+    document.querySelectorAll<HTMLElement>('.ms-group-card').forEach(card => {
+      const title = card.querySelector('.ms-group-card-title')?.textContent?.trim() || ''
+      const teamIds = Array.from(card.querySelectorAll<HTMLElement>('.ms-group-row'))
+        .map(row => row.dataset.teamId)
+        .filter((id): id is string => !!id)
+      groups[title] = teamIds
+    })
+    return groups
+  }
+
+  function updatePosNumbers() {
+    document.querySelectorAll<HTMLElement>('.ms-group-card').forEach(card => {
+      card.querySelectorAll<HTMLElement>('.ms-group-row').forEach((row, i) => {
+        const posEl = row.querySelector<HTMLElement>('.ms-gpos')
+        if (posEl) {
+          posEl.textContent = String(i + 1)
+          posEl.classList.toggle('ms-gpos--gold', i === 0)
+        }
+      })
+    })
+  }
+
+  async function saveGroups(groups: Record<string, string[]>): Promise<void> {
+    const res = await fetch('/api/matches/update-groups', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tournamentId, groups }),
+    })
+    if (!res.ok) {
+      const data = await res.json()
+      throw new Error(data.error || 'Error al guardar grupos')
+    }
+  }
+
+  // ── Intra-group reorder (up/down) ──
+  document.querySelectorAll<HTMLButtonElement>('.ms-order-up').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const row = btn.closest<HTMLElement>('.ms-group-row')
+      const prev = row?.previousElementSibling as HTMLElement | null
+      if (!row || !prev) return
+      row.parentNode?.insertBefore(row, prev)
+      updatePosNumbers()
+      try {
+        await saveGroups(readGroupsFromDOM())
+      } catch (e) {
+        alert(e instanceof Error ? e.message : 'Error al reordenar')
+        reloadPage()
+      }
+    })
+  })
+
+  document.querySelectorAll<HTMLButtonElement>('.ms-order-down').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const row = btn.closest<HTMLElement>('.ms-group-row')
+      const next = row?.nextElementSibling as HTMLElement | null
+      if (!row || !next) return
+      row.parentNode?.insertBefore(next, row)
+      updatePosNumbers()
+      try {
+        await saveGroups(readGroupsFromDOM())
+      } catch (e) {
+        alert(e instanceof Error ? e.message : 'Error al reordenar')
+        reloadPage()
+      }
+    })
+  })
+
+  // ── Move between groups modal ──
+  const moveOverlay = document.getElementById('ms-move-overlay')!
+  document.getElementById('ms-move-close')?.addEventListener('click', closeAllModals)
+  document.getElementById('ms-move-cancel')?.addEventListener('click', closeAllModals)
+  moveOverlay.addEventListener('click', e => { if (e.target === moveOverlay) closeAllModals() })
+
+  document.querySelectorAll<HTMLButtonElement>('.ms-move-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const teamId = btn.dataset.teamId!
+      const teamName = btn.dataset.teamName!
+      const card = btn.closest('.ms-group-card')
+      const currentGroup = card?.querySelector('.ms-group-card-title')?.textContent?.trim() || ''
+
+      const select = document.getElementById('ms-move-target') as HTMLSelectElement
+      select.innerHTML = ''
+      document.querySelectorAll<HTMLElement>('.ms-group-card').forEach(c => {
+        const title = c.querySelector('.ms-group-card-title')?.textContent?.trim() || ''
+        if (title !== currentGroup) {
+          const opt = document.createElement('option')
+          opt.value = title
+          opt.textContent = title
+          select.appendChild(opt)
+        }
+      })
+
+      select.dataset.teamId = teamId
+      select.dataset.currentGroup = currentGroup
+      document.getElementById('ms-move-team-name')!.textContent = teamName
+
+      openModal('ms-move-overlay')
+    })
+  })
+
+  document.getElementById('ms-move-confirm')?.addEventListener('click', async () => {
+    const select = document.getElementById('ms-move-target') as HTMLSelectElement
+    const teamId = select.dataset.teamId
+    const currentGroup = select.dataset.currentGroup
+    const targetGroup = select.value
+
+    if (!targetGroup) {
+      alert('Seleccioná un grupo destino')
+      return
+    }
+
+    const groups = readGroupsFromDOM()
+    groups[targetGroup] = [...(groups[targetGroup] || []), teamId]
+    groups[currentGroup] = (groups[currentGroup] || []).filter(id => id !== teamId)
+
+    const btn = document.getElementById('ms-move-confirm') as HTMLButtonElement
+    btn.disabled = true
+    btn.textContent = 'Moviendo...'
+
+    try {
+      await saveGroups(groups)
+      closeAllModals()
+      reloadPage()
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Error al mover equipo')
+      btn.disabled = false
+      btn.textContent = 'Mover'
+    }
   })
 
   // ── Filter pills ──
@@ -727,6 +888,32 @@ const filterJornadaOptions = Array.from({ length: maxJornada }, (_, i) => i + 1)
     min-width: 18px;
     text-align: right;
     flex-shrink: 0;
+  }
+
+  .ms-move-btn {
+    background: none; border: none;
+    color: color-mix(in srgb, var(--color-theme-gold) 35%, transparent);
+    cursor: pointer; font-size: .55rem; padding: 2px 4px;
+    border-radius: 4px;
+    transition: color .2s, background .2s;
+    flex-shrink: 0; line-height: 1;
+  }
+  .ms-move-btn:hover {
+    color: var(--color-theme-cream);
+    background: color-mix(in srgb, var(--color-theme-gold) 10%, transparent);
+  }
+
+  .ms-order-btn {
+    background: none; border: none;
+    color: color-mix(in srgb, var(--color-theme-gold) 30%, transparent);
+    cursor: pointer; font-size: .4rem; padding: 1px 3px;
+    border-radius: 3px; line-height: 1;
+    transition: color .2s, background .2s;
+    flex-shrink: 0;
+  }
+  .ms-order-btn:hover {
+    color: var(--color-theme-cream);
+    background: color-mix(in srgb, var(--color-theme-gold) 10%, transparent);
   }
 
   /* ══════════════════════════════════════════

@@ -12,7 +12,7 @@ function shuffle<T>(arr: T[]): T[] {
   return a
 }
 
-function generateRoundRobin(teamIds: string[], doubleRound: boolean, roundOffset = 0, groupLabel?: string): Match[] {
+export function generateRoundRobin(teamIds: string[], doubleRound: boolean, roundOffset = 0, groupLabel?: string): Match[] {
   const teams = [...teamIds]
   if (teams.length % 2 !== 0) teams.push('')
 
