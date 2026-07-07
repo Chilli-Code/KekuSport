@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro'
-import { createTeamRequest, deleteTeamRequest, getTeamRequestsByPlayer, getTeamRequestsByPlayerWithTeam, getTeamRequestsByOwner, getTeamRequestById, updateTeamRequestStatus, getPlayerByUser, createNotification, getDb, getTeamSquadByTeamId, getTeamPendingInvitesByOwner, addPlayerToTeam } from '../../../../server/db'
+import { createTeamRequest, deleteTeamRequest, getTeamRequestsByPlayer, getTeamRequestsByPlayerWithTeam, getTeamRequestsByOwner, getTeamRequestById, updateTeamRequestStatus, getPlayerByUser, createNotification, getDb, getTeamSquadByTeamId, getTeamPendingInvitesByOwner, addPlayerToTeam, updatePlayer, getPlayerById } from '../../../../server/db'
 
 export const GET: APIRoute = async ({ locals, url }) => {
   if (!locals.user) {
@@ -183,6 +183,34 @@ export const POST: APIRoute = async ({ request, locals }) => {
     })
 
     return new Response(JSON.stringify({ success: true, playerId: result.playerId, requestId: result.requestId }), { status: 201, headers: { 'Content-Type': 'application/json' } })
+  }
+
+  if (action === 'edit-player') {
+    if (locals.user.role !== 'tecnico') {
+      return new Response(JSON.stringify({ error: 'Solo los técnicos pueden editar jugadores' }), { status: 403, headers: { 'Content-Type': 'application/json' } })
+    }
+
+    const playerId = data.playerId
+    const player = await getPlayerById(playerId)
+    if (!player) {
+      return new Response(JSON.stringify({ error: 'Jugador no encontrado' }), { status: 404, headers: { 'Content-Type': 'application/json' } })
+    }
+
+    await updatePlayer({
+      id: playerId,
+      name: (data.name || '').trim() || player.name,
+      number: data.number !== undefined && data.number !== '' && data.number !== null ? Number(data.number) : player.number,
+      position: data.position || player.position,
+      shirt_name: data.shirtName ?? player.shirt_name,
+      real_name: data.realName ?? player.real_name,
+      age: data.age !== undefined && data.age !== '' && data.age !== null ? Number(data.age) : player.age,
+      city: data.city ?? player.city,
+      neighborhood: data.neighborhood ?? player.neighborhood,
+      preferred_foot: data.preferredFoot ?? player.preferred_foot,
+      bio: data.bio ?? player.bio,
+    })
+
+    return new Response(JSON.stringify({ success: true }), { status: 200, headers: { 'Content-Type': 'application/json' } })
   }
 
   if (action === 'invite') {

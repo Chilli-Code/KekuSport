@@ -1120,6 +1120,26 @@ export async function addPlayerToTeam(params: {
   return { playerId, requestId }
 }
 
+export async function updatePlayer(params: {
+  id: string
+  name: string
+  number: number | null
+  position: string
+  shirt_name: string
+  real_name: string | null
+  age: number | null
+  city: string | null
+  neighborhood: string | null
+  preferred_foot: string | null
+  bio: string | null
+}): Promise<void> {
+  const db = await getDb()
+  await db.execute({
+    sql: `UPDATE players SET name = ?, position = ?, number = ?, shirt_name = ?, real_name = ?, age = ?, city = ?, neighborhood = ?, preferred_foot = ?, bio = ? WHERE id = ?`,
+    args: [params.name, params.position, params.number, params.shirt_name, params.real_name, params.age, params.city, params.neighborhood, params.preferred_foot, params.bio, params.id],
+  })
+}
+
 export async function getTeamSquadByOwner(userId: string): Promise<(TeamRequestWithDetails & { user_id: string | null })[]> {
   const db = await getDb()
   const result = await db.execute({
@@ -1369,6 +1389,7 @@ export async function getTeamSquadByTeamId(teamId: string): Promise<(TeamRequest
   const db = await getDb()
   const result = await db.execute({
     sql: `SELECT r.*, p.name as player_name, p.position as player_position, p.age as player_age, p.image_big as player_image, p.image_card as player_image_card,
+                 p.real_name as player_real_name, p.city as player_city, p.neighborhood as player_neighborhood, p.preferred_foot as player_preferred_foot, p.bio as player_bio, p.shirt_name as player_shirt_name, p.number as player_number,
                  p.user_id, t.name as team_name, t.color as team_color
           FROM team_requests r
           JOIN teams t ON t.id = r.team_id
