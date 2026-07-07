@@ -34,6 +34,7 @@ async function migrateTables() {
   try { await db.execute("ALTER TABLE match_events ADD COLUMN team_request_id TEXT DEFAULT ''") } catch {}
   try { await db.execute("ALTER TABLE match_events ADD COLUMN details_json TEXT DEFAULT ''") } catch {}
   try { await db.execute("ALTER TABLE teams ADD COLUMN group_sort_order INTEGER DEFAULT 0") } catch {}
+  try { await db.execute("ALTER TABLE players ADD COLUMN shirt_name TEXT DEFAULT ''") } catch {}
   await ensurePlayersTable(db)
 
   const colResult = await db.execute("PRAGMA table_info('teams')")
@@ -54,8 +55,8 @@ async function ensurePlayersTable(db?: Awaited<ReturnType<typeof getDb>>) {
   const colInfo = colResult.rows as unknown as { name: string; notnull: number }[]
   const userIdCol = colInfo.find(c => c.name === 'user_id')
   if (userIdCol && userIdCol.notnull === 1) {
-    await db.execute("CREATE TABLE players_migrated (id TEXT PRIMARY KEY, user_id TEXT UNIQUE, name TEXT NOT NULL, real_name TEXT, age INTEGER, country TEXT DEFAULT 'co', city TEXT, neighborhood TEXT, preferred_foot TEXT, position TEXT NOT NULL, number INTEGER, bio TEXT, image_big TEXT, image_card TEXT, direct_team_id TEXT, created_at TEXT DEFAULT (datetime('now')), FOREIGN KEY (user_id) REFERENCES users(id))")
-    await db.execute("INSERT INTO players_migrated (id, user_id, name, real_name, age, country, city, neighborhood, preferred_foot, position, number, bio, image_big, image_card, direct_team_id, created_at) SELECT id, user_id, name, real_name, age, country, city, neighborhood, preferred_foot, position, number, bio, image_big, image_card, direct_team_id, created_at FROM players")
+    await db.execute("CREATE TABLE players_migrated (id TEXT PRIMARY KEY, user_id TEXT UNIQUE, name TEXT NOT NULL, real_name TEXT, age INTEGER, country TEXT DEFAULT 'co', city TEXT, neighborhood TEXT, preferred_foot TEXT, position TEXT NOT NULL, number INTEGER, bio TEXT, image_big TEXT, image_card TEXT, shirt_name TEXT DEFAULT '', direct_team_id TEXT, created_at TEXT DEFAULT (datetime('now')), FOREIGN KEY (user_id) REFERENCES users(id))")
+    await db.execute("INSERT INTO players_migrated (id, user_id, name, real_name, age, country, city, neighborhood, preferred_foot, position, number, bio, image_big, image_card, shirt_name, direct_team_id, created_at) SELECT id, user_id, name, real_name, age, country, city, neighborhood, preferred_foot, position, number, bio, image_big, image_card, IFNULL(shirt_name, ''), direct_team_id, created_at FROM players")
     await db.execute('DROP TABLE players')
     await db.execute('ALTER TABLE players_migrated RENAME TO players')
   }
@@ -576,6 +577,7 @@ export interface DBPlayer {
   bio: string | null
   image_big: string | null
   image_card: string | null
+  shirt_name: string
   direct_team_id: string | null
   created_at: string
 }
@@ -1090,6 +1092,13 @@ export async function addPlayerToTeam(params: {
   name: string
   number: number | null
   position: string
+  shirt_name: string
+  real_name: string | null
+  age: number | null
+  city: string | null
+  neighborhood: string | null
+  preferred_foot: string | null
+  bio: string | null
   image_big: string | null
   image_card: string | null
   teamId: string
@@ -1098,9 +1107,9 @@ export async function addPlayerToTeam(params: {
   await ensurePlayersTable(db)
   const playerId = params.id || crypto.randomUUID()
   await db.execute({
-    sql: `INSERT INTO players (id, user_id, name, position, number, image_big, image_card, direct_team_id)
-          VALUES (?, NULL, ?, ?, ?, ?, ?, ?)`,
-    args: [playerId, params.name, params.position, params.number, params.image_big, params.image_card, params.teamId],
+    sql: `INSERT INTO players (id, user_id, name, position, number, shirt_name, real_name, age, city, neighborhood, preferred_foot, bio, image_big, image_card, direct_team_id)
+          VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    args: [playerId, params.name, params.position, params.number, params.shirt_name, params.real_name, params.age, params.city, params.neighborhood, params.preferred_foot, params.bio, params.image_big, params.image_card, params.teamId],
   })
   const requestId = crypto.randomUUID()
   await db.execute({

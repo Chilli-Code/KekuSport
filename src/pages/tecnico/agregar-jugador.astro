@@ -56,18 +56,61 @@ const POSITIONS = [
         </div>
 
         <div>
-          <label class="block text-[.45rem] font-semibold tracking-[.18em] text-[rgba(232,220,200,.3)] uppercase mb-1.5 font-[family-name:var(--font-cinzel)]" for="player-number">DORSAL</label>
-          <input id="player-number" type="number" min="1" max="99" placeholder="Ej: 10" class="w-full px-3.5 py-2.5 rounded-lg text-[.55rem] tracking-wider text-[var(--color-theme-cream)] bg-[rgba(255,255,255,.03)] border border-[rgba(199,168,107,.14)] placeholder:text-[rgba(232,220,200,.12)] focus:outline-none focus:border-[rgba(0,255,136,.35)] focus:bg-[rgba(0,255,136,.03)] transition-all" />
+          <label class="block text-[.45rem] font-semibold tracking-[.18em] text-[rgba(232,220,200,.3)] uppercase mb-1.5 font-[family-name:var(--font-cinzel)]" for="player-real-name">NOMBRE REAL</label>
+          <input id="player-real-name" type="text" maxlength="50" placeholder="Ej: Alejandro García" class="w-full px-3.5 py-2.5 rounded-lg text-[.55rem] tracking-wider text-[var(--color-theme-cream)] bg-[rgba(255,255,255,.03)] border border-[rgba(199,168,107,.14)] placeholder:text-[rgba(232,220,200,.12)] focus:outline-none focus:border-[rgba(0,255,136,.35)] focus:bg-[rgba(0,255,136,.03)] transition-all" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[.45rem] font-semibold tracking-[.18em] text-[rgba(232,220,200,.3)] uppercase mb-1.5 font-[family-name:var(--font-cinzel)]" for="player-age">EDAD</label>
+            <input id="player-age" type="number" min="10" max="99" placeholder="Ej: 24" class="w-full px-3.5 py-2.5 rounded-lg text-[.55rem] tracking-wider text-[var(--color-theme-cream)] bg-[rgba(255,255,255,.03)] border border-[rgba(199,168,107,.14)] placeholder:text-[rgba(232,220,200,.12)] focus:outline-none focus:border-[rgba(0,255,136,.35)] focus:bg-[rgba(0,255,136,.03)] transition-all" />
+          </div>
+          <div>
+            <label class="block text-[.45rem] font-semibold tracking-[.18em] text-[rgba(232,220,200,.3)] uppercase mb-1.5 font-[family-name:var(--font-cinzel)]" for="player-number">DORSAL</label>
+            <input id="player-number" type="number" min="1" max="99" placeholder="Ej: 10" class="w-full px-3.5 py-2.5 rounded-lg text-[.55rem] tracking-wider text-[var(--color-theme-cream)] bg-[rgba(255,255,255,.03)] border border-[rgba(199,168,107,.14)] placeholder:text-[rgba(232,220,200,.12)] focus:outline-none focus:border-[rgba(0,255,136,.35)] focus:bg-[rgba(0,255,136,.03)] transition-all" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[.45rem] font-semibold tracking-[.18em] text-[rgba(232,220,200,.3)] uppercase mb-1.5 font-[family-name:var(--font-cinzel)]" for="player-city">CIUDAD</label>
+            <input id="player-city" type="text" maxlength="50" placeholder="Ej: Barranquilla" class="w-full px-3.5 py-2.5 rounded-lg text-[.55rem] tracking-wider text-[var(--color-theme-cream)] bg-[rgba(255,255,255,.03)] border border-[rgba(199,168,107,.14)] placeholder:text-[rgba(232,220,200,.12)] focus:outline-none focus:border-[rgba(0,255,136,.35)] focus:bg-[rgba(0,255,136,.03)] transition-all" />
+          </div>
+          <div>
+            <label class="block text-[.45rem] font-semibold tracking-[.18em] text-[rgba(232,220,200,.3)] uppercase mb-1.5 font-[family-name:var(--font-cinzel)]" for="player-neighborhood">BARRIO</label>
+            <input id="player-neighborhood" type="text" maxlength="50" placeholder="Ej: El Prado" class="w-full px-3.5 py-2.5 rounded-lg text-[.55rem] tracking-wider text-[var(--color-theme-cream)] bg-[rgba(255,255,255,.03)] border border-[rgba(199,168,107,.14)] placeholder:text-[rgba(232,220,200,.12)] focus:outline-none focus:border-[rgba(0,255,136,.35)] focus:bg-[rgba(0,255,136,.03)] transition-all" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[.45rem] font-semibold tracking-[.18em] text-[rgba(232,220,200,.3)] uppercase mb-1.5 font-[family-name:var(--font-cinzel)]" for="player-position">POSICIÓN *</label>
+            <select id="player-position" class="w-full px-3.5 py-2.5 rounded-lg text-[.55rem] tracking-wider text-[var(--color-theme-cream)] bg-[rgba(255,255,255,.03)] border border-[rgba(199,168,107,.14)] focus:outline-none focus:border-[rgba(0,255,136,.35)] focus:bg-[rgba(0,255,136,.03)] transition-all appearance-none" required>
+              <option value="" class="bg-[#050d08]">Seleccionar posición...</option>
+              {POSITIONS.map(p => (
+                <option value={p.value} class="bg-[#050d08]">{p.value} — {p.label}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label class="block text-[.45rem] font-semibold tracking-[.18em] text-[rgba(232,220,200,.3)] uppercase mb-1.5 font-[family-name:var(--font-cinzel)]" for="player-foot">PIE HÁBIL</label>
+            <select id="player-foot" class="w-full px-3.5 py-2.5 rounded-lg text-[.55rem] tracking-wider text-[var(--color-theme-cream)] bg-[rgba(255,255,255,.03)] border border-[rgba(199,168,107,.14)] focus:outline-none focus:border-[rgba(0,255,136,.35)] focus:bg-[rgba(0,255,136,.03)] transition-all appearance-none">
+              <option value="" class="bg-[#050d08]">Seleccionar...</option>
+              <option value="Derecho" class="bg-[#050d08]">Derecho</option>
+              <option value="Zurdo" class="bg-[#050d08]">Zurdo</option>
+              <option value="Ambos" class="bg-[#050d08]">Ambos</option>
+            </select>
+          </div>
         </div>
 
         <div>
-          <label class="block text-[.45rem] font-semibold tracking-[.18em] text-[rgba(232,220,200,.3)] uppercase mb-1.5 font-[family-name:var(--font-cinzel)]" for="player-position">POSICIÓN *</label>
-          <select id="player-position" class="w-full px-3.5 py-2.5 rounded-lg text-[.55rem] tracking-wider text-[var(--color-theme-cream)] bg-[rgba(255,255,255,.03)] border border-[rgba(199,168,107,.14)] focus:outline-none focus:border-[rgba(0,255,136,.35)] focus:bg-[rgba(0,255,136,.03)] transition-all appearance-none" required>
-            <option value="" class="bg-[#050d08]">Seleccionar posición...</option>
-            {POSITIONS.map(p => (
-              <option value={p.value} class="bg-[#050d08]">{p.value} — {p.label}</option>
-            ))}
-          </select>
+          <label class="block text-[.45rem] font-semibold tracking-[.18em] text-[rgba(232,220,200,.3)] uppercase mb-1.5 font-[family-name:var(--font-cinzel)]" for="player-shirt-name">NOMBRE DE CAMISA</label>
+          <input id="player-shirt-name" type="text" maxlength="30" placeholder="Ej: El Mago" class="w-full px-3.5 py-2.5 rounded-lg text-[.55rem] tracking-wider text-[var(--color-theme-cream)] bg-[rgba(255,255,255,.03)] border border-[rgba(199,168,107,.14)] placeholder:text-[rgba(232,220,200,.12)] focus:outline-none focus:border-[rgba(0,255,136,.35)] focus:bg-[rgba(0,255,136,.03)] transition-all" />
+        </div>
+
+        <div>
+          <label class="block text-[.45rem] font-semibold tracking-[.18em] text-[rgba(232,220,200,.3)] uppercase mb-1.5 font-[family-name:var(--font-cinzel)]" for="player-bio">BIOGRAFÍA</label>
+          <textarea id="player-bio" rows="3" placeholder="Cuéntanos sobre el jugador..." class="w-full px-3.5 py-2.5 rounded-lg text-[.55rem] tracking-wider text-[var(--color-theme-cream)] bg-[rgba(255,255,255,.03)] border border-[rgba(199,168,107,.14)] placeholder:text-[rgba(232,220,200,.12)] focus:outline-none focus:border-[rgba(0,255,136,.35)] focus:bg-[rgba(0,255,136,.03)] transition-all resize-vertical"></textarea>
         </div>
 
         <!-- <div>
@@ -114,32 +157,35 @@ const POSITIONS = [
   let uploadedImageUrl = '';
 
   const imageInput = $('player-image-upload');
-  $('btn-remove-image').addEventListener('click', e => {
-    e.stopPropagation();
-    uploadedImageUrl = '';
-    $('upload-placeholder').classList.remove('hidden');
-    $('upload-preview').classList.add('hidden');
-    imageInput.value = '';
-  });
+  const removeBtn = $('btn-remove-image');
+  if (imageInput && removeBtn) {
+    removeBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      uploadedImageUrl = '';
+      $('upload-placeholder').classList.remove('hidden');
+      $('upload-preview').classList.add('hidden');
+      imageInput.value = '';
+    });
 
-  imageInput.addEventListener('change', async e => {
-    const file = e.target.files[0];
-    if (!file) return;
-    if (file.size > 500 * 1024) { alert('Máximo 500KB'); return; }
-    const formData = new FormData();
-    formData.append('file', file);
-    try {
-      const res = await fetch('/api/teams/upload-logo', { method: 'POST', body: formData });
-      const data = await res.json();
-      if (!data.success) throw new Error(data.error || 'Error');
-      uploadedImageUrl = data.url;
-      $('upload-preview-img').src = data.url;
-      $('upload-placeholder').classList.add('hidden');
-      $('upload-preview').classList.remove('hidden');
-    } catch (err) {
-      alert('Error al subir imagen: ' + err.message);
-    }
-  });
+    imageInput.addEventListener('change', async e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      if (file.size > 500 * 1024) { alert('Máximo 500KB'); return; }
+      const formData = new FormData();
+      formData.append('file', file);
+      try {
+        const res = await fetch('/api/teams/upload-logo', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Error');
+        uploadedImageUrl = data.url;
+        $('upload-preview-img').src = data.url;
+        $('upload-placeholder').classList.add('hidden');
+        $('upload-preview').classList.remove('hidden');
+      } catch (err) {
+        alert('Error al subir imagen: ' + err.message);
+      }
+    });
+  }
 
   $('add-player-form').addEventListener('submit', async e => {
     e.preventDefault();
@@ -147,8 +193,15 @@ const POSITIONS = [
     errorEl.classList.add('hidden');
 
     const name = $('player-name').value.trim();
+    const realName = $('player-real-name').value.trim();
+    const age = $('player-age').value.trim();
     const number = $('player-number').value.trim();
+    const city = $('player-city').value.trim();
+    const neighborhood = $('player-neighborhood').value.trim();
     const position = $('player-position').value;
+    const preferredFoot = $('player-foot').value;
+    const shirtName = $('player-shirt-name').value.trim();
+    const bio = $('player-bio').value.trim();
 
     if (!name) { errorEl.textContent = 'El nombre es obligatorio'; errorEl.classList.remove('hidden'); return; }
     if (!position) { errorEl.textContent = 'La posición es obligatoria'; errorEl.classList.remove('hidden'); return; }
@@ -177,8 +230,15 @@ const POSITIONS = [
           action: 'add-player',
           teamId: team.id,
           name,
+          realName: realName || null,
+          age: age || null,
           number: number || null,
+          city: city || null,
+          neighborhood: neighborhood || null,
           position,
+          preferredFoot: preferredFoot || null,
+          shirtName,
+          bio: bio || null,
           imageBig: uploadedImageUrl || null,
           imageCard: uploadedImageUrl || null,
         }),
