@@ -1,6 +1,9 @@
 import type { APIRoute } from 'astro'
 
-export const POST: APIRoute = async ({ cookies, redirect }) => {
+export const POST: APIRoute = async ({ cookies }) => {
   cookies.delete('keku_token', { path: '/' })
-  return redirect('/', 302)
+  return new Response(JSON.stringify({ success: true }), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  })
 }
