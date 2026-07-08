@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro'
 import { recalculateTournamentStandings, getDb } from '../../../../server/db'
 
-export const POST: APIRoute = async ({ locals }) => {
+export const GET: APIRoute = async ({ locals }) => {
   if (!locals.user) {
     return new Response(JSON.stringify({ error: 'No autorizado' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
   }
