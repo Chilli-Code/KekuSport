@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro'
-import { createMatch, updateMatch, deleteMatch, getMatchesByTournamentWithTeams, isMatchEditable } from '../../../../server/db'
+import { createMatch, updateMatch, deleteMatch, getMatchById, getMatchesByTournamentWithTeams, isMatchEditable, recalculateTournamentStandings } from '../../../../server/db'
 
 export const GET: APIRoute = async ({ request, locals }) => {
   if (!locals.user) {
@@ -57,6 +57,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       dbData[map[key] || key] = val
     }
     await updateMatch(data.id, dbData)
+    const match = await getMatchById(data.id)
+    if (match) {
+      await recalculateTournamentStandings(match.tournament_id)
+    }
     return new Response(JSON.stringify({ success: true }), { status: 200, headers: { 'Content-Type': 'application/json' } })
   }
 

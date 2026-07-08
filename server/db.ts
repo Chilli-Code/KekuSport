@@ -264,6 +264,27 @@ async function initTables() {
     )
   `)
 
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS team_stats (
+      id TEXT PRIMARY KEY,
+      tournament_id TEXT NOT NULL,
+      team_id TEXT NOT NULL,
+      group_name TEXT DEFAULT NULL,
+      played INTEGER DEFAULT 0,
+      wins INTEGER DEFAULT 0,
+      draws INTEGER DEFAULT 0,
+      losses INTEGER DEFAULT 0,
+      goals_for INTEGER DEFAULT 0,
+      goals_against INTEGER DEFAULT 0,
+      goal_diff INTEGER DEFAULT 0,
+      points INTEGER DEFAULT 0,
+      updated_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE,
+      FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+      UNIQUE(tournament_id, team_id, group_name)
+    )
+  `)
+
   // Seed static teams into local DB so JOINs and API work for them
   for (const team of TEAMS) {
     await db.execute({
@@ -397,6 +418,112 @@ export async function getTournamentById(id: string): Promise<Tournament | undefi
   const db = await getDb()
   const result = await db.execute({ sql: 'SELECT * FROM tournaments WHERE id = ?', args: [id] })
   return result.rows[0] as unknown as Tournament | undefined
+}
+
+export interface TeamStatsEntry {
+  id: string
+  tournament_id: string
+  team_id: string
+  team_name?: string
+  team_logo?: string
+  group_name: string | null
+  played: number
+  wins: number
+  draws: number
+  losses: number
+  goals_for: number
+  goals_against: number
+  goal_diff: number
+  points: number
+}
+
+export async function recalculateTournamentStandings(tournamentId: string): Promise<void> {
+  const db = await getDb()
+  const tournament = await getTournamentById(tournamentId)
+  if (!tournament) return
+  const ptsPerWin = tournament.points_per_win || 3
+
+  const matchesResult = await db.execute({
+    sql: `SELECT * FROM matches WHERE tournament_id = ? AND status IN ('finished', 'completed')`,
+    args: [tournamentId],
+  })
+  const matches = matchesResult.rows as unknown as Match[]
+
+  const teamsResult = await db.execute({
+    sql: `SELECT DISTINCT t.id as team_id, t.name as team_name, t.logo as team_logo,
+          COALESCE(m.group_name, '') as group_name
+          FROM teams t
+          JOIN matches m ON (m.home_team_id = t.id OR m.away_team_id = t.id)
+          WHERE m.tournament_id = ?
+          GROUP BY t.id, group_name`,
+    args: [tournamentId],
+  })
+  const teamRows = teamsResult.rows as unknown as { team_id: string; team_name: string; team_logo: string | null; group_name: string }[]
+
+  const statsMap = new Map<string, TeamStatsEntry>()
+  for (const row of teamRows) {
+    const key = `${row.team_id}_${row.group_name}`
+    statsMap.set(key, {
+      id: crypto.randomUUID(),
+      tournament_id: tournamentId,
+      team_id: row.team_id,
+      group_name: row.group_name || null,
+      played: 0, wins: 0, draws: 0, losses: 0,
+      goals_for: 0, goals_against: 0, goal_diff: 0, points: 0,
+    })
+  }
+
+  for (const match of matches) {
+    if (match.home_score === null || match.away_score === null) continue
+    const homeKey = `${match.home_team_id}_`
+    const awayKey = `${match.away_team_id}_`
+    const homeStats = statsMap.get(homeKey)
+    const awayStats = statsMap.get(awayKey)
+    if (homeStats) {
+      homeStats.played++
+      homeStats.goals_for += match.home_score
+      homeStats.goals_against += match.away_score
+      if (match.home_score > match.away_score) { homeStats.wins++; homeStats.points += ptsPerWin }
+      else if (match.home_score === match.away_score) { homeStats.draws++; homeStats.points += 1 }
+      else homeStats.losses++
+    }
+    if (awayStats) {
+      awayStats.played++
+      awayStats.goals_for += match.away_score
+      awayStats.goals_against += match.home_score
+      if (match.away_score > match.home_score) { awayStats.wins++; awayStats.points += ptsPerWin }
+      else if (match.away_score === match.home_score) { awayStats.draws++; awayStats.points += 1 }
+      else awayStats.losses++
+    }
+  }
+
+  for (const [, stats] of statsMap) {
+    stats.goal_diff = stats.goals_for - stats.goals_against
+  }
+
+  await db.execute({ sql: `DELETE FROM team_stats WHERE tournament_id = ?`, args: [tournamentId] })
+  for (const [, stats] of statsMap) {
+    await db.execute({
+      sql: `INSERT INTO team_stats (id, tournament_id, team_id, group_name, played, wins, draws, losses, goals_for, goals_against, goal_diff, points)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      args: [stats.id, stats.tournament_id, stats.team_id, stats.group_name,
+        stats.played, stats.wins, stats.draws, stats.losses,
+        stats.goals_for, stats.goals_against, stats.goal_diff, stats.points],
+    })
+  }
+}
+
+export async function getTournamentStandings(tournamentId: string): Promise<TeamStatsEntry[]> {
+  const db = await getDb()
+  const result = await db.execute({
+    sql: `SELECT ts.*, t.name as team_name, t.logo as team_logo
+          FROM team_stats ts
+          JOIN teams t ON t.id = ts.team_id
+          WHERE ts.tournament_id = ?
+          ORDER BY ts.group_name, ts.points DESC, ts.goal_diff DESC, ts.goals_for DESC`,
+    args: [tournamentId],
+  })
+  return result.rows as unknown as TeamStatsEntry[]
 }
 
 export async function getCategoriesByTournament(tournamentId: string): Promise<Category[]> {
