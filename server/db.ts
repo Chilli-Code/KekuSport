@@ -1,5 +1,6 @@
 import { createClient } from '@libsql/client'
 import path from 'node:path'
+import { TEAMS } from '../src/consts/teams'
 
 const DB_URL = process.env.TURSO_DB_URL || `file:${process.env.DB_PATH || path.join(process.cwd(), 'data', 'keku.db')}`
 const AUTH_TOKEN = process.env.TURSO_AUTH_TOKEN
@@ -262,6 +263,14 @@ async function initTables() {
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     )
   `)
+
+  // Seed static teams into local DB so JOINs and API work for them
+  for (const team of TEAMS) {
+    await db.execute({
+      sql: 'INSERT OR IGNORE INTO teams (id, name, logo) VALUES (?, ?, ?)',
+      args: [team.id, team.name, team.logo],
+    })
+  }
 }
 
 export type UserRole = 'admin' | 'tecnico' | 'referee' | 'jugador'
