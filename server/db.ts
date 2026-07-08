@@ -485,7 +485,23 @@ export async function recalculateTournamentStandings(tournamentId: string): Prom
   }
 
   for (const match of matches) {
-    if (match.home_score === null || match.away_score === null) continue
+    let hs = match.home_score
+    let as = match.away_score
+    if (hs === null || as === null) {
+      const evResult = await db.execute({
+        sql: `SELECT type, team FROM match_events WHERE match_id = ? AND type = 'goal'`,
+        args: [match.id],
+      })
+      const goals = evResult.rows as unknown as { type: string; team: string }[]
+      hs = goals.filter(g => g.team === 'A').length
+      as = goals.filter(g => g.team === 'B').length
+      if (hs !== match.home_score || as !== match.away_score) {
+        await db.execute({
+          sql: `UPDATE matches SET home_score = ?, away_score = ? WHERE id = ?`,
+          args: [hs, as, match.id],
+        })
+      }
+    }
     const groupName = extractGroup(match.round_label)
     const homeKey = `${match.home_team_id}_${groupName}`
     const awayKey = `${match.away_team_id}_${groupName}`
@@ -493,18 +509,18 @@ export async function recalculateTournamentStandings(tournamentId: string): Prom
     const awayStats = statsMap.get(awayKey)
     if (homeStats) {
       homeStats.played++
-      homeStats.goals_for += match.home_score
-      homeStats.goals_against += match.away_score
-      if (match.home_score > match.away_score) { homeStats.wins++; homeStats.points += ptsPerWin }
-      else if (match.home_score === match.away_score) { homeStats.draws++; homeStats.points += 1 }
+      homeStats.goals_for += hs
+      homeStats.goals_against += as
+      if (hs > as) { homeStats.wins++; homeStats.points += ptsPerWin }
+      else if (hs === as) { homeStats.draws++; homeStats.points += 1 }
       else homeStats.losses++
     }
     if (awayStats) {
       awayStats.played++
-      awayStats.goals_for += match.away_score
-      awayStats.goals_against += match.home_score
-      if (match.away_score > match.home_score) { awayStats.wins++; awayStats.points += ptsPerWin }
-      else if (match.away_score === match.home_score) { awayStats.draws++; awayStats.points += 1 }
+      awayStats.goals_for += as
+      awayStats.goals_against += hs
+      if (as > hs) { awayStats.wins++; awayStats.points += ptsPerWin }
+      else if (as === hs) { awayStats.draws++; awayStats.points += 1 }
       else awayStats.losses++
     }
   }
