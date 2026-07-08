@@ -450,33 +450,45 @@ export async function recalculateTournamentStandings(tournamentId: string): Prom
   const matches = matchesResult.rows as unknown as Match[]
 
   const teamsResult = await db.execute({
-    sql: `SELECT DISTINCT t.id as team_id, t.name as team_name, t.logo as team_logo,
-          COALESCE(m.group_name, '') as group_name
+    sql: `SELECT DISTINCT t.id as team_id, t.name as team_name, t.logo as team_logo
           FROM teams t
           JOIN matches m ON (m.home_team_id = t.id OR m.away_team_id = t.id)
-          WHERE m.tournament_id = ?
-          GROUP BY t.id, group_name`,
+          WHERE m.tournament_id = ?`,
     args: [tournamentId],
   })
-  const teamRows = teamsResult.rows as unknown as { team_id: string; team_name: string; team_logo: string | null; group_name: string }[]
+  const teamRows = teamsResult.rows as unknown as { team_id: string; team_name: string; team_logo: string | null }[]
+
+  function extractGroup(roundLabel: string | null): string {
+    if (!roundLabel) return ''
+    const match = roundLabel.match(/^(Grupo\s[^-]+)/)
+    return match ? match[1].trim() : ''
+  }
 
   const statsMap = new Map<string, TeamStatsEntry>()
   for (const row of teamRows) {
-    const key = `${row.team_id}_${row.group_name}`
-    statsMap.set(key, {
-      id: crypto.randomUUID(),
-      tournament_id: tournamentId,
-      team_id: row.team_id,
-      group_name: row.group_name || null,
-      played: 0, wins: 0, draws: 0, losses: 0,
-      goals_for: 0, goals_against: 0, goal_diff: 0, points: 0,
-    })
+    const teamMatches = matches.filter(m => m.home_team_id === row.team_id || m.away_team_id === row.team_id)
+    const groupNames = new Set(teamMatches.map(m => extractGroup(m.round_label)))
+    if (groupNames.size === 0) groupNames.add('')
+    for (const groupName of groupNames) {
+      const key = `${row.team_id}_${groupName}`
+      if (!statsMap.has(key)) {
+        statsMap.set(key, {
+          id: crypto.randomUUID(),
+          tournament_id: tournamentId,
+          team_id: row.team_id,
+          group_name: groupName || null,
+          played: 0, wins: 0, draws: 0, losses: 0,
+          goals_for: 0, goals_against: 0, goal_diff: 0, points: 0,
+        })
+      }
+    }
   }
 
   for (const match of matches) {
     if (match.home_score === null || match.away_score === null) continue
-    const homeKey = `${match.home_team_id}_`
-    const awayKey = `${match.away_team_id}_`
+    const groupName = extractGroup(match.round_label)
+    const homeKey = `${match.home_team_id}_${groupName}`
+    const awayKey = `${match.away_team_id}_${groupName}`
     const homeStats = statsMap.get(homeKey)
     const awayStats = statsMap.get(awayKey)
     if (homeStats) {

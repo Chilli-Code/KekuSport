@@ -66,7 +66,56 @@ const standings = groups
       }))
     : undefined
 
-// Compute group standings for bracket with points from finished matches
+// Compute full per-group standings with all stats from finished matches
+function computeFullGroupStandings(teams: Array<{ id: string; name: string; logo?: string }>, prefix: string) {
+  return teams.map(t => {
+    const teamMatches = tournamentMatches.filter(m =>
+      m.round_label?.startsWith(prefix) &&
+      (m.home_team_id === t.id || m.away_team_id === t.id)
+    )
+    let played = 0, wins = 0, draws = 0, losses = 0
+    let goalsFor = 0, goalsAgainst = 0
+    const form: Array<'W' | 'D' | 'L'> = []
+
+    for (const m of teamMatches) {
+      if (m.status === 'finished' && m.home_score != null && m.away_score != null) {
+        const isHome = m.home_team_id === t.id
+        const scored = isHome ? m.home_score : m.away_score
+        const conceded = isHome ? m.away_score : m.home_score
+        played++
+        goalsFor += scored
+        goalsAgainst += conceded
+        if (scored > conceded) { wins++; form.push('W') }
+        else if (scored === conceded) { draws++; form.push('D') }
+        else { losses++; form.push('L') }
+      }
+    }
+
+    return {
+      position: 0,
+      team: { id: t.id, name: t.name, logo: t.logo || '/images/Logo_Default.webp' },
+      played,
+      wins,
+      draws,
+      losses,
+      goalsFor,
+      goalsAgainst,
+      goalDifference: goalsFor - goalsAgainst,
+      points: wins * 3 + draws,
+      form,
+    }
+  }).sort((a, b) => {
+    if (a.points !== b.points) return b.points - a.points
+    return b.goalDifference - a.goalDifference
+  }).map((entry, i) => ({ ...entry, position: i + 1 }))
+}
+
+const groupStandings = groups?.map(g => {
+  const prefix = `Grupo ${g.label}`
+  return { label: g.label, standings: computeFullGroupStandings(g.teams, prefix) }
+})
+
+// Compute group standings for bracket (only needs points)
 function computeGroupStandings(teams: Array<{ id: string; name: string; logo?: string }>, prefix: string) {
   return teams.map(t => {
     const teamMatches = tournamentMatches.filter(m =>
@@ -104,7 +153,7 @@ function formatEndDate(d: string | null | undefined) {
 <Layout>
   <TeamsHero teams={heroTeams} />
   <Slogan description={copa?.description} />
-  <StandingsTable title={copa ? copa.name : "TORNEO PES - TEMPORADA 1"} standings={standings} groups={groups} />
+  <StandingsTable title={copa ? copa.name : "TORNEO PES - TEMPORADA 1"} standings={standings} groups={groups} groupStandings={groupStandings} />
     <section class="py-12 px-4">
     <TournamentBracket
       title="PLAYOFF"
