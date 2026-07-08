@@ -312,14 +312,17 @@ function roundColumnWidth(round: BracketRound): number {
         const conn = prevCount > 0 ? getConnectorPaths(prevCount, round.matches.length, SLOT_H, GAP, CONN_W) : null
         return (
           <>
-            {conn ? (
-            <div class="flex-shrink-0 self-stretch flex items-center" style="width:{CONN_W}px">
-              <svg class="w-full overflow-visible" style="height:{conn.height}px;max-height:500px" viewBox="0 0 {CONN_W} {Math.max(conn.height,1)}" preserveAspectRatio="none">
-                {conn.paths.map((p, i) => <path key={i} d={p} />)}
-              </svg>
-            </div>
-            ) : (
-            <div class="flex-shrink-0 self-center" style="width:{CONN_W * 0.5}px"></div>
+            {conn ? (() => {
+              const vbH = Math.max(conn.height, 1);
+              return (
+              <div class="flex-shrink-0 self-stretch flex items-center" style={"width:" + CONN_W + "px"}>
+                <svg class="w-full overflow-visible" style={"height:" + conn.height + "px;max-height:500px"} viewBox={"0 0 " + CONN_W + " " + vbH} preserveAspectRatio="none">
+                  {conn.paths.map((p, i) => <path key={i} d={p} />)}
+                </svg>
+              </div>
+              );
+            })() : (
+            <div class="flex-shrink-0 self-center" style={"width:" + (CONN_W * 0.5) + "px"}></div>
             )}
             <div class="flex flex-col gap-2 flex-shrink-0 self-center" style="width:{colW}px">
               <span class="tb-round-label">{round.name}</span>
@@ -343,8 +346,8 @@ function roundColumnWidth(round: BracketRound): number {
 
       <!-- CONNECTOR TO FINAL -->
       {left.length > 0 && finalMatch ? (
-      <div class="flex-shrink-0 self-center" style="width:{CONN_W}px">
-        <svg class="w-full" height="2" viewBox="0 0 {CONN_W} 2">
+      <div class="flex-shrink-0 self-center" style={"width:" + CONN_W + "px"}>
+        <svg class="w-full" height="2" viewBox={"0 0 " + CONN_W + " 2"}>
           <line x1="0" y1="1" x2={CONN_W} y2="1" />
         </svg>
       </div>
@@ -392,8 +395,8 @@ function roundColumnWidth(round: BracketRound): number {
 
       <!-- CONNECTOR FROM FINAL -->
       {right.length > 0 && finalMatch ? (
-      <div class="flex-shrink-0 self-center" style="width:{CONN_W}px">
-        <svg class="w-full" height="2" viewBox="0 0 {CONN_W} 2">
+      <div class="flex-shrink-0 self-center" style={"width:" + CONN_W + "px"}>
+        <svg class="w-full" height="2" viewBox={"0 0 " + CONN_W + " 2"}>
           <line x1="0" y1="1" x2={CONN_W} y2="1" />
         </svg>
       </div>
@@ -423,14 +426,17 @@ function roundColumnWidth(round: BracketRound): number {
                 </div>
               ))}
             </div>
-            {conn ? (
-            <div class="flex-shrink-0 self-stretch flex items-center" style="width:{CONN_W}px">
-              <svg class="w-full overflow-visible" style="height:{conn.height}px;max-height:500px" viewBox="0 0 {CONN_W} {Math.max(conn.height,1)}" preserveAspectRatio="none">
-                {conn.paths.map((p, i) => <path key={i} d={p} />)}
-              </svg>
-            </div>
-            ) : (
-            <div class="flex-shrink-0 self-center" style="width:{CONN_W * 0.5}px"></div>
+            {conn ? (() => {
+              const vbH = Math.max(conn.height, 1);
+              return (
+              <div class="flex-shrink-0 self-stretch flex items-center" style={"width:" + CONN_W + "px"}>
+                <svg class="w-full overflow-visible" style={"height:" + conn.height + "px;max-height:500px"} viewBox={"0 0 " + CONN_W + " " + vbH} preserveAspectRatio="none">
+                  {conn.paths.map((p, i) => <path key={i} d={p} />)}
+                </svg>
+              </div>
+              );
+            })() : (
+            <div class="flex-shrink-0 self-center" style={"width:" + (CONN_W * 0.5) + "px"}></div>
             )}
           </>
         )
