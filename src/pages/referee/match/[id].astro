@@ -1201,10 +1201,15 @@ const serializedAwaySquad = JSON.stringify(awaySquad.map(s => ({
       endBtn.disabled = true;
       endBtn.textContent = 'FINALIZANDO...';
       try {
+        const evRes = await fetch('/api/matches/' + MATCH_ID + '/events');
+        const evData = await evRes.json();
+        const events = evData.success ? (evData.events || []) : [];
+        const homeScore = events.filter(e => e.type === 'goal' && e.team === 'A').length;
+        const awayScore = events.filter(e => e.type === 'goal' && e.team === 'B').length;
         await fetch('/api/matches', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'update', id: MATCH_ID, status: 'finished' }),
+          body: JSON.stringify({ action: 'update', id: MATCH_ID, status: 'finished', homeScore, awayScore }),
         });
         window.location.reload();
       } catch {}
